@@ -134,11 +134,15 @@ alter trigger trg_audit_registraties on public.factuuritems rename to trg_audit_
 alter table public.factuuritems drop column dossier_id;
 drop table public.dossiers cascade;
 
+-- Default alleen om bestaande rijen (bv. testdata) te backfillen; direct
+-- daarna weer verwijderd zodat nieuwe inserts altijd een echte waarde nodig hebben.
 alter table public.factuuritems
-  add column dossiernummer text not null,
+  add column dossiernummer text not null default 'ONBEKEND00',
   add column type_dienst text,
   add column land text,
   add column laatst_bewerkt_door uuid references public.profiles (id);
+
+alter table public.factuuritems alter column dossiernummer drop default;
 
 comment on table public.factuuritems is 'Kernregistratie van werkzaamheden/uren/kosten, ofwel "factuuritems". Regelbedrag = honorarium + externe_kosten - korting. Dossiernummer is vrije tekst; type_dienst en land worden hieruit afgeleid (zie src/lib/dossiernummer.ts) en server-side gevalideerd.';
 comment on column public.factuuritems.dossiernummer is 'Vrij tekstveld, bv. TM93905GB00. Opbouw: prefix (dienst-type) + nummer + 2-letterige landcode + suffix.';
