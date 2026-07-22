@@ -47,7 +47,9 @@ export function ChangelogTab({ entries }: { entries: Entry[] }) {
               <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
                 <CardTitle className="text-base">{entry.titel}</CardTitle>
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline">v{entry.versienummer}</Badge>
+                  <Badge variant="outline" className="font-mono">
+                    v{entry.versienummer}
+                  </Badge>
                   <span className="text-xs text-muted-foreground">
                     {new Date(entry.releasedatum).toLocaleDateString("nl-NL")}
                   </span>

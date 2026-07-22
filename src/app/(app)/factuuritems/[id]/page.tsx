@@ -24,7 +24,7 @@ export default async function FactuurItemBewerkenPage({
 
   const laatstBewerktDoor = (item.laatst_bewerkt_door_profiel as unknown as { full_name: string } | null)?.full_name;
 
-  const bewerkbaar = item.medewerker_id === user.id && ["concept", "teruggestuurd"].includes(item.status);
+  const bewerkbaar = item.medewerker_id === user.id && item.status === "aangemaakt";
   if (!bewerkbaar) {
     redirect("/factuuritems");
   }
@@ -39,10 +39,7 @@ export default async function FactuurItemBewerkenPage({
     <div className="flex flex-col gap-6">
       <div>
         <h2 className="text-2xl font-semibold tracking-tight">Factuuritem bewerken</h2>
-        {item.status === "teruggestuurd" && item.terugstuur_reden && (
-          <p className="mt-1 text-sm text-destructive">Teruggestuurd door teamleider: {item.terugstuur_reden}</p>
-        )}
-        <p className="text-sm text-muted-foreground">Pas het factuuritem aan en dien opnieuw in.</p>
+        <p className="text-sm text-muted-foreground">Pas het factuuritem aan.</p>
         {laatstBewerktDoor && (
           <p className="mt-1 text-xs text-muted-foreground">Laatst bewerkt door {laatstBewerktDoor}</p>
         )}

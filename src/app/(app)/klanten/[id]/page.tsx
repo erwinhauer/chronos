@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { euro, isGefactureerd, isNogTeFactureren, regelbedrag } from "@/lib/factuurbedragen";
+import { getCurrentProfile } from "@/lib/supabase/current-profile";
+import { STATUS_LABEL, euro, isGefactureerd, isNogTeFactureren, regelbedrag } from "@/lib/factuurbedragen";
+import { EditKlantDialog } from "@/components/edit-klant-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -13,25 +16,19 @@ import {
 } from "@/components/ui/table";
 import type { FactuurItemStatus } from "@/lib/supabase/types";
 
-const STATUS_LABEL: Record<FactuurItemStatus, string> = {
-  concept: "Concept",
-  ingediend: "Ingediend",
-  teruggestuurd: "Teruggestuurd",
-  goedgekeurd: "Goedgekeurd",
-  in_conceptbatch: "In conceptbatch",
-  batch_goedgekeurd: "Batch goedgekeurd",
-  geexporteerd: "Geëxporteerd",
-  gefactureerd: "Gefactureerd",
-  gecorrigeerd: "Gecorrigeerd",
-};
-
 export default async function KlantDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: klant }, { data: items }] = await Promise.all([
+  const [profile, { data: klant }, { data: items }, { data: facturen }] = await Promise.all([
+    getCurrentProfile(),
     supabase.from("klanten").select("*").eq("id", id).single(),
     supabase.from("factuuritems").select("honorarium, externe_kosten, korting, status, declarabel").eq("klant_id", id),
+    supabase
+      .from("facturatiebatches")
+      .select("id, periode_start, periode_eind, totaal_bedrag, valuta, created_at")
+      .eq("klant_id", id)
+      .order("periode_start", { ascending: false }),
   ]);
 
   if (!klant) notFound();
@@ -59,9 +56,12 @@ export default async function KlantDetailPage({ params }: { params: Promise<{ id
             {klant.contactpersoon_naam} &middot; {klant.contact_email}
           </p>
         </div>
-        <Badge variant={klant.status === "actief" ? "default" : "outline"}>
-          {klant.status === "actief" ? "Actief" : "Inactief"}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant={klant.status === "actief" ? "default" : "outline"}>
+            {klant.status === "actief" ? "Actief" : "Inactief"}
+          </Badge>
+          {profile?.role === "beheerder" && <EditKlantDialog klant={klant} />}
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -70,7 +70,7 @@ export default async function KlantDetailPage({ params }: { params: Promise<{ id
             <CardTitle className="text-sm font-medium text-muted-foreground">Nog te factureren</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-semibold tabular-figures">{euro(nogTeFactureren)}</div>
+            <div className="text-2xl font-semibold tabular-figures text-warning">{euro(nogTeFactureren)}</div>
           </CardContent>
         </Card>
         <Card>
@@ -78,7 +78,7 @@ export default async function KlantDetailPage({ params }: { params: Promise<{ id
             <CardTitle className="text-sm font-medium text-muted-foreground">Gefactureerd</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-semibold tabular-figures">{euro(gefactureerd)}</div>
+            <div className="text-2xl font-semibold tabular-figures text-success">{euro(gefactureerd)}</div>
           </CardContent>
         </Card>
       </div>
@@ -109,6 +109,47 @@ export default async function KlantDetailPage({ params }: { params: Promise<{ id
                 <TableRow>
                   <TableCell colSpan={3} className="py-10 text-center text-sm text-muted-foreground">
                     Nog geen factuuritems voor deze klant.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Facturen</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Periode</TableHead>
+                <TableHead className="text-right">Bedrag</TableHead>
+                <TableHead className="text-right">Specificatie</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {facturen && facturen.length > 0 ? (
+                facturen.map((f) => (
+                  <TableRow key={f.id}>
+                    <TableCell>
+                      {new Date(f.periode_start).toLocaleDateString("nl-NL")} –{" "}
+                      {new Date(f.periode_eind).toLocaleDateString("nl-NL")}
+                    </TableCell>
+                    <TableCell className="text-right tabular-figures">{euro(f.totaal_bedrag)}</TableCell>
+                    <TableCell className="text-right">
+                      <Link href={`/facturatiebatches/${f.id}`} className="text-sm text-primary hover:underline">
+                        Bekijken
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={3} className="py-10 text-center text-sm text-muted-foreground">
+                    Nog geen facturen voor deze klant.
                   </TableCell>
                 </TableRow>
               )}

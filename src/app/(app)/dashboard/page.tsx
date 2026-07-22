@@ -2,8 +2,12 @@ import { Users, Receipt, PiggyBank, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { euro, isGefactureerd, isNogTeFactureren, regelbedrag } from "@/lib/factuurbedragen";
+import { OmzetGrafiek, type OmzetRij } from "@/components/omzet-grafiek";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LinkButton } from "@/components/link-button";
+
+const MAANDEN = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+const MAX_SERIES = 5;
 
 function firstName(fullName: string) {
   return fullName.split(" ")[0];
@@ -12,11 +16,15 @@ function firstName(fullName: string) {
 export default async function DashboardPage() {
   const supabase = await createClient();
   const profile = await getCurrentProfile();
+  const huidigJaar = new Date().getFullYear();
 
-  const [{ count: klantenCount }, { data: items }, { data: teamRows }] = await Promise.all([
+  const [{ count: klantenCount }, { data: items }] = await Promise.all([
     supabase.from("klanten").select("*", { count: "exact", head: true }).eq("status", "actief"),
-    supabase.from("factuuritems").select("medewerker_id, honorarium, externe_kosten, korting, status, declarabel"),
-    supabase.from("team_members").select("team_id, profile_id, teams(naam), profiles(full_name)"),
+    supabase
+      .from("factuuritems")
+      .select(
+        "medewerker_id, honorarium, externe_kosten, korting, status, declarabel, datum, profiles!factuuritems_medewerker_id_fkey(full_name)"
+      ),
   ]);
 
   const rows = items ?? [];
@@ -25,26 +33,41 @@ export default async function DashboardPage() {
     .reduce((sum, r) => sum + regelbedrag(r), 0);
   const gefactureerd = rows.filter((r) => isGefactureerd(r.status)).reduce((sum, r) => sum + regelbedrag(r), 0);
 
-  const gefactureerdPerMedewerker = new Map<string, number>();
-  for (const r of rows) {
-    if (!isGefactureerd(r.status)) continue;
-    gefactureerdPerMedewerker.set(r.medewerker_id, (gefactureerdPerMedewerker.get(r.medewerker_id) ?? 0) + regelbedrag(r));
+  const ditJaar = rows.filter((r) => isGefactureerd(r.status) && new Date(r.datum).getFullYear() === huidigJaar);
+  const totaalDitJaar = ditJaar.reduce((sum, r) => sum + regelbedrag(r), 0);
+
+  const totaalPerMedewerker = new Map<string, { naam: string; totaal: number }>();
+  for (const r of ditJaar) {
+    const naam = (r.profiles as unknown as { full_name: string } | null)?.full_name ?? "Onbekend";
+    const bestaand = totaalPerMedewerker.get(r.medewerker_id) ?? { naam, totaal: 0 };
+    bestaand.totaal += regelbedrag(r);
+    totaalPerMedewerker.set(r.medewerker_id, bestaand);
   }
 
-  type Team = { naam: string; leden: Map<string, string> };
-  const teams = new Map<string, Team>();
-  for (const row of teamRows ?? []) {
-    const teamNaam = (row.teams as unknown as { naam: string } | null)?.naam ?? "Onbekend team";
-    const ledenNaam = (row.profiles as unknown as { full_name: string } | null)?.full_name ?? "Onbekend";
-    const team = teams.get(row.team_id) ?? { naam: teamNaam, leden: new Map() };
-    team.leden.set(row.profile_id, ledenNaam);
-    teams.set(row.team_id, team);
-  }
-
-  const isManagement = profile?.role === "finance" || profile?.role === "beheerder";
-  const zichtbareTeams = Array.from(teams.entries()).filter(
-    ([, team]) => isManagement || (profile && team.leden.has(profile.id))
+  // Vaste, alfabetische volgorde (nooit op waarde gesorteerd — anders verschuiven kleuren
+  // van betekenis tussen renders). Boven de 5 series vouwen de kleinste samen tot "Overig".
+  const gesorteerdOpNaam = Array.from(totaalPerMedewerker.entries()).sort((a, b) =>
+    a[1].naam.localeCompare(b[1].naam)
   );
+  const topMedewerkers = gesorteerdOpNaam.slice(0, MAX_SERIES).map(([id, v]) => ({ id, naam: v.naam }));
+  const overigeIds = new Set(gesorteerdOpNaam.slice(MAX_SERIES).map(([id]) => id));
+  const medewerkerNamen = topMedewerkers.map((m) => m.naam).concat(overigeIds.size > 0 ? ["Overig"] : []);
+
+  const chartData: OmzetRij[] = MAANDEN.map((maand) => {
+    const rij: OmzetRij = { maand };
+    for (const m of topMedewerkers) rij[m.naam] = 0;
+    if (overigeIds.size > 0) rij["Overig"] = 0;
+    return rij;
+  });
+
+  for (const r of ditJaar) {
+    const maandIndex = new Date(r.datum).getMonth();
+    const naam = overigeIds.has(r.medewerker_id)
+      ? "Overig"
+      : topMedewerkers.find((m) => m.id === r.medewerker_id)?.naam;
+    if (!naam) continue;
+    chartData[maandIndex][naam] = (chartData[maandIndex][naam] as number) + regelbedrag(r);
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -77,7 +100,7 @@ export default async function DashboardPage() {
             <Receipt className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-semibold tabular-figures">{euro(nogTeFactureren)}</div>
+            <div className="text-2xl font-semibold tabular-figures text-warning">{euro(nogTeFactureren)}</div>
           </CardContent>
         </Card>
         <Card>
@@ -86,34 +109,29 @@ export default async function DashboardPage() {
             <PiggyBank className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-semibold tabular-figures">{euro(gefactureerd)}</div>
+            <div className="text-2xl font-semibold tabular-figures text-success">{euro(gefactureerd)}</div>
           </CardContent>
         </Card>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Gefactureerd per teamlid</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
+          <div>
+            <CardTitle className="text-base">Omzet per teamlid</CardTitle>
+            <p className="text-sm text-muted-foreground">Gefactureerd per maand, {huidigJaar}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-muted-foreground">Totaal {huidigJaar}</p>
+            <p className="text-xl font-semibold tabular-figures">{euro(totaalDitJaar)}</p>
+          </div>
         </CardHeader>
-        <CardContent className="flex flex-col gap-5">
-          {zichtbareTeams.length > 0 ? (
-            zichtbareTeams.map(([teamId, team]) => (
-              <div key={teamId} className="flex flex-col gap-2">
-                <h3 className="text-sm font-semibold">{team.naam}</h3>
-                <ul className="flex flex-col divide-y divide-border rounded-lg border border-border">
-                  {Array.from(team.leden.entries()).map(([profileId, naam]) => (
-                    <li key={profileId} className="flex items-center justify-between px-3 py-2 text-sm">
-                      <span>{naam}</span>
-                      <span className="tabular-figures font-medium">
-                        {euro(gefactureerdPerMedewerker.get(profileId) ?? 0)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))
+        <CardContent>
+          {medewerkerNamen.length > 0 ? (
+            <OmzetGrafiek data={chartData} medewerkerNamen={medewerkerNamen} />
           ) : (
-            <p className="py-6 text-center text-sm text-muted-foreground">Nog geen teams aangemaakt.</p>
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              Nog geen gefactureerde factuuritems in {huidigJaar}.
+            </p>
           )}
         </CardContent>
       </Card>

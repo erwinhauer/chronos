@@ -176,7 +176,6 @@ export type Database = {
           status: Database["public"]["Enums"]["factuuritem_status"]
           tarief: number | null
           tarief_afwijkend: boolean
-          terugstuur_reden: string | null
           type_dienst: string | null
           updated_at: string
         }
@@ -202,7 +201,6 @@ export type Database = {
           status?: Database["public"]["Enums"]["factuuritem_status"]
           tarief?: number | null
           tarief_afwijkend?: boolean
-          terugstuur_reden?: string | null
           type_dienst?: string | null
           updated_at?: string
         }
@@ -228,7 +226,6 @@ export type Database = {
           status?: Database["public"]["Enums"]["factuuritem_status"]
           tarief?: number | null
           tarief_afwijkend?: boolean
-          terugstuur_reden?: string | null
           type_dienst?: string | null
           updated_at?: string
         }
@@ -626,16 +623,7 @@ export type Database = {
         | "batch_goedgekeurd"
         | "geexporteerd"
         | "gefactureerd"
-      factuuritem_status:
-        | "concept"
-        | "ingediend"
-        | "teruggestuurd"
-        | "goedgekeurd"
-        | "in_conceptbatch"
-        | "batch_goedgekeurd"
-        | "geexporteerd"
-        | "gefactureerd"
-        | "gecorrigeerd"
+      factuuritem_status: "aangemaakt" | "definitief"
       klant_status: "actief" | "inactief"
       specificatietaal: "nl" | "en"
       specificatietype: "simple" | "extended"
@@ -787,17 +775,7 @@ export const Constants = {
         "geexporteerd",
         "gefactureerd",
       ],
-      factuuritem_status: [
-        "concept",
-        "ingediend",
-        "teruggestuurd",
-        "goedgekeurd",
-        "in_conceptbatch",
-        "batch_goedgekeurd",
-        "geexporteerd",
-        "gefactureerd",
-        "gecorrigeerd",
-      ],
+      factuuritem_status: ["aangemaakt", "definitief"],
       klant_status: ["actief", "inactief"],
       specificatietaal: ["nl", "en"],
       specificatietype: ["simple", "extended"],

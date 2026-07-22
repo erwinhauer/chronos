@@ -38,7 +38,7 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
 
   return (
     <div className="flex min-h-screen">
-      <aside className="hidden w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground lg:flex">
+      <aside className="hidden w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground lg:flex print:hidden">
         <div className="flex h-16 items-center px-5">
           <ChronosLogo className="text-sidebar-foreground" />
         </div>
@@ -75,7 +75,7 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
       </Sheet>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-background px-4 lg:px-6">
+        <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-background px-4 lg:px-6 print:hidden">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
@@ -111,7 +111,7 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
           </DropdownMenu>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6 print:overflow-visible print:p-0">{children}</main>
       </div>
     </div>
   );

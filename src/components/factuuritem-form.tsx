@@ -164,6 +164,7 @@ export function FactuurItemForm({
                   <Label htmlFor="dossiernummer_input">Dossier</Label>
                   <Input
                     id="dossiernummer_input"
+                    className="font-mono"
                     value={dossiernummer}
                     onChange={(e) => setDossiernummer(e.target.value.toUpperCase())}
                     placeholder={DOSSIERNUMMER_VOORBEELD}
@@ -287,9 +288,7 @@ export function FactuurItemForm({
                     <p className="text-xs text-muted-foreground">
                       Voorgesteld tarief: {euro(voorgesteldTarief)}
                       {tariefWijktAf && (
-                        <span className="ml-1 font-medium text-coral-foreground">
-                          — wijkt af, wordt gelogd
-                        </span>
+                        <span className="ml-1 font-medium text-warning">— wijkt af, wordt gelogd</span>
                       )}
                     </p>
                   )}
@@ -360,12 +359,9 @@ export function FactuurItemForm({
                 </p>
               </CardContent>
             )}
-            <CardFooter className="flex flex-col gap-2">
-              <Button type="submit" name="actie" value="concept" variant="outline" disabled={pending} className="w-full">
-                Opslaan als concept
-              </Button>
-              <Button type="submit" name="actie" value="indienen" disabled={pending} className="w-full">
-                {pending ? "Bezig…" : "Opslaan en indienen"}
+            <CardFooter>
+              <Button type="submit" disabled={pending} className="w-full">
+                {pending ? "Bezig…" : initial ? "Wijzigingen opslaan" : "Factuuritem aanmaken"}
               </Button>
             </CardFooter>
           </Card>

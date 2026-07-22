@@ -1,57 +1,17 @@
 import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
-import { submitFactuurItem } from "@/actions/factuuritems";
-import { landNaamVoorIso } from "@/lib/dossiernummer";
-import { Button } from "@/components/ui/button";
+import { euro, isNogTeFactureren, regelbedrag } from "@/lib/factuurbedragen";
+import { FactuurGroep, type FactuurGroepItem } from "@/components/factuur-groep";
 import { LinkButton } from "@/components/link-button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Card, CardContent } from "@/components/ui/card";
 import type { FactuurItemStatus } from "@/lib/supabase/types";
-
-const STATUS_LABEL: Record<FactuurItemStatus, string> = {
-  concept: "Concept",
-  ingediend: "Ingediend",
-  teruggestuurd: "Teruggestuurd",
-  goedgekeurd: "Goedgekeurd",
-  in_conceptbatch: "In conceptbatch",
-  batch_goedgekeurd: "Batch goedgekeurd",
-  geexporteerd: "Geëxporteerd",
-  gefactureerd: "Gefactureerd",
-  gecorrigeerd: "Gecorrigeerd",
-};
-
-const STATUS_VARIANT: Record<FactuurItemStatus, "default" | "secondary" | "destructive" | "outline"> = {
-  concept: "outline",
-  ingediend: "secondary",
-  teruggestuurd: "destructive",
-  goedgekeurd: "default",
-  in_conceptbatch: "secondary",
-  batch_goedgekeurd: "default",
-  geexporteerd: "secondary",
-  gefactureerd: "default",
-  gecorrigeerd: "outline",
-};
 
 const FILTERS: { value: string; label: string }[] = [
   { value: "", label: "Alle" },
-  { value: "concept", label: "Concept" },
-  { value: "ingediend", label: "Ingediend" },
-  { value: "teruggestuurd", label: "Teruggestuurd" },
-  { value: "goedgekeurd", label: "Goedgekeurd" },
+  { value: "aangemaakt", label: "Aangemaakt" },
+  { value: "definitief", label: "Definitief" },
 ];
-
-function euro(n: number) {
-  return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n);
-}
 
 export default async function FactuuritemsPage({
   searchParams,
@@ -65,7 +25,7 @@ export default async function FactuuritemsPage({
   let query = supabase
     .from("factuuritems")
     .select(
-      "id, datum, dossiernummer, type_dienst, land, omschrijving_klant, eenheidstype, qty, honorarium, externe_kosten, korting, status, terugstuur_reden, medewerker_id, klant_id, klanten(naam), profiles!factuuritems_medewerker_id_fkey(full_name), laatst_bewerkt_door_profiel:profiles!factuuritems_laatst_bewerkt_door_fkey(full_name)"
+      "id, datum, dossiernummer, type_dienst, land, omschrijving_klant, eenheidstype, qty, honorarium, externe_kosten, korting, status, declarabel, medewerker_id, klant_id, klanten(naam), profiles!factuuritems_medewerker_id_fkey(full_name), laatst_bewerkt_door_profiel:profiles!factuuritems_laatst_bewerkt_door_fkey(full_name)"
     )
     .order("datum", { ascending: false });
 
@@ -75,19 +35,47 @@ export default async function FactuuritemsPage({
 
   const { data: items } = await query;
   const toonMedewerker = profile?.role !== "medewerker";
+  const kanFactureren = profile?.role === "finance" || profile?.role === "beheerder";
 
-  type Item = NonNullable<typeof items>[number];
-  const groepen = new Map<string, { klantNaam: string; items: Item[] }>();
+  const groepen = new Map<string, { klantNaam: string; items: FactuurGroepItem[] }>();
   for (const item of items ?? []) {
     const klantNaam = (item.klanten as unknown as { naam: string } | null)?.naam ?? "Onbekend";
+    const medewerkerNaam = (item.profiles as unknown as { full_name: string } | null)?.full_name ?? null;
+    const laatstBewerktDoor =
+      (item.laatst_bewerkt_door_profiel as unknown as { full_name: string } | null)?.full_name ?? null;
+
+    const genormaliseerd: FactuurGroepItem = {
+      id: item.id,
+      datum: item.datum,
+      dossiernummer: item.dossiernummer,
+      type_dienst: item.type_dienst,
+      land: item.land,
+      omschrijving_klant: item.omschrijving_klant,
+      eenheidstype: item.eenheidstype,
+      qty: item.qty,
+      honorarium: item.honorarium,
+      externe_kosten: item.externe_kosten,
+      korting: item.korting,
+      status: item.status,
+      medewerkerId: item.medewerker_id,
+      medewerkerNaam,
+      laatstBewerktDoor,
+    };
+
     const bestaand = groepen.get(item.klant_id);
     if (bestaand) {
-      bestaand.items.push(item);
+      bestaand.items.push(genormaliseerd);
     } else {
-      groepen.set(item.klant_id, { klantNaam, items: [item] });
+      groepen.set(item.klant_id, { klantNaam, items: [genormaliseerd] });
     }
   }
-  const groepenArray = Array.from(groepen.values()).sort((a, b) => a.klantNaam.localeCompare(b.klantNaam));
+  const groepenArray = Array.from(groepen.entries())
+    .map(([klantId, groep]) => ({ klantId, ...groep }))
+    .sort((a, b) => a.klantNaam.localeCompare(b.klantNaam));
+
+  const totaalOpenstaand = (items ?? [])
+    .filter((r) => isNogTeFactureren(r.status, r.declarabel))
+    .reduce((sum, r) => sum + regelbedrag(r), 0);
 
   return (
     <div className="flex flex-col gap-6">
@@ -105,6 +93,13 @@ export default async function FactuuritemsPage({
           Nieuw factuuritem
         </LinkButton>
       </div>
+
+      <Card>
+        <CardContent className="flex flex-wrap items-center justify-between gap-4 py-4">
+          <span className="text-sm text-muted-foreground">Totaal openstaand (alle klanten)</span>
+          <span className="text-xl font-semibold tabular-figures text-warning">{euro(totaalOpenstaand)}</span>
+        </CardContent>
+      </Card>
 
       <div className="flex flex-wrap gap-2">
         {FILTERS.map((f) => (
@@ -126,103 +121,17 @@ export default async function FactuuritemsPage({
           </CardContent>
         </Card>
       ) : (
-        groepenArray.map((groep) => {
-          const subtotaalHonorarium = groep.items.reduce((sum, r) => sum + r.honorarium, 0);
-          const subtotaalKosten = groep.items.reduce((sum, r) => sum + r.externe_kosten, 0);
-          const subtotaalKorting = groep.items.reduce((sum, r) => sum + r.korting, 0);
-          const subtotaalTotaal = subtotaalHonorarium + subtotaalKosten - subtotaalKorting;
-
-          return (
-            <Card key={groep.klantNaam}>
-              <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
-                <CardTitle className="text-base">{groep.klantNaam}</CardTitle>
-                <div className="text-right text-sm">
-                  <div className="text-muted-foreground">
-                    Honorarium {euro(subtotaalHonorarium)} · Kosten van derden {euro(subtotaalKosten)} · Korting -
-                    {euro(subtotaalKorting)}
-                  </div>
-                  <div className="font-semibold tabular-figures">Subtotaal {euro(subtotaalTotaal)}</div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Datum</TableHead>
-                      <TableHead>Dossier</TableHead>
-                      {toonMedewerker && <TableHead>Medewerker</TableHead>}
-                      <TableHead>Omschrijving</TableHead>
-                      <TableHead>Qty</TableHead>
-                      <TableHead>Bedrag</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Acties</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {groep.items.map((r) => {
-                      const medewerker = r.profiles as unknown as { full_name: string } | null;
-                      const laatstBewerktDoor = (
-                        r.laatst_bewerkt_door_profiel as unknown as { full_name: string } | null
-                      )?.full_name;
-                      const bewerkbaar =
-                        r.medewerker_id === profile?.id && ["concept", "teruggestuurd"].includes(r.status);
-                      const regelbedrag = r.honorarium + r.externe_kosten - r.korting;
-
-                      return (
-                        <TableRow key={r.id}>
-                          <TableCell className="whitespace-nowrap text-muted-foreground">
-                            {new Date(r.datum).toLocaleDateString("nl-NL")}
-                          </TableCell>
-                          <TableCell>
-                            <div className="font-medium">{r.dossiernummer}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {r.type_dienst}
-                              {r.land ? ` · ${landNaamVoorIso(r.land)}` : ""}
-                            </div>
-                          </TableCell>
-                          {toonMedewerker && <TableCell>{medewerker?.full_name}</TableCell>}
-                          <TableCell className="max-w-xs truncate" title={r.omschrijving_klant}>
-                            {r.omschrijving_klant}
-                            {laatstBewerktDoor && (
-                              <div className="text-xs font-normal text-muted-foreground">
-                                Laatst bewerkt door {laatstBewerktDoor}
-                              </div>
-                            )}
-                          </TableCell>
-                          <TableCell className="tabular-figures">
-                            {r.qty} {r.eenheidstype}
-                          </TableCell>
-                          <TableCell className="tabular-figures">{euro(regelbedrag)}</TableCell>
-                          <TableCell>
-                            <Badge variant={STATUS_VARIANT[r.status]} className="text-xs">
-                              {STATUS_LABEL[r.status]}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {bewerkbaar && (
-                              <div className="flex justify-end gap-2">
-                                <LinkButton size="sm" variant="outline" href={`/factuuritems/${r.id}`}>
-                                  Bewerken
-                                </LinkButton>
-                                {r.status === "concept" && (
-                                  <form action={submitFactuurItem.bind(null, r.id)}>
-                                    <Button size="sm" type="submit">
-                                      Indienen
-                                    </Button>
-                                  </form>
-                                )}
-                              </div>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          );
-        })
+        groepenArray.map((groep) => (
+          <FactuurGroep
+            key={groep.klantId}
+            klantId={groep.klantId}
+            klantNaam={groep.klantNaam}
+            items={groep.items}
+            toonMedewerker={toonMedewerker}
+            kanFactureren={kanFactureren}
+            huidigeGebruikerId={profile?.id}
+          />
+        ))
       )}
     </div>
   );

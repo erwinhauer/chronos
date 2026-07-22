@@ -32,7 +32,6 @@ function parseInput(formData: FormData) {
   const korting = round2(Number(formData.get("korting") ?? 0));
   const kantoorkosten_van_toepassing = formData.get("kantoorkosten_van_toepassing") === "on";
   const declarabel = formData.get("declarabel") === "on";
-  const actie = String(formData.get("actie") ?? "concept");
 
   return {
     klant_id,
@@ -49,7 +48,6 @@ function parseInput(formData: FormData) {
     korting,
     kantoorkosten_van_toepassing,
     declarabel,
-    actie,
   };
 }
 
@@ -58,7 +56,7 @@ function mapDbError(error: { code?: string; message: string }) {
     return "Korting mag niet hoger zijn dan honorarium plus externe kosten.";
   }
   if (error.code === "42501") {
-    return "Dit factuuritem kan niet meer worden gewijzigd (mogelijk al goedgekeurd of gefactureerd).";
+    return "Dit factuuritem kan niet meer worden gewijzigd (al definitief/gefactureerd).";
   }
   return "Opslaan is mislukt. Controleer de ingevulde gegevens en probeer het opnieuw.";
 }
@@ -112,7 +110,6 @@ export async function createFactuurItem(
   }
 
   const afwijkend = !input.vastHonorarium && tariefWijktAf(voorgesteldTarief, input.tarief);
-  const status = input.actie === "indienen" ? "ingediend" : "concept";
 
   const { error } = await supabase.from("factuuritems").insert({
     klant_id: input.klant_id,
@@ -132,7 +129,6 @@ export async function createFactuurItem(
     korting: input.korting,
     kantoorkosten_van_toepassing: input.kantoorkosten_van_toepassing,
     declarabel: input.declarabel,
-    status,
   });
 
   if (error) {
@@ -189,7 +185,6 @@ export async function updateFactuurItem(
   }
 
   const afwijkend = !input.vastHonorarium && tariefWijktAf(voorgesteldTarief, input.tarief);
-  const status = input.actie === "indienen" ? "ingediend" : "concept";
 
   const { error } = await supabase
     .from("factuuritems")
@@ -210,8 +205,6 @@ export async function updateFactuurItem(
       korting: input.korting,
       kantoorkosten_van_toepassing: input.kantoorkosten_van_toepassing,
       declarabel: input.declarabel,
-      status,
-      terugstuur_reden: status === "concept" ? null : undefined,
     })
     .eq("id", id);
 
@@ -222,14 +215,4 @@ export async function updateFactuurItem(
   revalidatePath("/factuuritems");
   revalidatePath("/dashboard");
   redirect("/factuuritems");
-}
-
-export async function submitFactuurItem(id: string) {
-  const supabase = await createClient();
-  const { error } = await supabase.from("factuuritems").update({ status: "ingediend" }).eq("id", id);
-  if (error) {
-    throw new Error(mapDbError(error));
-  }
-  revalidatePath("/factuuritems");
-  revalidatePath("/dashboard");
 }
