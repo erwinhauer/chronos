@@ -39,7 +39,7 @@ export async function createFacturatiebatch(
 
   const { data: items, error: itemsError } = await supabase
     .from("factuuritems")
-    .select("id, honorarium, externe_kosten, korting, kantoorkosten_van_toepassing")
+    .select("id, honorarium, externe_kosten, korting, kantoorkosten_van_toepassing, project_id")
     .eq("klant_id", klant_id)
     .eq("status", "aangemaakt")
     .in("id", itemIds);
@@ -53,6 +53,15 @@ export async function createFacturatiebatch(
       success: false,
     };
   }
+
+  const projectIds = new Set(items.map((i) => i.project_id ?? null));
+  if (projectIds.size > 1) {
+    return {
+      error: "Alle geselecteerde items moeten tot hetzelfde project behoren (of geen project hebben) om samen gefactureerd te worden.",
+      success: false,
+    };
+  }
+  const project_id = items[0]?.project_id ?? null;
 
   const totaalHonorarium = round2(items.reduce((som, i) => som + i.honorarium, 0));
   const totaalExterneKosten = round2(items.reduce((som, i) => som + i.externe_kosten, 0));
@@ -73,6 +82,7 @@ export async function createFacturatiebatch(
     .from("facturatiebatches")
     .insert({
       klant_id,
+      project_id,
       periode_start,
       periode_eind,
       status: "gefactureerd",

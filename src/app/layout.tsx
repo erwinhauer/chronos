@@ -1,15 +1,9 @@
 import type { Metadata } from "next";
-import { Inter, Inconsolata } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({
   variable: "--font-sans",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-const inconsolata = Inconsolata({
-  variable: "--font-mono",
   subsets: ["latin"],
   display: "swap",
 });
@@ -25,11 +19,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="nl"
-      className={`${inter.variable} ${inconsolata.variable} h-full antialiased`}
-      suppressHydrationWarning
-    >
+    <html lang="nl" className={`${inter.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full flex flex-col bg-background text-foreground font-sans">
         {children}
       </body>

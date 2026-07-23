@@ -1,9 +1,10 @@
-import { Plus } from "lucide-react";
+import { Plus, Receipt } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { euro, isNogTeFactureren, regelbedrag } from "@/lib/factuurbedragen";
 import { FactuurGroep, type FactuurGroepItem } from "@/components/factuur-groep";
 import { LinkButton } from "@/components/link-button";
+import { StatIcon } from "@/components/stat-icon";
 import { Card, CardContent } from "@/components/ui/card";
 import type { FactuurItemStatus } from "@/lib/supabase/types";
 
@@ -25,7 +26,7 @@ export default async function FactuuritemsPage({
   let query = supabase
     .from("factuuritems")
     .select(
-      "id, datum, dossiernummer, type_dienst, land, omschrijving_klant, eenheidstype, qty, honorarium, externe_kosten, korting, status, declarabel, medewerker_id, klant_id, klanten(naam), profiles!factuuritems_medewerker_id_fkey(full_name), laatst_bewerkt_door_profiel:profiles!factuuritems_laatst_bewerkt_door_fkey(full_name)"
+      "id, datum, omschrijving_klant, eenheidstype, qty, honorarium, externe_kosten, korting, status, declarabel, medewerker_id, klant_id, project_id, klanten(naam), projecten(naam, po_nummer), profiles!factuuritems_medewerker_id_fkey(full_name), laatst_bewerkt_door_profiel:profiles!factuuritems_laatst_bewerkt_door_fkey(full_name), factuuritem_dossiers(dossiernummer, type_dienst, land, volgorde)"
     )
     .order("datum", { ascending: false });
 
@@ -40,16 +41,19 @@ export default async function FactuuritemsPage({
   const groepen = new Map<string, { klantNaam: string; items: FactuurGroepItem[] }>();
   for (const item of items ?? []) {
     const klantNaam = (item.klanten as unknown as { naam: string } | null)?.naam ?? "Onbekend";
+    const project = item.projecten as unknown as { naam: string; po_nummer: string | null } | null;
     const medewerkerNaam = (item.profiles as unknown as { full_name: string } | null)?.full_name ?? null;
     const laatstBewerktDoor =
       (item.laatst_bewerkt_door_profiel as unknown as { full_name: string } | null)?.full_name ?? null;
+    const dossiers = (item.factuuritem_dossiers ?? [])
+      .slice()
+      .sort((a, b) => a.volgorde - b.volgorde)
+      .map((d) => ({ dossiernummer: d.dossiernummer, type_dienst: d.type_dienst, land: d.land }));
 
     const genormaliseerd: FactuurGroepItem = {
       id: item.id,
       datum: item.datum,
-      dossiernummer: item.dossiernummer,
-      type_dienst: item.type_dienst,
-      land: item.land,
+      dossiers,
       omschrijving_klant: item.omschrijving_klant,
       eenheidstype: item.eenheidstype,
       qty: item.qty,
@@ -60,6 +64,9 @@ export default async function FactuuritemsPage({
       medewerkerId: item.medewerker_id,
       medewerkerNaam,
       laatstBewerktDoor,
+      projectId: item.project_id,
+      projectNaam: project?.naam ?? null,
+      projectPoNummer: project?.po_nummer ?? null,
     };
 
     const bestaand = groepen.get(item.klant_id);
@@ -96,7 +103,10 @@ export default async function FactuuritemsPage({
 
       <Card>
         <CardContent className="flex flex-wrap items-center justify-between gap-4 py-4">
-          <span className="text-sm text-muted-foreground">Totaal openstaand (alle klanten)</span>
+          <div className="flex items-center gap-3">
+            <StatIcon icon={Receipt} tint="warning" />
+            <span className="text-sm text-muted-foreground">Totaal openstaand (alle klanten)</span>
+          </div>
           <span className="text-xl font-semibold tabular-figures text-warning">{euro(totaalOpenstaand)}</span>
         </CardContent>
       </Card>

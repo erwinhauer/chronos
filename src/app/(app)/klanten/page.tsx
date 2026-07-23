@@ -19,7 +19,7 @@ export default async function KlantenPage() {
   const { data: klanten } = await supabase
     .from("klanten")
     .select(
-      "id, naam, status, contactpersoon_naam, contact_email, specificatietaal, specificatietype, kantoorkosten_actief, kantoorkosten_percentage, valuta"
+      "id, naam, subtitel, status, contactpersoon_naam, contact_email, specificatietaal, specificatietype, kantoorkosten_actief, kantoorkosten_percentage, valuta"
     )
     .order("naam");
 
@@ -57,6 +57,7 @@ export default async function KlantenPage() {
                       <Link href={`/klanten/${k.id}`} className="hover:underline">
                         {k.naam}
                       </Link>
+                      {k.subtitel && <div className="text-xs font-normal text-muted-foreground">{k.subtitel}</div>}
                     </TableCell>
                     <TableCell>
                       <div>{k.contactpersoon_naam ?? "—"}</div>

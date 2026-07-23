@@ -3,6 +3,7 @@
 import { useActionState, useState, useTransition } from "react";
 import { Plus } from "lucide-react";
 import { createTeam, setTeamLeden, type TeamFormState } from "@/actions/admin";
+import { setTeamdoel } from "@/actions/teamdoelen";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,10 +26,14 @@ export function TeamsTab({
   teams,
   profiles,
   ledenPerTeam,
+  doelPerTeam,
+  jaar,
 }: {
   teams: Team[];
   profiles: Profile[];
   ledenPerTeam: Record<string, string[]>;
+  doelPerTeam: Record<string, number>;
+  jaar: number;
 }) {
   return (
     <div className="flex flex-col gap-5">
@@ -43,7 +48,14 @@ export function TeamsTab({
           <p className="py-6 text-center text-sm text-muted-foreground">Nog geen teams aangemaakt.</p>
         ) : (
           teams.map((team) => (
-            <TeamRow key={team.id} team={team} profiles={profiles} huidigeLeden={ledenPerTeam[team.id] ?? []} />
+            <TeamRow
+              key={team.id}
+              team={team}
+              profiles={profiles}
+              huidigeLeden={ledenPerTeam[team.id] ?? []}
+              huidigDoel={doelPerTeam[team.id]}
+              jaar={jaar}
+            />
           ))
         )}
       </div>
@@ -51,10 +63,25 @@ export function TeamsTab({
   );
 }
 
-function TeamRow({ team, profiles, huidigeLeden }: { team: Team; profiles: Profile[]; huidigeLeden: string[] }) {
+function TeamRow({
+  team,
+  profiles,
+  huidigeLeden,
+  huidigDoel,
+  jaar,
+}: {
+  team: Team;
+  profiles: Profile[];
+  huidigeLeden: string[];
+  huidigDoel?: number;
+  jaar: number;
+}) {
   const [leden, setLeden] = useState<string[]>(huidigeLeden);
+  const [doel, setDoel] = useState(huidigDoel !== undefined ? String(huidigDoel) : "");
   const [pending, startTransition] = useTransition();
+  const [doelPending, startDoelTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [doelError, setDoelError] = useState<string | null>(null);
 
   return (
     <Card>
@@ -98,6 +125,46 @@ function TeamRow({ team, profiles, huidigeLeden }: { team: Team; profiles: Profi
             {pending ? "Bezig…" : "Leden opslaan"}
           </Button>
         </div>
+
+        <div className="flex items-end gap-3 border-t border-border pt-3">
+          <div className="flex flex-col gap-1">
+            <Label htmlFor={`doel-${team.id}`} className="text-xs text-muted-foreground">
+              Jaardoel {jaar}
+            </Label>
+            <Input
+              id={`doel-${team.id}`}
+              type="number"
+              step="1000"
+              min="0"
+              className="w-40"
+              value={doel}
+              onChange={(e) => setDoel(e.target.value)}
+              placeholder="Bijv. 250000"
+            />
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={doelPending}
+            onClick={() =>
+              startDoelTransition(async () => {
+                setDoelError(null);
+                try {
+                  await setTeamdoel(team.id, jaar, Number(doel));
+                } catch (e) {
+                  setDoelError(e instanceof Error ? e.message : "Opslaan is mislukt.");
+                }
+              })
+            }
+          >
+            {doelPending ? "Bezig…" : "Doel opslaan"}
+          </Button>
+        </div>
+        {doelError && (
+          <p role="alert" className="text-sm text-destructive">
+            {doelError}
+          </p>
+        )}
       </CardContent>
     </Card>
   );

@@ -1,9 +1,12 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { Receipt, PiggyBank } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { STATUS_LABEL, euro, isGefactureerd, isNogTeFactureren, regelbedrag } from "@/lib/factuurbedragen";
 import { EditKlantDialog } from "@/components/edit-klant-dialog";
+import { ProjectenKaart } from "@/components/projecten-kaart";
+import { StatIcon } from "@/components/stat-icon";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -20,7 +23,7 @@ export default async function KlantDetailPage({ params }: { params: Promise<{ id
   const { id } = await params;
   const supabase = await createClient();
 
-  const [profile, { data: klant }, { data: items }, { data: facturen }] = await Promise.all([
+  const [profile, { data: klant }, { data: items }, { data: facturen }, { data: projecten }] = await Promise.all([
     getCurrentProfile(),
     supabase.from("klanten").select("*").eq("id", id).single(),
     supabase.from("factuuritems").select("honorarium, externe_kosten, korting, status, declarabel").eq("klant_id", id),
@@ -29,6 +32,7 @@ export default async function KlantDetailPage({ params }: { params: Promise<{ id
       .select("id, periode_start, periode_eind, totaal_bedrag, valuta, created_at")
       .eq("klant_id", id)
       .order("periode_start", { ascending: false }),
+    supabase.from("projecten").select("id, naam, po_nummer, actief").eq("klant_id", id).order("naam"),
   ]);
 
   if (!klant) notFound();
@@ -52,6 +56,7 @@ export default async function KlantDetailPage({ params }: { params: Promise<{ id
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">{klant.naam}</h2>
+          {klant.subtitel && <p className="text-sm text-muted-foreground">{klant.subtitel}</p>}
           <p className="text-sm text-muted-foreground">
             {klant.contactpersoon_naam} &middot; {klant.contact_email}
           </p>
@@ -64,21 +69,23 @@ export default async function KlantDetailPage({ params }: { params: Promise<{ id
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-6 sm:grid-cols-2">
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Nog te factureren</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold tabular-figures text-warning">{euro(nogTeFactureren)}</div>
+          <CardContent className="flex items-center gap-4">
+            <StatIcon icon={Receipt} tint="warning" />
+            <div>
+              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Nog te factureren</p>
+              <div className="text-2xl font-semibold tabular-figures text-warning">{euro(nogTeFactureren)}</div>
+            </div>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Gefactureerd</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold tabular-figures text-success">{euro(gefactureerd)}</div>
+          <CardContent className="flex items-center gap-4">
+            <StatIcon icon={PiggyBank} tint="success" />
+            <div>
+              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Gefactureerd</p>
+              <div className="text-2xl font-semibold tabular-figures text-success">{euro(gefactureerd)}</div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -158,6 +165,8 @@ export default async function KlantDetailPage({ params }: { params: Promise<{ id
         </CardContent>
       </Card>
 
+      {profile?.role === "beheerder" && <ProjectenKaart klantId={id} projecten={projecten ?? []} />}
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Klantinstellingen</CardTitle>
@@ -179,6 +188,12 @@ export default async function KlantDetailPage({ params }: { params: Promise<{ id
             <span className="text-muted-foreground">Valuta: </span>
             {klant.valuta}
           </div>
+          {klant.opmerkingen && (
+            <div className="sm:col-span-2">
+              <span className="text-muted-foreground">Opmerkingen: </span>
+              <span className="whitespace-pre-line">{klant.opmerkingen}</span>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

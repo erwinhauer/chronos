@@ -11,18 +11,25 @@ export default async function InstellingenPage() {
   if (profile?.role !== "beheerder") redirect("/dashboard");
 
   const supabase = await createClient();
-  const [{ data: profiles }, { data: teams }, { data: teamMembers }, { data: changelog }] = await Promise.all([
-    supabase.from("profiles").select("id, full_name, email, role, actief").order("full_name"),
-    supabase.from("teams").select("id, naam").order("naam"),
-    supabase.from("team_members").select("team_id, profile_id"),
-    supabase.from("productchangelog").select("*").order("releasedatum", { ascending: false }),
-  ]);
+  const jaar = new Date().getFullYear();
+  const [{ data: profiles }, { data: teams }, { data: teamMembers }, { data: changelog }, { data: teamdoelen }] =
+    await Promise.all([
+      supabase.from("profiles").select("id, full_name, email, role, actief, initialen").order("full_name"),
+      supabase.from("teams").select("id, naam").order("naam"),
+      supabase.from("team_members").select("team_id, profile_id"),
+      supabase.from("productchangelog").select("*").order("releasedatum", { ascending: false }),
+      supabase.from("teamdoelen").select("team_id, bedrag").eq("jaar", jaar),
+    ]);
 
   const teamIdsPerProfile: Record<string, string[]> = {};
   const ledenPerTeam: Record<string, string[]> = {};
   for (const row of teamMembers ?? []) {
     (teamIdsPerProfile[row.profile_id] ??= []).push(row.team_id);
     (ledenPerTeam[row.team_id] ??= []).push(row.profile_id);
+  }
+  const doelPerTeam: Record<string, number> = {};
+  for (const row of teamdoelen ?? []) {
+    doelPerTeam[row.team_id] = row.bedrag;
   }
 
   return (
@@ -45,6 +52,8 @@ export default async function InstellingenPage() {
             teams={teams ?? []}
             profiles={(profiles ?? []).map((p) => ({ id: p.id, full_name: p.full_name }))}
             ledenPerTeam={ledenPerTeam}
+            doelPerTeam={doelPerTeam}
+            jaar={jaar}
           />
         </TabsContent>
         <TabsContent value="changelog">

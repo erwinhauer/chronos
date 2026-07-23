@@ -18,16 +18,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { signOut } from "@/actions/auth";
 import { ALL_NAV_ITEMS, NAV_ITEMS_BOTTOM, ROLE_LABELS } from "@/lib/nav";
+import { suggestInitialen } from "@/lib/initials";
 import type { Profile } from "@/lib/supabase/types";
-
-function initials(name: string) {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("");
-}
 
 export function AppShell({ profile, children }: { profile: Profile; children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -93,7 +85,7 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
             <DropdownMenuTrigger className="flex items-center gap-2 rounded-full outline-none ring-ring/50 focus-visible:ring-2">
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-primary text-primary-foreground text-xs font-medium">
-                  {initials(profile.full_name)}
+                  {profile.initialen || suggestInitialen(profile.full_name)}
                 </AvatarFallback>
               </Avatar>
             </DropdownMenuTrigger>

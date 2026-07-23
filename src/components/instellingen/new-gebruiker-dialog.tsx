@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { Plus } from "lucide-react";
 import { createGebruiker, type GebruikerFormState } from "@/actions/admin";
+import { suggestInitialen } from "@/lib/initials";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,7 +46,12 @@ export function NewGebruikerDialog({ teams }: { teams: { id: string; naam: strin
 
 function GebruikerDialogBody({ teams, onDone }: { teams: { id: string; naam: string }[]; onDone: () => void }) {
   const [teamIds, setTeamIds] = useState<string[]>([]);
+  const [fullName, setFullName] = useState("");
+  const [initialen, setInitialen] = useState("");
+  const [initialenHandmatig, setInitialenHandmatig] = useState(false);
   const [state, formAction, pending] = useActionState(createGebruiker, initialState);
+
+  const getoondeInitialen = initialenHandmatig ? initialen : suggestInitialen(fullName);
 
   if (state.success && state.tempWachtwoord) {
     return (
@@ -54,7 +60,7 @@ function GebruikerDialogBody({ teams, onDone }: { teams: { id: string; naam: str
           <DialogTitle>Gebruiker aangemaakt</DialogTitle>
           <DialogDescription>Geef dit tijdelijke wachtwoord door aan {state.email}.</DialogDescription>
         </DialogHeader>
-        <div className="rounded-lg border border-border bg-muted p-3 font-mono text-sm">{state.tempWachtwoord}</div>
+        <div className="rounded-lg border border-border bg-muted p-3 text-sm">{state.tempWachtwoord}</div>
         <DialogFooter>
           <Button onClick={onDone}>Klaar</Button>
         </DialogFooter>
@@ -69,9 +75,25 @@ function GebruikerDialogBody({ teams, onDone }: { teams: { id: string; naam: str
         <DialogDescription>Er wordt direct een account aangemaakt met een tijdelijk wachtwoord.</DialogDescription>
       </DialogHeader>
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="full_name">Naam</Label>
-        <Input id="full_name" name="full_name" required />
+      <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="full_name">Naam</Label>
+          <Input id="full_name" name="full_name" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="initialen">Initialen</Label>
+          <Input
+            id="initialen"
+            name="initialen"
+            className="w-20 uppercase"
+            maxLength={3}
+            value={getoondeInitialen}
+            onChange={(e) => {
+              setInitialenHandmatig(true);
+              setInitialen(e.target.value.toUpperCase().slice(0, 3));
+            }}
+          />
+        </div>
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="email">E-mailadres</Label>

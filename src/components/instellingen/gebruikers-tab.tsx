@@ -5,11 +5,20 @@ import { updateGebruiker, type UpdateGebruikerFormState } from "@/actions/admin"
 import { NewGebruikerDialog } from "./new-gebruiker-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ROLE_LABELS } from "@/lib/nav";
+import { suggestInitialen } from "@/lib/initials";
 import type { UserRole } from "@/lib/supabase/types";
 
-type ProfileRow = { id: string; full_name: string; email: string; role: UserRole; actief: boolean };
+type ProfileRow = {
+  id: string;
+  full_name: string;
+  email: string;
+  role: UserRole;
+  actief: boolean;
+  initialen: string | null;
+};
 type Team = { id: string; naam: string };
 
 export function GebruikersTab({
@@ -51,6 +60,7 @@ function GebruikerRow({
   const [role, setRole] = useState<UserRole>(profile.role);
   const [actief, setActief] = useState(profile.actief);
   const [teamIds, setTeamIds] = useState<string[]>(huidigeTeamIds);
+  const [initialen, setInitialen] = useState(profile.initialen ?? suggestInitialen(profile.full_name));
 
   return (
     <Card>
@@ -66,6 +76,14 @@ function GebruikerRow({
               <div className="font-medium">{profile.full_name}</div>
               <div className="text-xs text-muted-foreground">{profile.email}</div>
             </div>
+            <Input
+              name="initialen"
+              className="w-20 uppercase"
+              maxLength={3}
+              value={initialen}
+              onChange={(e) => setInitialen(e.target.value.toUpperCase().slice(0, 3))}
+              aria-label="Initialen"
+            />
           </div>
 
           <div className="flex flex-wrap items-center gap-4">

@@ -89,6 +89,7 @@ export type Database = {
           klant_id: string
           periode_eind: string
           periode_start: string
+          project_id: string | null
           status: Database["public"]["Enums"]["batch_status"]
           totaal_bedrag: number
           totaal_externe_kosten: number
@@ -108,6 +109,7 @@ export type Database = {
           klant_id: string
           periode_eind: string
           periode_start: string
+          project_id?: string | null
           status?: Database["public"]["Enums"]["batch_status"]
           totaal_bedrag?: number
           totaal_externe_kosten?: number
@@ -127,6 +129,7 @@ export type Database = {
           klant_id?: string
           periode_eind?: string
           periode_start?: string
+          project_id?: string | null
           status?: Database["public"]["Enums"]["batch_status"]
           totaal_bedrag?: number
           totaal_externe_kosten?: number
@@ -151,6 +154,51 @@ export type Database = {
             referencedRelation: "klanten"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "facturatiebatches_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projecten"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      factuuritem_dossiers: {
+        Row: {
+          created_at: string
+          dossiernummer: string
+          factuuritem_id: string
+          id: string
+          land: string | null
+          type_dienst: string | null
+          volgorde: number
+        }
+        Insert: {
+          created_at?: string
+          dossiernummer: string
+          factuuritem_id: string
+          id?: string
+          land?: string | null
+          type_dienst?: string | null
+          volgorde?: number
+        }
+        Update: {
+          created_at?: string
+          dossiernummer?: string
+          factuuritem_id?: string
+          id?: string
+          land?: string | null
+          type_dienst?: string | null
+          volgorde?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "factuuritem_dossiers_factuuritem_id_fkey"
+            columns: ["factuuritem_id"]
+            isOneToOne: false
+            referencedRelation: "factuuritems"
+            referencedColumns: ["id"]
+          },
         ]
       }
       factuuritems: {
@@ -158,7 +206,6 @@ export type Database = {
           created_at: string
           datum: string
           declarabel: boolean
-          dossiernummer: string
           eenheidstype: string
           externe_kosten: number
           facturatiebatch_id: string | null
@@ -169,21 +216,19 @@ export type Database = {
           klant_id: string
           korting: number
           laatst_bewerkt_door: string | null
-          land: string | null
           medewerker_id: string
           omschrijving_klant: string
+          project_id: string | null
           qty: number
           status: Database["public"]["Enums"]["factuuritem_status"]
           tarief: number | null
           tarief_afwijkend: boolean
-          type_dienst: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           datum: string
           declarabel?: boolean
-          dossiernummer: string
           eenheidstype?: string
           externe_kosten?: number
           facturatiebatch_id?: string | null
@@ -194,21 +239,19 @@ export type Database = {
           klant_id: string
           korting?: number
           laatst_bewerkt_door?: string | null
-          land?: string | null
           medewerker_id: string
           omschrijving_klant: string
+          project_id?: string | null
           qty: number
           status?: Database["public"]["Enums"]["factuuritem_status"]
           tarief?: number | null
           tarief_afwijkend?: boolean
-          type_dienst?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           datum?: string
           declarabel?: boolean
-          dossiernummer?: string
           eenheidstype?: string
           externe_kosten?: number
           facturatiebatch_id?: string | null
@@ -219,14 +262,13 @@ export type Database = {
           klant_id?: string
           korting?: number
           laatst_bewerkt_door?: string | null
-          land?: string | null
           medewerker_id?: string
           omschrijving_klant?: string
+          project_id?: string | null
           qty?: number
           status?: Database["public"]["Enums"]["factuuritem_status"]
           tarief?: number | null
           tarief_afwijkend?: boolean
-          type_dienst?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -258,6 +300,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "factuuritems_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projecten"
+            referencedColumns: ["id"]
+          },
         ]
       }
       klanten: {
@@ -280,11 +329,13 @@ export type Database = {
           kolom_tarief_zichtbaar: boolean
           kolom_uren_zichtbaar: boolean
           naam: string
+          opmerkingen: string | null
           patricia_id: string | null
           specificatietaal: Database["public"]["Enums"]["specificatietaal"]
           specificatietype: Database["public"]["Enums"]["specificatietype"]
           standaard_teamleider_id: string | null
           status: Database["public"]["Enums"]["klant_status"]
+          subtitel: string | null
           updated_at: string
           valuta: string
         }
@@ -307,11 +358,13 @@ export type Database = {
           kolom_tarief_zichtbaar?: boolean
           kolom_uren_zichtbaar?: boolean
           naam: string
+          opmerkingen?: string | null
           patricia_id?: string | null
           specificatietaal?: Database["public"]["Enums"]["specificatietaal"]
           specificatietype?: Database["public"]["Enums"]["specificatietype"]
           standaard_teamleider_id?: string | null
           status?: Database["public"]["Enums"]["klant_status"]
+          subtitel?: string | null
           updated_at?: string
           valuta?: string
         }
@@ -334,11 +387,13 @@ export type Database = {
           kolom_tarief_zichtbaar?: boolean
           kolom_uren_zichtbaar?: boolean
           naam?: string
+          opmerkingen?: string | null
           patricia_id?: string | null
           specificatietaal?: Database["public"]["Enums"]["specificatietaal"]
           specificatietype?: Database["public"]["Enums"]["specificatietype"]
           standaard_teamleider_id?: string | null
           status?: Database["public"]["Enums"]["klant_status"]
+          subtitel?: string | null
           updated_at?: string
           valuta?: string
         }
@@ -404,6 +459,7 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          initialen: string | null
           role: Database["public"]["Enums"]["user_role"]
           updated_at: string
         }
@@ -413,6 +469,7 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          initialen?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
         }
@@ -422,10 +479,49 @@ export type Database = {
           email?: string
           full_name?: string
           id?: string
+          initialen?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
         }
         Relationships: []
+      }
+      projecten: {
+        Row: {
+          actief: boolean
+          created_at: string
+          id: string
+          klant_id: string
+          naam: string
+          po_nummer: string | null
+          updated_at: string
+        }
+        Insert: {
+          actief?: boolean
+          created_at?: string
+          id?: string
+          klant_id: string
+          naam: string
+          po_nummer?: string | null
+          updated_at?: string
+        }
+        Update: {
+          actief?: boolean
+          created_at?: string
+          id?: string
+          klant_id?: string
+          naam?: string
+          po_nummer?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projecten_klant_id_fkey"
+            columns: ["klant_id"]
+            isOneToOne: false
+            referencedRelation: "klanten"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       specificaties: {
         Row: {
@@ -559,6 +655,41 @@ export type Database = {
           },
           {
             foreignKeyName: "team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teamdoelen: {
+        Row: {
+          bedrag: number
+          created_at: string
+          id: string
+          jaar: number
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          bedrag: number
+          created_at?: string
+          id?: string
+          jaar: number
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          bedrag?: number
+          created_at?: string
+          id?: string
+          jaar?: number
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teamdoelen_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"

@@ -6,6 +6,7 @@ import { createKlant, type KlantFormState } from "@/actions/klanten";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -41,9 +42,15 @@ export function NewKlantDialog() {
             <DialogDescription>Klantgegevens en specificatie-instellingen.</DialogDescription>
           </DialogHeader>
 
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="naam">Klantnaam</Label>
-            <Input id="naam" name="naam" placeholder="Bijv. Arcadis" required />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="naam">Klantnaam</Label>
+              <Input id="naam" name="naam" placeholder="Bijv. Arcadis" required />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="subtitel">Subtitel (optioneel)</Label>
+              <Input id="subtitel" name="subtitel" placeholder="Korte omschrijving of alias" />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -81,6 +88,11 @@ export function NewKlantDialog() {
             <input type="hidden" name="kantoorkosten_actief" value={kantoorkostenActief ? "on" : ""} />
             Kantoorkosten (6%) van toepassing bij deze klant
           </label>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="opmerkingen">Opmerkingen (optioneel, intern)</Label>
+            <Textarea id="opmerkingen" name="opmerkingen" rows={3} placeholder="Alleen intern zichtbaar." />
+          </div>
 
           {state.error && (
             <p role="alert" className="text-sm text-destructive">

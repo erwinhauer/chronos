@@ -7,7 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import type { UserRole } from "@/lib/supabase/types";
 
-async function assertBeheerder() {
+export async function assertBeheerder() {
   const profile = await getCurrentProfile();
   if (profile?.role !== "beheerder") {
     throw new Error("Alleen beheerders kunnen dit beheren.");
@@ -90,6 +90,7 @@ export async function createGebruiker(
   const full_name = String(formData.get("full_name") ?? "").trim();
   const role = String(formData.get("role") ?? "medewerker") as UserRole;
   const teamIds = formData.getAll("team_ids").map(String);
+  const initialen = String(formData.get("initialen") ?? "").trim().toUpperCase().slice(0, 3);
 
   if (!email || !full_name) {
     return { error: "Naam en e-mailadres zijn verplicht.", success: false };
@@ -113,8 +114,11 @@ export async function createGebruiker(
     };
   }
 
+  const supabase = await createClient();
+  if (initialen) {
+    await supabase.from("profiles").update({ initialen }).eq("id", data.user.id);
+  }
   if (teamIds.length > 0) {
-    const supabase = await createClient();
     await supabase.from("team_members").insert(teamIds.map((team_id) => ({ team_id, profile_id: data.user.id })));
   }
 
@@ -134,9 +138,13 @@ export async function updateGebruiker(
   const role = String(formData.get("role") ?? "") as UserRole;
   const actief = formData.get("actief") === "on";
   const teamIds = formData.getAll("team_ids").map(String);
+  const initialen = String(formData.get("initialen") ?? "").trim().toUpperCase().slice(0, 3);
 
   const supabase = await createClient();
-  const { error } = await supabase.from("profiles").update({ role, actief }).eq("id", profileId);
+  const { error } = await supabase
+    .from("profiles")
+    .update({ role, actief, initialen: initialen || null })
+    .eq("id", profileId);
   if (error) {
     return { error: "Bijwerken van de gebruiker is mislukt.", success: false };
   }

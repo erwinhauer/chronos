@@ -6,6 +6,7 @@ import { updateKlant, type KlantFormState } from "@/actions/klanten";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -20,10 +21,12 @@ import {
 type Klant = {
   id: string;
   naam: string;
+  subtitel: string | null;
   contactpersoon_naam: string | null;
   contact_email: string | null;
   specificatietaal: "nl" | "en";
   kantoorkosten_actief: boolean;
+  opmerkingen: string | null;
 };
 
 const initialState: KlantFormState = { error: null, success: false };
@@ -50,9 +53,15 @@ export function EditKlantDialog({ klant }: { klant: Klant }) {
             <DialogDescription>Klantgegevens en specificatie-instellingen.</DialogDescription>
           </DialogHeader>
 
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="naam">Klantnaam</Label>
-            <Input id="naam" name="naam" defaultValue={klant.naam} required />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="naam">Klantnaam</Label>
+              <Input id="naam" name="naam" defaultValue={klant.naam} required />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="subtitel">Subtitel (optioneel)</Label>
+              <Input id="subtitel" name="subtitel" defaultValue={klant.subtitel ?? ""} placeholder="Korte omschrijving of alias" />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -101,6 +110,17 @@ export function EditKlantDialog({ klant }: { klant: Klant }) {
             <input type="hidden" name="kantoorkosten_actief" value={kantoorkostenActief ? "on" : ""} />
             Kantoorkosten (6%) van toepassing bij deze klant
           </label>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="opmerkingen">Opmerkingen (optioneel, intern)</Label>
+            <Textarea
+              id="opmerkingen"
+              name="opmerkingen"
+              rows={3}
+              defaultValue={klant.opmerkingen ?? ""}
+              placeholder="Alleen intern zichtbaar."
+            />
+          </div>
 
           {state.error && (
             <p role="alert" className="text-sm text-destructive">

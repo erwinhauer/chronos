@@ -14,12 +14,12 @@ const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
 });
 
 const USERS = [
-  { email: "vera.vermeer@chronos.local", full_name: "Vera Vermeer", role: "medewerker" },
-  { email: "anna.aerts@chronos.local", full_name: "Anna Aerts", role: "medewerker" },
-  { email: "lucas.berg@chronos.local", full_name: "Lucas Berg", role: "medewerker" },
-  { email: "tom.teunissen@chronos.local", full_name: "Tom Teunissen", role: "teamleider" },
-  { email: "fatima.faber@chronos.local", full_name: "Fatima Faber", role: "finance" },
-  { email: "bram.beheer@chronos.local", full_name: "Bram Beheer", role: "beheerder" },
+  { email: "vera.vermeer@chronos.local", full_name: "Vera Vermeer", role: "medewerker", initialen: "VVM" },
+  { email: "anna.aerts@chronos.local", full_name: "Anna Aerts", role: "medewerker", initialen: "AA" },
+  { email: "lucas.berg@chronos.local", full_name: "Lucas Berg", role: "medewerker", initialen: "LB" },
+  { email: "tom.teunissen@chronos.local", full_name: "Tom Teunissen", role: "teamleider", initialen: "TT" },
+  { email: "fatima.faber@chronos.local", full_name: "Fatima Faber", role: "finance", initialen: "FF" },
+  { email: "bram.beheer@chronos.local", full_name: "Bram Beheer", role: "beheerder", initialen: "BB" },
 ];
 
 function round2(n) {
@@ -50,6 +50,15 @@ async function main() {
   for (const user of USERS) {
     ids[user.email] = await upsertUser(user);
   }
+
+  for (const user of USERS) {
+    const { error: initialenError } = await admin
+      .from("profiles")
+      .update({ initialen: user.initialen })
+      .eq("id", ids[user.email]);
+    if (initialenError) throw initialenError;
+  }
+  console.log("✓ initialen ingesteld voor demo-gebruikers");
 
   const teamleiderId = ids["tom.teunissen@chronos.local"];
   const veraId = ids["vera.vermeer@chronos.local"];
@@ -93,6 +102,8 @@ async function main() {
   const klanten = [
     {
       naam: "Arcadis",
+      subtitel: "Wereldwijd advies- en ingenieursbureau",
+      opmerkingen: "Factureert per kwartaal; wil het PO-nummer op elke factuur terugzien.",
       juridische_naam: "Arcadis N.V.",
       hubspot_id: "hs-arcadis-001",
       accountview_debiteurnummer: "10023",
@@ -111,6 +122,8 @@ async function main() {
     },
     {
       naam: "Lipton Teas & Infusions",
+      subtitel: "Thee- en infusiemerken wereldwijd",
+      opmerkingen: "Wil aparte facturatie per regio/project.",
       juridische_naam: "Lipton Teas and Infusions Group B.V.",
       hubspot_id: "hs-lipton-001",
       accountview_debiteurnummer: "10041",
@@ -138,6 +151,39 @@ async function main() {
 
   const arcadis = klantRows.find((k) => k.naam === "Arcadis");
   const lipton = klantRows.find((k) => k.naam === "Lipton Teas & Infusions");
+
+  const teamdoelen = [
+    { team_id: benelux.id, jaar: 2026, bedrag: 250000 },
+    { team_id: international.id, jaar: 2026, bedrag: 150000 },
+  ];
+  const { error: teamdoelError } = await admin.from("teamdoelen").upsert(teamdoelen, { onConflict: "team_id,jaar" });
+  if (teamdoelError) throw teamdoelError;
+  console.log("✓ teamdoelen 2026 ingesteld");
+
+  // Projecten per klant: 0..n, elk met eigen PO-nummer — facturatie wordt hierop
+  // hard gescoped (zie src/actions/facturatie.ts).
+  const projectenGewenst = [
+    { klant_id: arcadis.id, naam: "Oppositiezaken NL/PL", po_nummer: "PO-AR-2026-02", actief: true },
+    { klant_id: lipton.id, naam: "US/Azië merkuitbreiding", po_nummer: "PO-LIP-2026-01", actief: true },
+  ];
+  const { data: bestaandeProjecten, error: projectenLeesError } = await admin
+    .from("projecten")
+    .select("id, klant_id, naam");
+  if (projectenLeesError) throw projectenLeesError;
+
+  const bestaandeProjectSleutels = new Set(bestaandeProjecten.map((p) => `${p.klant_id}|${p.naam}`));
+  const nieuweProjecten = projectenGewenst.filter((p) => !bestaandeProjectSleutels.has(`${p.klant_id}|${p.naam}`));
+  if (nieuweProjecten.length > 0) {
+    const { error: projectenError } = await admin.from("projecten").insert(nieuweProjecten);
+    if (projectenError) throw projectenError;
+    console.log(`✓ projecten: ${nieuweProjecten.length} toegevoegd`);
+  } else {
+    console.log("↺ projecten bestaan al");
+  }
+
+  const { data: alleProjecten, error: alleProjectenError } = await admin.from("projecten").select("id, klant_id, naam");
+  if (alleProjectenError) throw alleProjectenError;
+  const projectIdPerSleutel = new Map(alleProjecten.map((p) => [`${p.klant_id}|${p.naam}`, p.id]));
 
   const tarieven = [
     { klant_id: null, medewerker_id: null, tarief: 250, ingangsdatum: "2025-01-01" },
@@ -169,14 +215,15 @@ async function main() {
   // Statusmodel: alleen 'aangemaakt' (nog te wijzigen) of 'definitief' (gefactureerd).
   // Temporele spreiding over meerdere maanden (en één in het vorige jaar) zodat de
   // dashboardgrafiek ("omzet per teamlid, per maand/jaar") betekenisvolle data toont.
+  // _dossiers: één of meer dossiers per regel (zie factuuritem_dossiers); _project: naam
+  // van een project uit projectenGewenst hierboven, of null.
   const factuuritems = [
     {
       _batch: "arcadis-2026-h1",
+      _project: null,
       klant_id: arcadis.id,
       medewerker_id: veraId,
-      dossiernummer: "TM93905GB00",
-      type_dienst: "Merken",
-      land: "GB",
+      _dossiers: [{ dossiernummer: "TM93905GB00", type_dienst: "Merken", land: "GB" }],
       datum: "2026-06-15",
       omschrijving_klant: "Merkonderzoek en aanvraag GENX",
       eenheidstype: "uren",
@@ -191,13 +238,15 @@ async function main() {
     },
     {
       _batch: null,
+      _project: "Oppositiezaken NL/PL",
       klant_id: arcadis.id,
       medewerker_id: annaId,
-      dossiernummer: "O26921PL00",
-      type_dienst: "Opposities",
-      land: "PL",
+      _dossiers: [
+        { dossiernummer: "O26921PL00", type_dienst: "Opposities", land: "PL" },
+        { dossiernummer: "O26922PL00", type_dienst: "Opposities", land: "PL" },
+      ],
       datum: "2026-07-01",
-      omschrijving_klant: "Oppositie ARCADIS ./. ARKADIS voorbereiden",
+      omschrijving_klant: "Oppositie ARCADIS ./. ARKADIS voorbereiden (2 gelieerde dossiers)",
       eenheidstype: "uren",
       qty: 4,
       tarief: 310,
@@ -210,13 +259,16 @@ async function main() {
     },
     {
       _batch: "arcadis-2026-h1",
+      _project: null,
       klant_id: arcadis.id,
       medewerker_id: veraId,
-      dossiernummer: "TM94010NL00",
-      type_dienst: "Merken",
-      land: "NL",
+      _dossiers: [
+        { dossiernummer: "TM94010NL00", type_dienst: "Merken", land: "NL" },
+        { dossiernummer: "TM94011NL00", type_dienst: "Merken", land: "NL" },
+        { dossiernummer: "TM94012NL00", type_dienst: "Merken", land: "NL" },
+      ],
       datum: "2026-01-20",
-      omschrijving_klant: "Merkregistratie GENX vervolgstap",
+      omschrijving_klant: "Merkregistratie GENX-familie vervolgstap (3 registraties)",
       eenheidstype: "uren",
       qty: 2,
       tarief: 300,
@@ -229,11 +281,10 @@ async function main() {
     },
     {
       _batch: "arcadis-2026-h1",
+      _project: null,
       klant_id: arcadis.id,
       medewerker_id: annaId,
-      dossiernummer: "O27050DE00",
-      type_dienst: "Opposities",
-      land: "DE",
+      _dossiers: [{ dossiernummer: "O27050DE00", type_dienst: "Opposities", land: "DE" }],
       datum: "2026-03-10",
       omschrijving_klant: "Oppositie voorbereiding Duitsland",
       eenheidstype: "uren",
@@ -248,11 +299,10 @@ async function main() {
     },
     {
       _batch: "arcadis-2025-h2",
+      _project: null,
       klant_id: arcadis.id,
       medewerker_id: veraId,
-      dossiernummer: "TM94500FR00",
-      type_dienst: "Merken",
-      land: "FR",
+      _dossiers: [{ dossiernummer: "TM94500FR00", type_dienst: "Merken", land: "FR" }],
       datum: "2025-11-05",
       omschrijving_klant: "Merkonderzoek Frankrijk",
       eenheidstype: "uren",
@@ -267,11 +317,10 @@ async function main() {
     },
     {
       _batch: null,
+      _project: "US/Azië merkuitbreiding",
       klant_id: lipton.id,
       medewerker_id: lucasId,
-      dossiernummer: "TM93669BD30",
-      type_dienst: "Merken",
-      land: "BD",
+      _dossiers: [{ dossiernummer: "TM93669BD30", type_dienst: "Merken", land: "BD" }],
       datum: "2026-07-10",
       omschrijving_klant: "Registratie LIPTON YELLOW LABEL TEA (label)",
       eenheidstype: "uren",
@@ -286,11 +335,10 @@ async function main() {
     },
     {
       _batch: null,
+      _project: "US/Azië merkuitbreiding",
       klant_id: lipton.id,
       medewerker_id: lucasId,
-      dossiernummer: "TM102373US00",
-      type_dienst: "Merken",
-      land: "US",
+      _dossiers: [{ dossiernummer: "TM102373US00", type_dienst: "Merken", land: "US" }],
       datum: "2026-06-20",
       omschrijving_klant: "Registratie ZEN voortzetten",
       eenheidstype: "uren",
@@ -305,11 +353,10 @@ async function main() {
     },
     {
       _batch: "lipton-2026-q2",
+      _project: null,
       klant_id: lipton.id,
       medewerker_id: annaId,
-      dossiernummer: "O103109EU00",
-      type_dienst: "Opposities",
-      land: "EU",
+      _dossiers: [{ dossiernummer: "O103109EU00", type_dienst: "Opposities", land: "EU" }],
       datum: "2026-05-05",
       omschrijving_klant: "Oppositie ELEPHANT ./. ELEPHANT BAY",
       eenheidstype: "uren",
@@ -324,11 +371,10 @@ async function main() {
     },
     {
       _batch: "lipton-2026-q2",
+      _project: null,
       klant_id: lipton.id,
       medewerker_id: lucasId,
-      dossiernummer: "TM95012JP00",
-      type_dienst: "Merken",
-      land: "JP",
+      _dossiers: [{ dossiernummer: "TM95012JP00", type_dienst: "Merken", land: "JP" }],
       datum: "2026-02-14",
       omschrijving_klant: "Merkregistratie Japan",
       eenheidstype: "uren",
@@ -343,11 +389,10 @@ async function main() {
     },
     {
       _batch: "lipton-2026-q2",
+      _project: null,
       klant_id: lipton.id,
       medewerker_id: annaId,
-      dossiernummer: "TM95500CA00",
-      type_dienst: "Merken",
-      land: "CA",
+      _dossiers: [{ dossiernummer: "TM95500CA00", type_dienst: "Merken", land: "CA" }],
       datum: "2026-04-08",
       omschrijving_klant: "Merkregistratie Canada",
       eenheidstype: "uren",
@@ -364,24 +409,39 @@ async function main() {
 
   const { data: bestaandeItems, error: itemsLeesError } = await admin
     .from("factuuritems")
-    .select("id, dossiernummer, medewerker_id, facturatiebatch_id");
+    .select("id, omschrijving_klant, medewerker_id, facturatiebatch_id");
   if (itemsLeesError) throw itemsLeesError;
 
-  const bestaandeItemSleutels = new Map(
-    bestaandeItems.map((i) => [`${i.dossiernummer}|${i.medewerker_id}`, i])
+  const bestaandeItemSleutels = new Set(bestaandeItems.map((i) => `${i.omschrijving_klant}|${i.medewerker_id}`));
+  const nieuweItems = factuuritems.filter(
+    (i) => !bestaandeItemSleutels.has(`${i.omschrijving_klant}|${i.medewerker_id}`)
   );
-  const nieuweItems = factuuritems.filter((i) => !bestaandeItemSleutels.has(`${i.dossiernummer}|${i.medewerker_id}`));
 
   if (nieuweItems.length > 0) {
-    const { error: itemsError } = await admin.from("factuuritems").insert(
-      nieuweItems.map((i) => {
-        const rest = { ...i };
-        delete rest._batch;
-        return rest;
-      })
-    );
+    const { data: ingevoegd, error: itemsError } = await admin
+      .from("factuuritems")
+      .insert(
+        nieuweItems.map((i) => {
+          const rest = { ...i };
+          delete rest._batch;
+          delete rest._project;
+          delete rest._dossiers;
+          rest.project_id = i._project ? projectIdPerSleutel.get(`${i.klant_id}|${i._project}`) ?? null : null;
+          return rest;
+        })
+      )
+      .select("id, omschrijving_klant, medewerker_id");
     if (itemsError) throw itemsError;
-    console.log(`✓ factuuritems: ${nieuweItems.length} toegevoegd`);
+
+    const idPerSleutel = new Map(ingevoegd.map((i) => [`${i.omschrijving_klant}|${i.medewerker_id}`, i.id]));
+    const dossierRijen = nieuweItems.flatMap((i) => {
+      const factuuritemId = idPerSleutel.get(`${i.omschrijving_klant}|${i.medewerker_id}`);
+      return i._dossiers.map((d, index) => ({ factuuritem_id: factuuritemId, volgorde: index, ...d }));
+    });
+    const { error: dossierError } = await admin.from("factuuritem_dossiers").insert(dossierRijen);
+    if (dossierError) throw dossierError;
+
+    console.log(`✓ factuuritems: ${nieuweItems.length} toegevoegd (${dossierRijen.length} dossiers)`);
   } else {
     console.log("↺ factuuritems bestaan al");
   }
@@ -390,13 +450,17 @@ async function main() {
   // idempotent op basis van of de items al een facturatiebatch_id hebben.
   const { data: alleItems, error: alleItemsError } = await admin
     .from("factuuritems")
-    .select("id, dossiernummer, klant_id, honorarium, externe_kosten, korting, kantoorkosten_van_toepassing, status, facturatiebatch_id");
+    .select(
+      "id, omschrijving_klant, klant_id, honorarium, externe_kosten, korting, kantoorkosten_van_toepassing, status, facturatiebatch_id"
+    );
   if (alleItemsError) throw alleItemsError;
 
-  const dossiernummerNaarBatchsleutel = new Map(factuuritems.filter((i) => i._batch).map((i) => [i.dossiernummer, i._batch]));
+  const omschrijvingNaarBatchsleutel = new Map(
+    factuuritems.filter((i) => i._batch).map((i) => [i.omschrijving_klant, i._batch])
+  );
   const batchGroepen = new Map();
   for (const item of alleItems) {
-    const batchSleutel = dossiernummerNaarBatchsleutel.get(item.dossiernummer);
+    const batchSleutel = omschrijvingNaarBatchsleutel.get(item.omschrijving_klant);
     if (!batchSleutel || item.status !== "definitief" || item.facturatiebatch_id) continue;
     if (!batchGroepen.has(batchSleutel)) batchGroepen.set(batchSleutel, []);
     batchGroepen.get(batchSleutel).push(item);

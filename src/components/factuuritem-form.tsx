@@ -4,7 +4,7 @@ import { useActionState, useEffect, useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import type { FactuurItemFormState } from "@/actions/factuuritems";
 import { createClient } from "@/lib/supabase/client";
-import { parseDossiernummer, DOSSIERNUMMER_VOORBEELD } from "@/lib/dossiernummer";
+import { DossiernummerTagInput } from "@/components/dossiernummer-tag-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,11 +13,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
 type Klant = { id: string; naam: string; kantoorkosten_actief: boolean };
+type Project = { id: string; naam: string; po_nummer: string | null };
 
 type Initial = {
   id: string;
   klant_id: string;
-  dossiernummer: string;
+  project_id: string | null;
+  dossiernummers: string[];
   datum: string;
   omschrijving_klant: string;
   interne_opmerking: string | null;
@@ -41,11 +43,13 @@ function euro(n: number) {
 
 export function FactuurItemForm({
   klanten,
+  projectenPerKlant,
   action,
   initial,
   medewerkerId,
 }: {
   klanten: Klant[];
+  projectenPerKlant: Record<string, Project[]>;
   action: (prevState: FactuurItemFormState, formData: FormData) => Promise<FactuurItemFormState>;
   initial?: Initial;
   medewerkerId: string;
@@ -64,7 +68,8 @@ export function FactuurItemForm({
   }
 
   const [klantId, setKlantId] = useState(initial?.klant_id ?? "");
-  const [dossiernummer, setDossiernummer] = useState(initial?.dossiernummer ?? "");
+  const [projectId, setProjectId] = useState(initial?.project_id ?? "");
+  const [dossiernummers, setDossiernummers] = useState<string[]>(initial?.dossiernummers ?? []);
   const [datum, setDatum] = useState(initial?.datum ?? new Date().toISOString().slice(0, 10));
   const [omschrijvingKlant, setOmschrijvingKlant] = useState(initial?.omschrijving_klant ?? "");
   const [interneOpmerking, setInterneOpmerking] = useState(initial?.interne_opmerking ?? "");
@@ -81,17 +86,19 @@ export function FactuurItemForm({
   const [declarabel, setDeclarabel] = useState(initial?.declarabel ?? true);
   const [voorgesteldTarief, setVoorgesteldTarief] = useState<number | null>(null);
 
-  const dossierPreview = useMemo(() => parseDossiernummer(dossiernummer), [dossiernummer]);
+  const projectenVoorKlant = useMemo(() => projectenPerKlant[klantId] ?? [], [projectenPerKlant, klantId]);
 
-  // Wanneer de klant wijzigt: kantoorkosten-standaard overnemen en de oude
-  // tariefsuggestie laten vervallen. Render-fase aanpassing (React-patroon),
-  // geen effect: voorkomt een extra commit/re-render t.o.v. useEffect.
+  // Wanneer de klant wijzigt: kantoorkosten-standaard overnemen, de oude
+  // tariefsuggestie laten vervallen en het projectveld resetten (projecten
+  // horen bij een klant). Render-fase aanpassing (React-patroon), geen
+  // effect: voorkomt een extra commit/re-render t.o.v. useEffect.
   const [klantIdVoorReset, setKlantIdVoorReset] = useState(klantId);
   if (klantId !== klantIdVoorReset) {
     setKlantIdVoorReset(klantId);
     const klant = klanten.find((k) => k.id === klantId);
     setKantoorkostenActief(klant?.kantoorkosten_actief ?? true);
     setVoorgesteldTarief(null);
+    setProjectId("");
   }
 
   useEffect(() => {
@@ -121,7 +128,10 @@ export function FactuurItemForm({
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
-      <input type="hidden" name="dossiernummer" value={dossiernummer} />
+      {dossiernummers.map((d) => (
+        <input key={d} type="hidden" name="dossiernummers" value={d} />
+      ))}
+      <input type="hidden" name="project_id" value={projectId} />
       <input type="hidden" name="datum" value={datum} />
       <input type="hidden" name="qty" value={qty} />
       <input type="hidden" name="vast_honorarium_actief" value={vastHonorariumActief ? "on" : ""} />
@@ -160,25 +170,28 @@ export function FactuurItemForm({
                     ))}
                   </NativeSelect>
                 </div>
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="dossiernummer_input">Dossier</Label>
-                  <Input
-                    id="dossiernummer_input"
-                    className="font-mono"
-                    value={dossiernummer}
-                    onChange={(e) => setDossiernummer(e.target.value.toUpperCase())}
-                    placeholder={DOSSIERNUMMER_VOORBEELD}
-                    required
-                  />
-                  {dossiernummer && (
-                    <p className="text-xs text-muted-foreground">
-                      {dossierPreview
-                        ? `${dossierPreview.typeLabel} · ${dossierPreview.landIso}`
-                        : "Onbekend dossiernummerformaat"}
-                    </p>
-                  )}
-                </div>
+                {projectenVoorKlant.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="project">Project (optioneel)</Label>
+                    <NativeSelect
+                      key={`project-${klantId}-${selectResetKey}`}
+                      id="project"
+                      value={projectId}
+                      onChange={setProjectId}
+                    >
+                      <option value="">Geen project</option>
+                      {projectenVoorKlant.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.naam}
+                          {p.po_nummer ? ` (${p.po_nummer})` : ""}
+                        </option>
+                      ))}
+                    </NativeSelect>
+                  </div>
+                )}
               </div>
+
+              <DossiernummerTagInput value={dossiernummers} onChange={setDossiernummers} />
 
               <div className="flex flex-col gap-2">
                 <Label htmlFor="omschrijving_klant">Omschrijving voor klant</Label>

@@ -4,6 +4,8 @@ import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { euro, isGefactureerd, isNogTeFactureren, regelbedrag } from "@/lib/factuurbedragen";
 import { OmzetGrafiek, type OmzetRij } from "@/components/omzet-grafiek";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { StatIcon } from "@/components/stat-icon";
 import { LinkButton } from "@/components/link-button";
 
 const MAANDEN = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
@@ -18,13 +20,15 @@ export default async function DashboardPage() {
   const profile = await getCurrentProfile();
   const huidigJaar = new Date().getFullYear();
 
-  const [{ count: klantenCount }, { data: items }] = await Promise.all([
+  const [{ count: klantenCount }, { data: items }, { data: teamdoelen }, { data: teamMembers }] = await Promise.all([
     supabase.from("klanten").select("*", { count: "exact", head: true }).eq("status", "actief"),
     supabase
       .from("factuuritems")
       .select(
         "medewerker_id, honorarium, externe_kosten, korting, status, declarabel, datum, profiles!factuuritems_medewerker_id_fkey(full_name)"
       ),
+    supabase.from("teamdoelen").select("bedrag, teams(id, naam)").eq("jaar", huidigJaar),
+    supabase.from("team_members").select("team_id, profile_id"),
   ]);
 
   const rows = items ?? [];
@@ -35,6 +39,23 @@ export default async function DashboardPage() {
 
   const ditJaar = rows.filter((r) => isGefactureerd(r.status) && new Date(r.datum).getFullYear() === huidigJaar);
   const totaalDitJaar = ditJaar.reduce((sum, r) => sum + regelbedrag(r), 0);
+
+  const ledenPerTeam = new Map<string, Set<string>>();
+  for (const lid of teamMembers ?? []) {
+    (ledenPerTeam.get(lid.team_id) ?? ledenPerTeam.set(lid.team_id, new Set()).get(lid.team_id)!).add(lid.profile_id);
+  }
+  const teamVoortgang = (teamdoelen ?? [])
+    .map((d) => {
+      const team = d.teams as unknown as { id: string; naam: string } | null;
+      if (!team) return null;
+      const leden = ledenPerTeam.get(team.id) ?? new Set();
+      const gefactureerd = ditJaar
+        .filter((r) => leden.has(r.medewerker_id))
+        .reduce((sum, r) => sum + regelbedrag(r), 0);
+      return { teamNaam: team.naam, doel: d.bedrag, gefactureerd };
+    })
+    .filter((v): v is { teamNaam: string; doel: number; gefactureerd: number } => v !== null)
+    .sort((a, b) => a.teamNaam.localeCompare(b.teamNaam));
 
   const totaalPerMedewerker = new Map<string, { naam: string; totaal: number }>();
   for (const r of ditJaar) {
@@ -84,44 +105,65 @@ export default async function DashboardPage() {
         </LinkButton>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Actieve klanten</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold tabular-figures">{klantenCount ?? 0}</div>
+          <CardContent className="flex items-center gap-4">
+            <StatIcon icon={Users} tint="primary" />
+            <div>
+              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Actieve klanten</p>
+              <div className="text-2xl font-semibold tabular-figures">{klantenCount ?? 0}</div>
+            </div>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Nog te factureren</CardTitle>
-            <Receipt className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold tabular-figures text-warning">{euro(nogTeFactureren)}</div>
+          <CardContent className="flex items-center gap-4">
+            <StatIcon icon={Receipt} tint="warning" />
+            <div>
+              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Nog te factureren</p>
+              <div className="text-2xl font-semibold tabular-figures text-warning">{euro(nogTeFactureren)}</div>
+            </div>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Gefactureerd</CardTitle>
-            <PiggyBank className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold tabular-figures text-success">{euro(gefactureerd)}</div>
+          <CardContent className="flex items-center gap-4">
+            <StatIcon icon={PiggyBank} tint="success" />
+            <div>
+              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Gefactureerd</p>
+              <div className="text-2xl font-semibold tabular-figures text-success">{euro(gefactureerd)}</div>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
+      {teamVoortgang.length > 0 && (
+        <Card className="rounded-2xl">
+          <CardHeader>
+            <CardTitle className="text-base">Teamdoelen {huidigJaar}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            {teamVoortgang.map((t) => (
+              <div key={t.teamNaam} className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium">{t.teamNaam}</span>
+                  <span className="tabular-figures text-muted-foreground">
+                    {euro(t.gefactureerd)} / {euro(t.doel)}
+                  </span>
+                </div>
+                <Progress value={t.doel > 0 ? (t.gefactureerd / t.doel) * 100 : 0} />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      <Card className="rounded-2xl">
         <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
           <div>
             <CardTitle className="text-base">Omzet per teamlid</CardTitle>
             <p className="text-sm text-muted-foreground">Gefactureerd per maand, {huidigJaar}</p>
           </div>
           <div className="text-right">
-            <p className="text-xs text-muted-foreground">Totaal {huidigJaar}</p>
+            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Totaal {huidigJaar}</p>
             <p className="text-xl font-semibold tabular-figures">{euro(totaalDitJaar)}</p>
           </div>
         </CardHeader>

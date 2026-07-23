@@ -48,16 +48,21 @@ export default async function SpecificatiePagina({ params }: { params: Promise<{
   const { id } = await params;
   const supabase = await createClient();
 
-  const { data: batch } = await supabase.from("facturatiebatches").select("*, klanten(*)").eq("id", id).single();
+  const { data: batch } = await supabase
+    .from("facturatiebatches")
+    .select("*, klanten(*), projecten(naam, po_nummer)")
+    .eq("id", id)
+    .single();
   if (!batch) notFound();
 
   const klant = batch.klanten;
   if (!klant) notFound();
+  const project = batch.projecten as unknown as { naam: string; po_nummer: string | null } | null;
 
   const { data: items } = await supabase
     .from("factuuritems")
     .select(
-      "id, datum, dossiernummer, type_dienst, land, omschrijving_klant, eenheidstype, qty, tarief, honorarium, externe_kosten, korting, profiles!factuuritems_medewerker_id_fkey(full_name)"
+      "id, datum, omschrijving_klant, eenheidstype, qty, tarief, honorarium, externe_kosten, korting, profiles!factuuritems_medewerker_id_fkey(full_name), factuuritem_dossiers(dossiernummer, type_dienst, land, volgorde)"
     )
     .eq("facturatiebatch_id", batch.id)
     .order("datum", { ascending: true });
@@ -84,6 +89,8 @@ export default async function SpecificatiePagina({ params }: { params: Promise<{
             <div className="text-right text-sm text-muted-foreground">
               <p className="font-medium text-foreground">{t.titel}</p>
               {batch.accountview_factuurnummer && <p>{batch.accountview_factuurnummer}</p>}
+              {project && <p>{project.naam}</p>}
+              {project?.po_nummer && <p>PO: {project.po_nummer}</p>}
               <p>
                 {t.periode}: {formatDatum(batch.periode_start, taal)} – {formatDatum(batch.periode_eind, taal)}
               </p>
@@ -109,16 +116,22 @@ export default async function SpecificatiePagina({ params }: { params: Promise<{
             <TableBody>
               {(items ?? []).map((item) => {
                 const medewerker = item.profiles as unknown as { full_name: string } | null;
+                const dossiers = (item.factuuritem_dossiers ?? []).slice().sort((a, b) => a.volgorde - b.volgorde);
                 return (
                   <TableRow key={item.id}>
                     <TableCell className="whitespace-nowrap">{formatDatum(item.datum, taal)}</TableCell>
                     {klant.kolom_matter_type_land_zichtbaar && (
                       <TableCell>
-                        <div className="font-mono text-xs">{item.dossiernummer}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {item.type_dienst}
-                          {item.land ? ` · ${landNaamVoorIso(item.land)}` : ""}
-                        </div>
+                        {dossiers.map((d) => (
+                          <div key={d.dossiernummer} className="text-xs">
+                            <span className="font-medium">{d.dossiernummer}</span>
+                            <span className="text-muted-foreground">
+                              {" "}
+                              · {d.type_dienst}
+                              {d.land ? ` · ${landNaamVoorIso(d.land)}` : ""}
+                            </span>
+                          </div>
+                        ))}
                       </TableCell>
                     )}
                     {klant.kolom_persoon_zichtbaar && <TableCell>{medewerker?.full_name}</TableCell>}

@@ -17,7 +17,15 @@ function round2(n: number) {
 
 function parseInput(formData: FormData) {
   const klant_id = String(formData.get("klant_id") ?? "");
-  const dossiernummer = String(formData.get("dossiernummer") ?? "").trim().toUpperCase();
+  const project_id = String(formData.get("project_id") ?? "").trim() || null;
+  const dossiernummers = Array.from(
+    new Set(
+      formData
+        .getAll("dossiernummers")
+        .map((v) => String(v).trim().toUpperCase())
+        .filter(Boolean)
+    )
+  );
   const datum = String(formData.get("datum") ?? "");
   const omschrijving_klant = String(formData.get("omschrijving_klant") ?? "").trim();
   const interne_opmerking = String(formData.get("interne_opmerking") ?? "").trim();
@@ -35,7 +43,8 @@ function parseInput(formData: FormData) {
 
   return {
     klant_id,
-    dossiernummer,
+    project_id,
+    dossiernummers,
     datum,
     omschrijving_klant,
     interne_opmerking: interne_opmerking || null,
@@ -66,6 +75,28 @@ function tariefWijktAf(voorgesteld: number | null | undefined, ingevuld: number 
   return Math.abs(voorgesteld - ingevuld) > 0.001;
 }
 
+type DossierParseResultaat =
+  | { ok: false; error: string }
+  | { ok: true; rijen: { dossiernummer: string; type_dienst: string; land: string; volgorde: number }[] };
+
+function parseDossiernummers(dossiernummers: string[]): DossierParseResultaat {
+  if (dossiernummers.length === 0) {
+    return { ok: false, error: "Voeg minimaal één dossiernummer toe." };
+  }
+  const rijen: { dossiernummer: string; type_dienst: string; land: string; volgorde: number }[] = [];
+  for (const [index, dossiernummer] of dossiernummers.entries()) {
+    const parsed = parseDossiernummer(dossiernummer);
+    if (!parsed) {
+      return {
+        ok: false,
+        error: `Dossiernummer "${dossiernummer}" heeft niet het verwachte formaat (bv. ${DOSSIERNUMMER_VOORBEELD}).`,
+      };
+    }
+    rijen.push({ dossiernummer, type_dienst: parsed.typeLabel, land: parsed.landIso, volgorde: index });
+  }
+  return { ok: true, rijen };
+}
+
 export async function createFactuurItem(
   _prevState: FactuurItemFormState,
   formData: FormData
@@ -75,12 +106,9 @@ export async function createFactuurItem(
   if (!input.klant_id || !input.datum || !input.omschrijving_klant || input.qty <= 0) {
     return { error: "Klant, datum, omschrijving en aantal (groter dan 0) zijn verplicht.", success: false };
   }
-  const parsed = parseDossiernummer(input.dossiernummer);
-  if (!parsed) {
-    return {
-      error: `Dossiernummer heeft niet het verwachte formaat (bv. ${DOSSIERNUMMER_VOORBEELD}).`,
-      success: false,
-    };
+  const dossiers = parseDossiernummers(input.dossiernummers);
+  if (!dossiers.ok) {
+    return { error: dossiers.error, success: false };
   }
   if (!input.vastHonorarium && (input.tarief === null || input.tarief < 0)) {
     return { error: "Vul een geldig tarief in, of kies voor een vast honorarium.", success: false };
@@ -111,28 +139,39 @@ export async function createFactuurItem(
 
   const afwijkend = !input.vastHonorarium && tariefWijktAf(voorgesteldTarief, input.tarief);
 
-  const { error } = await supabase.from("factuuritems").insert({
-    klant_id: input.klant_id,
-    medewerker_id: user.id,
-    dossiernummer: input.dossiernummer,
-    type_dienst: parsed.typeLabel,
-    land: parsed.landIso,
-    datum: input.datum,
-    omschrijving_klant: input.omschrijving_klant,
-    interne_opmerking: input.interne_opmerking,
-    eenheidstype: input.eenheidstype,
-    qty: input.qty,
-    tarief: input.vastHonorarium ? null : input.tarief,
-    tarief_afwijkend: afwijkend,
-    honorarium,
-    externe_kosten: input.externe_kosten,
-    korting: input.korting,
-    kantoorkosten_van_toepassing: input.kantoorkosten_van_toepassing,
-    declarabel: input.declarabel,
-  });
+  const { data: item, error } = await supabase
+    .from("factuuritems")
+    .insert({
+      klant_id: input.klant_id,
+      project_id: input.project_id,
+      medewerker_id: user.id,
+      datum: input.datum,
+      omschrijving_klant: input.omschrijving_klant,
+      interne_opmerking: input.interne_opmerking,
+      eenheidstype: input.eenheidstype,
+      qty: input.qty,
+      tarief: input.vastHonorarium ? null : input.tarief,
+      tarief_afwijkend: afwijkend,
+      honorarium,
+      externe_kosten: input.externe_kosten,
+      korting: input.korting,
+      kantoorkosten_van_toepassing: input.kantoorkosten_van_toepassing,
+      declarabel: input.declarabel,
+    })
+    .select("id")
+    .single();
 
-  if (error) {
-    return { error: mapDbError(error), success: false };
+  if (error || !item) {
+    return { error: mapDbError(error ?? { message: "onbekend" }), success: false };
+  }
+
+  const { error: dossierError } = await supabase
+    .from("factuuritem_dossiers")
+    .insert(dossiers.rijen.map((d) => ({ ...d, factuuritem_id: item.id })));
+
+  if (dossierError) {
+    await supabase.from("factuuritems").delete().eq("id", item.id);
+    return { error: "Opslaan van de dossiernummers is mislukt. Probeer het opnieuw.", success: false };
   }
 
   revalidatePath("/factuuritems");
@@ -150,12 +189,9 @@ export async function updateFactuurItem(
   if (!input.klant_id || !input.datum || !input.omschrijving_klant || input.qty <= 0) {
     return { error: "Klant, datum, omschrijving en aantal (groter dan 0) zijn verplicht.", success: false };
   }
-  const parsed = parseDossiernummer(input.dossiernummer);
-  if (!parsed) {
-    return {
-      error: `Dossiernummer heeft niet het verwachte formaat (bv. ${DOSSIERNUMMER_VOORBEELD}).`,
-      success: false,
-    };
+  const dossiers = parseDossiernummers(input.dossiernummers);
+  if (!dossiers.ok) {
+    return { error: dossiers.error, success: false };
   }
   if (!input.vastHonorarium && (input.tarief === null || input.tarief < 0)) {
     return { error: "Vul een geldig tarief in, of kies voor een vast honorarium.", success: false };
@@ -190,9 +226,7 @@ export async function updateFactuurItem(
     .from("factuuritems")
     .update({
       klant_id: input.klant_id,
-      dossiernummer: input.dossiernummer,
-      type_dienst: parsed.typeLabel,
-      land: parsed.landIso,
+      project_id: input.project_id,
       datum: input.datum,
       omschrijving_klant: input.omschrijving_klant,
       interne_opmerking: input.interne_opmerking,
@@ -210,6 +244,17 @@ export async function updateFactuurItem(
 
   if (error) {
     return { error: mapDbError(error), success: false };
+  }
+
+  const { error: deleteError } = await supabase.from("factuuritem_dossiers").delete().eq("factuuritem_id", id);
+  if (deleteError) {
+    return { error: "Bijwerken van de dossiernummers is mislukt.", success: false };
+  }
+  const { error: dossierError } = await supabase
+    .from("factuuritem_dossiers")
+    .insert(dossiers.rijen.map((d) => ({ ...d, factuuritem_id: id })));
+  if (dossierError) {
+    return { error: "Bijwerken van de dossiernummers is mislukt.", success: false };
   }
 
   revalidatePath("/factuuritems");
