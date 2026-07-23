@@ -261,3 +261,52 @@ export async function updateFactuurItem(
   revalidatePath("/dashboard");
   redirect("/factuuritems");
 }
+
+export type VerplaatsFormState = { error: string | null; success: boolean };
+
+export async function moveFactuuritemsToProject(
+  klantId: string,
+  _prevState: VerplaatsFormState,
+  formData: FormData
+): Promise<VerplaatsFormState> {
+  const itemIds = formData.getAll("item_ids").map(String);
+  const projectId = String(formData.get("project_id") ?? "").trim() || null;
+
+  if (itemIds.length === 0) {
+    return { error: "Selecteer minimaal één factuuritem.", success: false };
+  }
+
+  const supabase = await createClient();
+
+  const { data: items, error: itemsError } = await supabase
+    .from("factuuritems")
+    .select("id")
+    .eq("klant_id", klantId)
+    .eq("status", "aangemaakt")
+    .in("id", itemIds);
+
+  if (itemsError) {
+    return { error: "Ophalen van de geselecteerde items is mislukt.", success: false };
+  }
+  if (!items || items.length !== itemIds.length) {
+    return {
+      error: "Een of meer geselecteerde items zijn niet meer beschikbaar (mogelijk al gefactureerd).",
+      success: false,
+    };
+  }
+
+  const { error } = await supabase
+    .from("factuuritems")
+    .update({ project_id: projectId })
+    .in(
+      "id",
+      items.map((i) => i.id)
+    );
+
+  if (error) {
+    return { error: "Verplaatsen naar het project is mislukt.", success: false };
+  }
+
+  revalidatePath("/factuuritems");
+  return { error: null, success: true };
+}

@@ -6,35 +6,27 @@ import { FactuurGroep, type FactuurGroepItem } from "@/components/factuur-groep"
 import { LinkButton } from "@/components/link-button";
 import { StatIcon } from "@/components/stat-icon";
 import { Card, CardContent } from "@/components/ui/card";
-import type { FactuurItemStatus } from "@/lib/supabase/types";
 
-const FILTERS: { value: string; label: string }[] = [
-  { value: "", label: "Alle" },
-  { value: "aangemaakt", label: "Aangemaakt" },
-  { value: "definitief", label: "Definitief" },
-];
-
-export default async function FactuuritemsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ status?: string }>;
-}) {
-  const { status } = await searchParams;
+export default async function FactuuritemsPage() {
   const supabase = await createClient();
   const profile = await getCurrentProfile();
 
-  let query = supabase
-    .from("factuuritems")
-    .select(
-      "id, datum, omschrijving_klant, eenheidstype, qty, honorarium, externe_kosten, korting, status, declarabel, medewerker_id, klant_id, project_id, klanten(naam), projecten(naam, po_nummer), profiles!factuuritems_medewerker_id_fkey(full_name), laatst_bewerkt_door_profiel:profiles!factuuritems_laatst_bewerkt_door_fkey(full_name), factuuritem_dossiers(dossiernummer, type_dienst, land, volgorde)"
-    )
-    .order("datum", { ascending: false });
+  const [{ data: items }, { data: projecten }] = await Promise.all([
+    supabase
+      .from("factuuritems")
+      .select(
+        "id, datum, omschrijving_klant, eenheidstype, qty, honorarium, externe_kosten, korting, status, declarabel, medewerker_id, klant_id, project_id, klanten(naam), projecten(naam, po_nummer), profiles!factuuritems_medewerker_id_fkey(full_name), laatst_bewerkt_door_profiel:profiles!factuuritems_laatst_bewerkt_door_fkey(full_name), factuuritem_dossiers(dossiernummer, type_dienst, land, volgorde)"
+      )
+      .eq("status", "aangemaakt")
+      .order("datum", { ascending: false }),
+    supabase.from("projecten").select("id, klant_id, naam, po_nummer").eq("actief", true).order("naam"),
+  ]);
 
-  if (status) {
-    query = query.eq("status", status as FactuurItemStatus);
+  const projectenPerKlant: Record<string, { id: string; naam: string; po_nummer: string | null }[]> = {};
+  for (const p of projecten ?? []) {
+    (projectenPerKlant[p.klant_id] ??= []).push({ id: p.id, naam: p.naam, po_nummer: p.po_nummer });
   }
 
-  const { data: items } = await query;
   const toonMedewerker = profile?.role !== "medewerker";
   const kanFactureren = profile?.role === "finance" || profile?.role === "beheerder";
 
@@ -111,23 +103,10 @@ export default async function FactuuritemsPage({
         </CardContent>
       </Card>
 
-      <div className="flex flex-wrap gap-2">
-        {FILTERS.map((f) => (
-          <LinkButton
-            key={f.value}
-            size="sm"
-            variant={status === f.value || (!status && f.value === "") ? "secondary" : "ghost"}
-            href={f.value ? `/factuuritems?status=${f.value}` : "/factuuritems"}
-          >
-            {f.label}
-          </LinkButton>
-        ))}
-      </div>
-
       {groepenArray.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            Geen factuuritems gevonden.
+            Geen openstaande factuuritems.
           </CardContent>
         </Card>
       ) : (
@@ -137,6 +116,7 @@ export default async function FactuuritemsPage({
             klantId={groep.klantId}
             klantNaam={groep.klantNaam}
             items={groep.items}
+            projecten={projectenPerKlant[groep.klantId] ?? []}
             toonMedewerker={toonMedewerker}
             kanFactureren={kanFactureren}
             huidigeGebruikerId={profile?.id}

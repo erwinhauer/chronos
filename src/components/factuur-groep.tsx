@@ -2,14 +2,17 @@
 
 import { useState } from "react";
 import { landNaamVoorIso } from "@/lib/dossiernummer";
-import { STATUS_LABEL, STATUS_VARIANT, euro, regelbedrag } from "@/lib/factuurbedragen";
+import { euro, regelbedrag } from "@/lib/factuurbedragen";
 import { FactureerDialog } from "@/components/factureer-dialog";
+import { VerplaatsProjectDialog } from "@/components/verplaats-project-dialog";
 import { LinkButton } from "@/components/link-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { FactuurItemStatus } from "@/lib/supabase/types";
+
+type Project = { id: string; naam: string; po_nummer: string | null };
 
 export type FactuurGroepItem = {
   id: string;
@@ -41,6 +44,7 @@ export function FactuurGroep({
   klantId,
   klantNaam,
   items,
+  projecten,
   toonMedewerker,
   kanFactureren,
   huidigeGebruikerId,
@@ -48,6 +52,7 @@ export function FactuurGroep({
   klantId: string;
   klantNaam: string;
   items: FactuurGroepItem[];
+  projecten: Project[];
   toonMedewerker: boolean;
   kanFactureren: boolean;
   huidigeGebruikerId?: string;
@@ -92,6 +97,7 @@ export function FactuurGroep({
             klantId={klantId}
             klantNaam={klantNaam}
             sectie={sectie}
+            projecten={projecten}
             toonHeader={toonProjectHeaders}
             toonMedewerker={toonMedewerker}
             kanFactureren={kanFactureren}
@@ -107,6 +113,7 @@ function ProjectSectieBlok({
   klantId,
   klantNaam,
   sectie,
+  projecten,
   toonHeader,
   toonMedewerker,
   kanFactureren,
@@ -115,6 +122,7 @@ function ProjectSectieBlok({
   klantId: string;
   klantNaam: string;
   sectie: ProjectSectie;
+  projecten: Project[];
   toonHeader: boolean;
   toonMedewerker: boolean;
   kanFactureren: boolean;
@@ -122,9 +130,14 @@ function ProjectSectieBlok({
 }) {
   const [geselecteerd, setGeselecteerd] = useState<Set<string>>(new Set());
 
+  // Altijd filteren tegen sectie.items (niet de kale Set): als een item na een
+  // verplaatsing niet meer in deze sectie zit maar de sectie-key (projectId)
+  // ongewijzigd bleef, behoudt React de geselecteerd-state — zonder deze
+  // filter zou dat een "geest"-id laten meesturen dat niet meer zichtbaar is.
   const selectie = sectie.items
     .filter((r) => geselecteerd.has(r.id))
     .map((r) => ({ id: r.id, datum: r.datum, bedrag: regelbedrag(r) }));
+  const huidigProjectId = sectie.items[0]?.projectId ?? null;
 
   function toggle(id: string, checked: boolean) {
     setGeselecteerd((prev) => {
@@ -135,8 +148,16 @@ function ProjectSectieBlok({
     });
   }
 
-  const factureerKnop = kanFactureren && (
-    <FactureerDialog klantId={klantId} klantNaam={klantNaam} selectie={selectie} />
+  const acties = kanFactureren && (
+    <div className="flex flex-wrap items-center gap-2">
+      <VerplaatsProjectDialog
+        klantId={klantId}
+        itemIds={selectie.map((s) => s.id)}
+        projecten={projecten}
+        huidigProjectId={huidigProjectId}
+      />
+      <FactureerDialog klantId={klantId} klantNaam={klantNaam} selectie={selectie} />
+    </div>
   );
 
   return (
@@ -151,10 +172,10 @@ function ProjectSectieBlok({
               </Badge>
             )}
           </div>
-          {factureerKnop}
+          {acties}
         </div>
       ) : (
-        factureerKnop && <div className="flex justify-end px-4 pt-4">{factureerKnop}</div>
+        acties && <div className="flex justify-end px-4 pt-4">{acties}</div>
       )}
       <div className={toonHeader ? "overflow-hidden rounded-lg border border-border" : undefined}>
         <FactuurItemsTabel
@@ -186,18 +207,17 @@ function FactuurItemsTabel({
   onToggle: (id: string, checked: boolean) => void;
 }) {
   return (
-    <Table>
+    <Table className="table-fixed">
       <TableHeader>
         <TableRow>
           {kanFactureren && <TableHead className="w-8" />}
-          <TableHead>Datum</TableHead>
-          <TableHead>Dossier</TableHead>
-          {toonMedewerker && <TableHead>Medewerker</TableHead>}
+          <TableHead className="w-24">Datum</TableHead>
+          <TableHead className="w-56">Dossier</TableHead>
+          {toonMedewerker && <TableHead className="w-32">Medewerker</TableHead>}
           <TableHead>Omschrijving</TableHead>
-          <TableHead>Qty</TableHead>
-          <TableHead>Bedrag</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead className="text-right">Acties</TableHead>
+          <TableHead className="w-24">Qty</TableHead>
+          <TableHead className="w-28 text-right">Bedrag</TableHead>
+          <TableHead className="w-24 text-right">Acties</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -243,11 +263,11 @@ function FactuurItemsTabel({
                   </div>
                 )}
               </TableCell>
-              {toonMedewerker && <TableCell>{r.medewerkerNaam}</TableCell>}
-              <TableCell className="max-w-xs truncate" title={r.omschrijving_klant}>
+              {toonMedewerker && <TableCell className="truncate">{r.medewerkerNaam}</TableCell>}
+              <TableCell className="truncate" title={r.omschrijving_klant}>
                 {r.omschrijving_klant}
                 {r.laatstBewerktDoor && (
-                  <div className="text-xs font-normal text-muted-foreground">
+                  <div className="truncate text-xs font-normal text-muted-foreground">
                     Laatst bewerkt door {r.laatstBewerktDoor}
                   </div>
                 )}
@@ -255,12 +275,7 @@ function FactuurItemsTabel({
               <TableCell className="tabular-figures">
                 {r.qty} {r.eenheidstype}
               </TableCell>
-              <TableCell className="tabular-figures">{euro(bedrag)}</TableCell>
-              <TableCell>
-                <Badge variant={STATUS_VARIANT[r.status]} className="text-xs">
-                  {STATUS_LABEL[r.status]}
-                </Badge>
-              </TableCell>
+              <TableCell className="text-right tabular-figures">{euro(bedrag)}</TableCell>
               <TableCell className="text-right">
                 {bewerkbaar && (
                   <LinkButton size="sm" variant="outline" href={`/factuuritems/${r.id}`}>

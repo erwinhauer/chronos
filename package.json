@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "vercel-build": "supabase db push --db-url \"$SUPABASE_DB_URL\" --yes && node scripts/release-changelog.mjs && next build",
     "start": "next start",
     "lint": "eslint",
     "seed": "node scripts/seed.mjs"
@@ -33,6 +34,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
+    "supabase": "2.109.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

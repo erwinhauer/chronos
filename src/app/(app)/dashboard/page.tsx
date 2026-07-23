@@ -44,10 +44,19 @@ export default async function DashboardPage() {
   for (const lid of teamMembers ?? []) {
     (ledenPerTeam.get(lid.team_id) ?? ledenPerTeam.set(lid.team_id, new Set()).get(lid.team_id)!).add(lid.profile_id);
   }
+
+  // Teamdoelen: finance/beheerder zien alle teams (zelfde scheiding als
+  // factuuritems_select_scope), medewerker/teamleider alleen hun eigen team(s).
+  const zietAlleTeams = profile?.role === "finance" || profile?.role === "beheerder";
+  const eigenTeamIds = new Set(
+    (teamMembers ?? []).filter((lid) => lid.profile_id === profile?.id).map((lid) => lid.team_id)
+  );
+
   const teamVoortgang = (teamdoelen ?? [])
     .map((d) => {
       const team = d.teams as unknown as { id: string; naam: string } | null;
       if (!team) return null;
+      if (!zietAlleTeams && !eigenTeamIds.has(team.id)) return null;
       const leden = ledenPerTeam.get(team.id) ?? new Set();
       const gefactureerd = ditJaar
         .filter((r) => leden.has(r.medewerker_id))
