@@ -6,18 +6,15 @@ import { createClient } from "@supabase/supabase-js";
 
 // Vóór elke commit bijwerken met de wijzigingen van die release.
 const CHANGELOG_ENTRY = {
-  versienummer: "0.4.0",
+  versienummer: "0.4.1",
   releasedatum: "2026-07-23",
-  titel: "Metrics-scope, schaalbare Instellingen, factuuritems-polish en deploy-automatisering",
-  nieuwe_functies: [
-    "Instellingen: zoekbare en sorteerbare tabellen voor Gebruikers en Teams (bewerken via dialoog)",
-    "Factuuritems: projectloze items kunnen via regelselectie alsnog naar een project verplaatst worden",
-    "Schema-migraties en changelog-entries worden voortaan automatisch toegepast bij elke productie-deploy",
-  ],
+  titel: "Dossiernummer: land/type-labels verbeterd",
+  nieuwe_functies: [],
   wijzigingen: [
-    "Teamdoelen op het dashboard tonen voortaan alleen het eigen team (finance/beheerder blijven alles zien)",
-    "Factuuritems toont alleen nog te factureren regels (geen filter-tabs meer nodig)",
-    "Factuuritems-kolommen lijnen consistent uit tussen klanten en projecten",
+    "Landcode BX toont nu 'Benelux' in plaats van de kale code",
+    "WO toont 'Internationale registratie', EU toont 'Europese Unie' (zonder '(EUIPO)')",
+    "Dossiernummers die beginnen met 'W' worden herkend als type dienst 'Bewaking'",
+    "De live preview bij het invoeren van een dossiernummer toont nu ook de uitgeschreven landnaam",
   ],
   bugfixes: [],
   bekende_beperkingen: [],
