@@ -22,14 +22,16 @@ const TYPE_PREFIXES: { code: string; label: string }[] = [
   { code: "I", label: "Inbreuken" },
   { code: "G", label: "Algemeen" },
   { code: "C", label: "Mutaties" },
+  { code: "W", label: "Bewaking" },
 ];
 
 // ISO 3166-1 alpha-2 → Nederlandse landnaam, plus praktijk-uitzonderingen (WIPO/EUIPO)
 // die geen ISO-land zijn maar wel als "landcode" in dossiernummers voorkomen.
 // Niet uitputtend: onbekende codes vallen terug op de kale code zelf.
 const LANDNAMEN: Record<string, string> = {
-  WO: "Wereldwijd (WIPO/Madrid)",
-  EU: "Europese Unie (EUIPO)",
+  WO: "Internationale registratie",
+  EU: "Europese Unie",
+  BX: "Benelux",
   NL: "Nederland",
   BE: "België",
   LU: "Luxemburg",

@@ -54,7 +54,7 @@ export function DossiernummerTagInput({
       </div>
       {invoer && (
         <p className="text-xs text-muted-foreground">
-          {preview ? `${preview.typeLabel} · ${preview.landIso}` : "Onbekend dossiernummerformaat"}
+          {preview ? `${preview.typeLabel} · ${preview.landNaam}` : "Onbekend dossiernummerformaat"}
         </p>
       )}
       {value.length > 0 && (
