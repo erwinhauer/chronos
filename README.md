@@ -1,2 +1,2 @@
-# chronos2027
+# chronos
 Chronos on Render
