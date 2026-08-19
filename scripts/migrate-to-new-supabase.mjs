@@ -57,14 +57,14 @@ async function fetchAll(client, table) {
   return rows;
 }
 
-async function upsertAll(table, rows) {
+async function upsertAll(table, rows, onConflict = "id") {
   if (rows.length === 0) {
     console.log(`↺ ${table}: niets te kopiëren.`);
     return;
   }
   for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
     const chunk = rows.slice(i, i + CHUNK_SIZE);
-    const { error } = await newDb.from(table).upsert(chunk, { onConflict: "id" });
+    const { error } = await newDb.from(table).upsert(chunk, { onConflict });
     if (error) throw new Error(`Wegschrijven van ${table} mislukt: ${error.message}`);
   }
   console.log(`✓ ${table}: ${rows.length} rijen gekopieerd.`);
@@ -134,7 +134,11 @@ async function main() {
   await upsertAll("teams", await fetchAll(oldDb, "teams"));
 
   console.log("\n== team_members ==");
-  await upsertAll("team_members", remap(await fetchAll(oldDb, "team_members"), idMap, ["profile_id"]));
+  await upsertAll(
+    "team_members",
+    remap(await fetchAll(oldDb, "team_members"), idMap, ["profile_id"]),
+    "team_id,profile_id"
+  );
 
   console.log("\n== klanten ==");
   await upsertAll("klanten", remap(await fetchAll(oldDb, "klanten"), idMap, ["standaard_teamleider_id"]));
