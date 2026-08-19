@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { signIn, type LoginState } from "@/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +27,15 @@ export function LoginForm({ next }: { next: string }) {
         />
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="password">Wachtwoord</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="password">Wachtwoord</Label>
+          <Link
+            href="/wachtwoord-vergeten"
+            className="text-xs font-medium text-muted-foreground underline-offset-4 hover:underline"
+          >
+            Wachtwoord vergeten?
+          </Link>
+        </div>
         <Input id="password" name="password" type="password" autoComplete="current-password" required />
       </div>
       {state.error && (

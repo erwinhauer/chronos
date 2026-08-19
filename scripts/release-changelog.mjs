@@ -6,16 +6,13 @@ import { createClient } from "@supabase/supabase-js";
 
 // Vóór elke commit bijwerken met de wijzigingen van die release.
 const CHANGELOG_ENTRY = {
-  versienummer: "0.4.1",
-  releasedatum: "2026-07-23",
-  titel: "Dossiernummer: land/type-labels verbeterd",
-  nieuwe_functies: [],
-  wijzigingen: [
-    "Landcode BX toont nu 'Benelux' in plaats van de kale code",
-    "WO toont 'Internationale registratie', EU toont 'Europese Unie' (zonder '(EUIPO)')",
-    "Dossiernummers die beginnen met 'W' worden herkend als type dienst 'Bewaking'",
-    "De live preview bij het invoeren van een dossiernummer toont nu ook de uitgeschreven landnaam",
+  versienummer: "0.5.0",
+  releasedatum: "2026-08-19",
+  titel: "Wachtwoord vergeten",
+  nieuwe_functies: [
+    "Nieuwe 'Wachtwoord vergeten'-pagina: stuurt een e-mail met een link waarmee je zelf een nieuw wachtwoord instelt, zonder tussenkomst van een beheerder",
   ],
+  wijzigingen: [],
   bugfixes: [],
   bekende_beperkingen: [],
   gebruikersactie: null,
