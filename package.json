@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "vercel-build": "supabase link --project-ref tniznfjoldttkiijspen --password \"$SUPABASE_DB_PASSWORD\" && supabase db push --linked --yes && node scripts/release-changelog.mjs && next build",
+    "vercel-build": "supabase link --project-ref trkdqsvsadvaibgsvmwz --password \"$SUPABASE_DB_PASSWORD\" && supabase db push --linked --yes && node scripts/release-changelog.mjs && next build",
     "start": "next start",
     "lint": "eslint",
     "seed": "node scripts/seed.mjs"
