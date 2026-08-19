@@ -6,13 +6,17 @@ import { createClient } from "@supabase/supabase-js";
 
 // Vóór elke commit bijwerken met de wijzigingen van die release.
 const CHANGELOG_ENTRY = {
-  versienummer: "0.5.0",
-  releasedatum: "2026-08-19",
-  titel: "Wachtwoord vergeten",
+  versienummer: "0.6.0",
+  releasedatum: "2026-08-20",
+  titel: "Breadcrumbs en vernieuwd loginscherm",
   nieuwe_functies: [
-    "Nieuwe 'Wachtwoord vergeten'-pagina: stuurt een e-mail met een link waarmee je zelf een nieuw wachtwoord instelt, zonder tussenkomst van een beheerder",
+    "Detailpagina's (klant, factuuritem, specificatie) tonen nu een breadcrumb-pad in de header, bv. 'Klanten / Arcadis', met de vorige stappen klikbaar",
   ],
-  wijzigingen: [],
+  wijzigingen: [
+    "Loginscherm: linkerdeel toont nu een sfeerfoto in plaats van alleen een kleurverloop",
+    "Loginscherm: rechterdeel toont het Chronos-logo en de standaard tagline in plaats van 'Welkom terug'",
+    "Loginscherm: Tab vanuit het e-mailveld springt nu direct naar het wachtwoordveld in plaats van naar 'Wachtwoord vergeten?'",
+  ],
   bugfixes: [],
   bekende_beperkingen: [],
   gebruikersactie: null,

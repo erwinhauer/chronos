@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { Menu, LogOut } from "lucide-react";
+import Link from "next/link";
+import { Menu, LogOut, ChevronRight } from "lucide-react";
 import { ChronosLogo } from "@/components/chronos-logo";
 import { NavLinks } from "@/components/nav-links";
 import { Button } from "@/components/ui/button";
@@ -19,9 +20,46 @@ import { Badge } from "@/components/ui/badge";
 import { signOut } from "@/actions/auth";
 import { ALL_NAV_ITEMS, NAV_ITEMS_BOTTOM, ROLE_LABELS } from "@/lib/nav";
 import { suggestInitialen } from "@/lib/initials";
+import { BreadcrumbProvider, useBreadcrumbSegments } from "@/lib/breadcrumb-context";
 import type { Profile } from "@/lib/supabase/types";
 
 export function AppShell({ profile, children }: { profile: Profile; children: React.ReactNode }) {
+  return (
+    <BreadcrumbProvider>
+      <AppShellContent profile={profile}>{children}</AppShellContent>
+    </BreadcrumbProvider>
+  );
+}
+
+function HeaderTitle({ fallback }: { fallback: string }) {
+  const { segments } = useBreadcrumbSegments();
+
+  if (!segments || segments.length === 0) {
+    return <h1 className="text-base font-semibold tracking-tight">{fallback}</h1>;
+  }
+
+  return (
+    <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-base font-semibold tracking-tight">
+      {segments.map((segment, index) => {
+        const isLast = index === segments.length - 1;
+        return (
+          <span key={`${segment.label}-${index}`} className="flex items-center gap-1.5">
+            {index > 0 && <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />}
+            {segment.href && !isLast ? (
+              <Link href={segment.href} className="text-muted-foreground hover:text-foreground hover:underline">
+                {segment.label}
+              </Link>
+            ) : (
+              <span className={isLast ? "" : "text-muted-foreground"}>{segment.label}</span>
+            )}
+          </span>
+        );
+      })}
+    </nav>
+  );
+}
+
+function AppShellContent({ profile, children }: { profile: Profile; children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const currentLabel = ALL_NAV_ITEMS.find(
@@ -78,7 +116,7 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
             >
               <Menu className="h-5 w-5" />
             </Button>
-            <h1 className="text-base font-semibold tracking-tight">{currentLabel ?? "Chronos"}</h1>
+            <HeaderTitle fallback={currentLabel ?? "Chronos"} />
           </div>
 
           <DropdownMenu>

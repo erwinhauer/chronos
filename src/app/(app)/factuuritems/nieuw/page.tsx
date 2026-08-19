@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createFactuurItem } from "@/actions/factuuritems";
 import { FactuurItemForm } from "@/components/factuuritem-form";
+import { SetBreadcrumb } from "@/lib/breadcrumb-context";
 
 export default async function NieuwFactuurItemPage() {
   const supabase = await createClient();
@@ -22,6 +23,7 @@ export default async function NieuwFactuurItemPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <SetBreadcrumb segments={[{ label: "Factuuritems", href: "/factuuritems" }, { label: "Nieuw" }]} />
       <div>
         <h2 className="text-2xl font-semibold tracking-tight">Nieuw factuuritem</h2>
         <p className="text-sm text-muted-foreground">Leg een werkzaamheid, uren of kosten vast op een dossier.</p>

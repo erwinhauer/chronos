@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { landNaamVoorIso } from "@/lib/dossiernummer";
+import { SetBreadcrumb } from "@/lib/breadcrumb-context";
 import { PrintKnop } from "@/components/print-knop";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -74,6 +75,13 @@ export default async function SpecificatiePagina({ params }: { params: Promise<{
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6 print:max-w-none">
+      <SetBreadcrumb
+        segments={[
+          { label: "Klanten", href: "/klanten" },
+          { label: klant.naam, href: `/klanten/${klant.id}` },
+          { label: t.titel },
+        ]}
+      />
       <div className="flex items-center justify-between print:hidden">
         <h2 className="text-2xl font-semibold tracking-tight">{t.titel}</h2>
         <PrintKnop />

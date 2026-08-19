@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { updateFactuurItem } from "@/actions/factuuritems";
 import { FactuurItemForm } from "@/components/factuuritem-form";
+import { SetBreadcrumb } from "@/lib/breadcrumb-context";
 
 export default async function FactuurItemBewerkenPage({
   params,
@@ -47,6 +48,7 @@ export default async function FactuurItemBewerkenPage({
 
   return (
     <div className="flex flex-col gap-6">
+      <SetBreadcrumb segments={[{ label: "Factuuritems", href: "/factuuritems" }, { label: "Bewerken" }]} />
       <div>
         <h2 className="text-2xl font-semibold tracking-tight">Factuuritem bewerken</h2>
         <p className="text-sm text-muted-foreground">Pas het factuuritem aan.</p>

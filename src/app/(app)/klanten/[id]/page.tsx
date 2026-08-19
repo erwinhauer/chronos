@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Receipt, PiggyBank } from "lucide-react";
+import { SetBreadcrumb } from "@/lib/breadcrumb-context";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { STATUS_LABEL, euro, isGefactureerd, isNogTeFactureren, regelbedrag } from "@/lib/factuurbedragen";
@@ -53,6 +54,7 @@ export default async function KlantDetailPage({ params }: { params: Promise<{ id
 
   return (
     <div className="flex flex-col gap-6">
+      <SetBreadcrumb segments={[{ label: "Klanten", href: "/klanten" }, { label: klant.naam }]} />
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">{klant.naam}</h2>

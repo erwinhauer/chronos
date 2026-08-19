@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { ChronosLogo, ChronosMark } from "@/components/chronos-logo";
 import { LoginForm } from "./login-form";
 
@@ -11,6 +12,8 @@ export default async function LoginPage({
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
       <div className="relative hidden flex-col justify-between overflow-hidden bg-primary p-10 text-primary-foreground lg:flex">
+        <Image src="/login_image.png" alt="" fill priority sizes="50vw" className="object-cover" />
+        <div className="absolute inset-0 bg-primary/75" />
         <div
           className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full opacity-20"
           style={{ background: "radial-gradient(circle, var(--coral) 0%, transparent 70%)" }}
@@ -34,12 +37,11 @@ export default async function LoginPage({
 
       <div className="flex flex-col items-center justify-center gap-8 px-6 py-16">
         <div className="flex w-full max-w-sm flex-col gap-8">
-          <div className="flex flex-col gap-2 lg:hidden">
+          <div className="flex flex-col gap-3">
             <ChronosLogo className="text-foreground" />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <h1 className="text-2xl font-semibold tracking-tight">Welkom terug</h1>
-            <p className="text-sm text-muted-foreground">Log in met je Knijff-account om verder te gaan.</p>
+            <p className="text-sm text-muted-foreground">
+              Uren, werkzaamheden en facturatie van Knijff, op één centrale plek.
+            </p>
           </div>
           <LoginForm next={next ?? "/dashboard"} />
         </div>
