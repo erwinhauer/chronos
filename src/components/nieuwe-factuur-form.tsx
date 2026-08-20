@@ -3,6 +3,7 @@
 import { useActionState, useMemo, useRef, useState } from "react";
 import { createFacturatiebatch, type FactureerFormState } from "@/actions/facturatie";
 import { round2 } from "@/lib/factuurbedragen";
+import type { LandenMap } from "@/lib/landen";
 import {
   FactuurSpecificatie,
   type FactuurSpecificatieItem,
@@ -21,7 +22,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-type Klant = FactuurSpecificatieKlant & { id: string; valuta: string; contact_email: string | null };
+type Klant = FactuurSpecificatieKlant & {
+  id: string;
+  valuta: string;
+  contact_email: string | null;
+  verzending_toegestaan: boolean;
+};
 type Project = { naam: string; po_nummer: string | null } | null;
 
 type BasisTotalen = {
@@ -42,6 +48,7 @@ export function NieuweFactuurForm({
   periodeEind,
   items,
   basisTotalen,
+  landen,
 }: {
   klant: Klant;
   project: Project;
@@ -50,6 +57,7 @@ export function NieuweFactuurForm({
   periodeEind: string;
   items: FactuurSpecificatieItem[];
   basisTotalen: BasisTotalen;
+  landen: LandenMap;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [state, formAction, pending] = useActionState(createFacturatiebatch, initialState);
@@ -127,20 +135,29 @@ export function NieuweFactuurForm({
               </p>
             )}
           </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="email_input">E-mailadres debiteur</Label>
-            <Input
-              id="email_input"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div className="flex flex-col gap-2 sm:col-span-2">
-            <Label htmlFor="cc_input">Cc (optioneel, gescheiden door komma&apos;s)</Label>
-            <Input id="cc_input" value={cc} onChange={(e) => setCc(e.target.value)} placeholder="naam@knijff.com" />
-          </div>
+          {klant.verzending_toegestaan ? (
+            <>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="email_input">E-mailadres debiteur</Label>
+                <Input
+                  id="email_input"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="flex flex-col gap-2 sm:col-span-2">
+                <Label htmlFor="cc_input">Cc (optioneel, gescheiden door komma&apos;s)</Label>
+                <Input id="cc_input" value={cc} onChange={(e) => setCc(e.target.value)} placeholder="naam@knijff.com" />
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground sm:col-span-2">
+              Deze klant werkt met een eigen billing-systeem — er wordt alleen een PDF aangemaakt, geen e-mail
+              verstuurd.
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -157,6 +174,7 @@ export function NieuweFactuurForm({
             periodeEind={eind}
             items={items}
             totalen={totalen}
+            landen={landen}
           />
         </CardContent>
         {state.error && (
@@ -172,7 +190,7 @@ export function NieuweFactuurForm({
             disabled={pending || extraKortingTeHoog}
             onClick={() => setToonBevestiging(true)}
           >
-            {pending ? "Bezig…" : "Bevestigen en factuur aanmaken"}
+            {pending ? "Bezig…" : klant.verzending_toegestaan ? "Bevestigen en factuur aanmaken" : "Bevestigen en PDF aanmaken"}
           </Button>
         </CardFooter>
       </Card>
@@ -184,6 +202,7 @@ export function NieuweFactuurForm({
             <DialogDescription>
               Na bevestigen wordt de factuur definitief en kunnen de geselecteerde factuuritems niet meer
               aangepast worden.
+              {!klant.verzending_toegestaan && " Er wordt alleen een PDF aangemaakt, geen e-mail verstuurd."}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

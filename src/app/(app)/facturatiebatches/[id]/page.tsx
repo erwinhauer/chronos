@@ -5,6 +5,7 @@ import { SetBreadcrumb } from "@/lib/breadcrumb-context";
 import { PrintKnop } from "@/components/print-knop";
 import { FactuurSpecificatie } from "@/components/factuur-specificatie";
 import { VerstuurOpnieuwKnop } from "@/components/verstuur-opnieuw-knop";
+import { haalLandenMap } from "@/lib/landen";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -24,13 +25,16 @@ export default async function SpecificatiePagina({ params }: { params: Promise<{
   if (!klant) notFound();
   const project = batch.projecten as unknown as { naam: string; po_nummer: string | null } | null;
 
-  const { data: items } = await supabase
-    .from("factuuritems")
-    .select(
-      "id, datum, omschrijving_klant, eenheidstype, qty, tarief, honorarium, externe_kosten, korting, profiles!factuuritems_medewerker_id_fkey(full_name), factuuritem_dossiers(dossiernummer, type_dienst, land, volgorde)"
-    )
-    .eq("facturatiebatch_id", batch.id)
-    .order("datum", { ascending: true });
+  const [{ data: items }, landen] = await Promise.all([
+    supabase
+      .from("factuuritems")
+      .select(
+        "id, datum, omschrijving_klant, eenheidstype, qty, tarief, honorarium, externe_kosten, korting, profiles!factuuritems_medewerker_id_fkey(full_name), factuuritem_dossiers(dossiernummer, type_dienst, land, volgorde)"
+      )
+      .eq("facturatiebatch_id", batch.id)
+      .order("datum", { ascending: true }),
+    haalLandenMap(supabase),
+  ]);
 
   const titel = klant.specificatietaal === "nl" ? "Specificatie" : "Fee Note";
   const magOpnieuwVersturen = profile?.role === "finance" || profile?.role === "beheerder";
@@ -49,23 +53,32 @@ export default async function SpecificatiePagina({ params }: { params: Promise<{
         <PrintKnop />
       </div>
 
-      {(batch.verzonden_op || batch.verzend_fout) && (
-        <div className="flex items-center justify-between gap-4 rounded-lg border border-border p-3 print:hidden">
-          {batch.verzonden_op ? (
-            <div className="flex items-center gap-2 text-sm">
-              <Badge variant="success">Verstuurd</Badge>
-              <span className="text-muted-foreground">
-                Verstuurd op {new Date(batch.verzonden_op).toLocaleString("nl-NL")} naar {batch.verzend_email}
-              </span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 text-sm">
-              <Badge variant="warning">Niet verstuurd</Badge>
-              <span className="text-muted-foreground">{batch.verzend_fout}</span>
-            </div>
-          )}
-          {magOpnieuwVersturen && <VerstuurOpnieuwKnop batchId={batch.id} />}
+      {!klant.verzending_toegestaan ? (
+        <div className="flex items-center gap-2 rounded-lg border border-border p-3 text-sm print:hidden">
+          <Badge variant="secondary">Alleen PDF</Badge>
+          <span className="text-muted-foreground">
+            Deze klant werkt met een eigen billing-systeem — er is geen e-mail verstuurd.
+          </span>
         </div>
+      ) : (
+        (batch.verzonden_op || batch.verzend_fout) && (
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-border p-3 print:hidden">
+            {batch.verzonden_op ? (
+              <div className="flex items-center gap-2 text-sm">
+                <Badge variant="success">Verstuurd</Badge>
+                <span className="text-muted-foreground">
+                  Verstuurd op {new Date(batch.verzonden_op).toLocaleString("nl-NL")} naar {batch.verzend_email}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-sm">
+                <Badge variant="warning">Niet verstuurd</Badge>
+                <span className="text-muted-foreground">{batch.verzend_fout}</span>
+              </div>
+            )}
+            {magOpnieuwVersturen && <VerstuurOpnieuwKnop batchId={batch.id} />}
+          </div>
+        )
       )}
 
       <Card className="print:border-none print:shadow-none">
@@ -77,6 +90,7 @@ export default async function SpecificatiePagina({ params }: { params: Promise<{
             factuurnummer={batch.accountview_factuurnummer}
             periodeStart={batch.periode_start}
             periodeEind={batch.periode_eind}
+            landen={landen}
             items={(items ?? []).map((item) => ({
               id: item.id,
               datum: item.datum,

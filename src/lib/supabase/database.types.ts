@@ -188,6 +188,7 @@ export type Database = {
           factuuritem_id: string
           id: string
           land: string | null
+          matter_naam: string | null
           type_dienst: string | null
           volgorde: number
         }
@@ -197,6 +198,7 @@ export type Database = {
           factuuritem_id: string
           id?: string
           land?: string | null
+          matter_naam?: string | null
           type_dienst?: string | null
           volgorde?: number
         }
@@ -206,6 +208,7 @@ export type Database = {
           factuuritem_id?: string
           id?: string
           land?: string | null
+          matter_naam?: string | null
           type_dienst?: string | null
           volgorde?: number
         }
@@ -365,6 +368,7 @@ export type Database = {
           subtitel: string | null
           updated_at: string
           valuta: string
+          verzending_toegestaan: boolean
         }
         Insert: {
           accountview_debiteurnummer?: string | null
@@ -394,6 +398,7 @@ export type Database = {
           subtitel?: string | null
           updated_at?: string
           valuta?: string
+          verzending_toegestaan?: boolean
         }
         Update: {
           accountview_debiteurnummer?: string | null
@@ -423,6 +428,7 @@ export type Database = {
           subtitel?: string | null
           updated_at?: string
           valuta?: string
+          verzending_toegestaan?: boolean
         }
         Relationships: [
           {
@@ -433,6 +439,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      landcodes: {
+        Row: {
+          iso_code: string
+          naam_en: string
+          naam_nl: string
+        }
+        Insert: {
+          iso_code: string
+          naam_en: string
+          naam_nl: string
+        }
+        Update: {
+          iso_code?: string
+          naam_en?: string
+          naam_nl?: string
+        }
+        Relationships: []
       }
       patricia_dossiers: {
         Row: {
@@ -797,18 +821,21 @@ export type Database = {
       teams: {
         Row: {
           created_at: string
+          email: string | null
           id: string
           naam: string
           updated_at: string
         }
         Insert: {
           created_at?: string
+          email?: string | null
           id?: string
           naam: string
           updated_at?: string
         }
         Update: {
           created_at?: string
+          email?: string | null
           id?: string
           naam?: string
           updated_at?: string

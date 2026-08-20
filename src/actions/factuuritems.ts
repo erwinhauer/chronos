@@ -18,7 +18,9 @@ function round2(n: number) {
 
 function parseInput(formData: FormData) {
   const project_id = String(formData.get("project_id") ?? "").trim() || null;
-  const dossier_ids = Array.from(new Set(formData.getAll("dossier_ids").map(String).filter(Boolean)));
+  const dossiernummers = Array.from(
+    new Set(formData.getAll("dossiernummers").map((v) => String(v).trim().toUpperCase()).filter(Boolean))
+  );
   const datum = String(formData.get("datum") ?? "");
   const omschrijving_klant = String(formData.get("omschrijving_klant") ?? "").trim();
   const interne_opmerking = String(formData.get("interne_opmerking") ?? "").trim();
@@ -37,7 +39,7 @@ function parseInput(formData: FormData) {
 
   return {
     project_id,
-    dossier_ids,
+    dossiernummers,
     datum,
     omschrijving_klant,
     interne_opmerking: interne_opmerking || null,
@@ -74,42 +76,57 @@ type DossierResolutie =
   | {
       ok: true;
       klant_id: string;
-      rijen: { dossiernummer: string; type_dienst: string; land: string; volgorde: number }[];
+      rijen: { dossiernummer: string; type_dienst: string; land: string; matter_naam: string | null; volgorde: number }[];
     };
 
-// Klant en dossierinfo komen altijd van de server af — de client kiest alleen
-// welke patricia_dossiers-ids het betreft, nooit de klant zelf. Dit is de
-// tijdelijke stand-in voor de nog te bouwen Patricia-koppeling (zie
+// Klant en dossierinfo komen altijd van de server af — de client typt/kiest
+// alleen dossiernummers, nooit de klant zelf. Herleiding gaat op dossiernummer
+// (niet op patricia_dossiers.id) en filtert niet op `actief` — een dossier dat
+// ooit gekoppeld is/was blijft herleidbaar, ook als het inmiddels inactief is.
+// Dit is de tijdelijke stand-in voor de nog te bouwen Patricia-koppeling (zie
 // supabase/migrations/20260820063624_patricia_dossiers_dummy.sql).
 async function resolveDossiers(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  dossierIds: string[]
+  dossiernummers: string[]
 ): Promise<DossierResolutie> {
-  if (dossierIds.length === 0) {
+  if (dossiernummers.length === 0) {
     return { ok: false, error: "Voeg minimaal één dossier toe." };
   }
 
   const { data: rows, error } = await supabase
     .from("patricia_dossiers")
-    .select("id, klant_id, dossiernummer")
-    .in("id", dossierIds);
+    .select("klant_id, dossiernummer, matter_naam")
+    .in("dossiernummer", dossiernummers);
 
-  if (error || !rows || rows.length !== dossierIds.length) {
-    return { ok: false, error: "Een of meer geselecteerde dossiers zijn niet meer beschikbaar." };
+  if (error) {
+    return { ok: false, error: "Ophalen van de dossiergegevens is mislukt." };
   }
 
-  const klantIds = new Set(rows.map((r) => r.klant_id));
+  const perNummer = new Map((rows ?? []).map((r) => [r.dossiernummer, r]));
+  const nietGevonden = dossiernummers.filter((d) => !perNummer.has(d));
+  if (nietGevonden.length > 0) {
+    return { ok: false, error: `Dossier(s) niet gevonden: ${nietGevonden.join(", ")}` };
+  }
+
+  const klantIds = new Set(dossiernummers.map((d) => perNummer.get(d)!.klant_id));
   if (klantIds.size > 1) {
     return { ok: false, error: "Alle geselecteerde dossiers moeten bij dezelfde klant horen." };
   }
 
-  const rijen: { dossiernummer: string; type_dienst: string; land: string; volgorde: number }[] = [];
-  for (const [index, row] of rows.entries()) {
-    const parsed = parseDossiernummer(row.dossiernummer);
+  const rijen: { dossiernummer: string; type_dienst: string; land: string; matter_naam: string | null; volgorde: number }[] =
+    [];
+  for (const [index, dossiernummer] of dossiernummers.entries()) {
+    const parsed = parseDossiernummer(dossiernummer);
     if (!parsed) {
-      return { ok: false, error: `Dossiernummer "${row.dossiernummer}" heeft niet het verwachte formaat.` };
+      return { ok: false, error: `Dossiernummer "${dossiernummer}" heeft niet het verwachte formaat.` };
     }
-    rijen.push({ dossiernummer: row.dossiernummer, type_dienst: parsed.typeLabel, land: parsed.landIso, volgorde: index });
+    rijen.push({
+      dossiernummer,
+      type_dienst: parsed.typeLabel,
+      land: parsed.landIso,
+      matter_naam: perNummer.get(dossiernummer)!.matter_naam,
+      volgorde: index,
+    });
   }
 
   return { ok: true, klant_id: [...klantIds][0], rijen };
@@ -149,7 +166,7 @@ export async function createFactuurItem(
   }
 
   const supabase = await createClient();
-  const dossiers = await resolveDossiers(supabase, input.dossier_ids);
+  const dossiers = await resolveDossiers(supabase, input.dossiernummers);
   if (!dossiers.ok) {
     return { error: dossiers.error, success: false };
   }
@@ -239,7 +256,7 @@ export async function updateFactuurItem(
   }
 
   const supabase = await createClient();
-  const dossiers = await resolveDossiers(supabase, input.dossier_ids);
+  const dossiers = await resolveDossiers(supabase, input.dossiernummers);
   if (!dossiers.ok) {
     return { error: dossiers.error, success: false };
   }

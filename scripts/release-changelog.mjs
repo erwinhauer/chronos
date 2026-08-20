@@ -6,29 +6,31 @@ import { createClient } from "@supabase/supabase-js";
 
 // Vóór elke commit bijwerken met de wijzigingen van die release.
 const CHANGELOG_ENTRY = {
-  versienummer: "0.11.0",
+  versienummer: "0.12.0",
   releasedatum: "2026-08-20",
-  titel: "Voorbeeldfactuur, factuurkorting, verzending per e-mail en uitgebreide managementcijfers",
+  titel: "Factuuritems per klant, vrij dossiers intypen, landenlijst en UI-verbeteringen",
   nieuwe_functies: [
-    "Nieuw scherm bij het factureren: een echte voorbeeldfactuur met specificatie, periode, extra korting op de hele factuur en het e-mailadres (+ cc) van de debiteur, met een bevestiging vóór de factuur definitief wordt",
-    "Na bevestigen wordt automatisch een PDF gemaakt en per e-mail verstuurd naar de debiteur, met een kopie aan de medewerkers op de factuur; bij een mislukte verzending verschijnt een duidelijke melding met een 'opnieuw versturen'-knop op de specificatiepagina",
-    "Korting op de hele factuur (los van de bestaande korting per factuuritem)",
-    "Klantscherm: schakelaar om kosten van derden apart te tonen op de specificatie",
-    "Factuuritem-scherm: de taal van de klant is nu zichtbaar en direct wijzigbaar",
-    "Teamleiders kunnen nu projecten/PO-nummers beheren voor klanten die hun team al bedient (voorheen alleen beheerder)",
-    "Dashboard: nieuwe periode 'Heel jaar' en een jaarkeuze, omzet per medewerker over alle teams heen, top 3 klanten per team, en een overzicht van omzet/uren per dienst (merken, modellen, opposities, enz.)",
+    "Factuuritems-overzicht toont nu eerst een ingeklapte lijst per klant (naam + openstaand bedrag) met een zoekveld; een klik opent de volledige, vertrouwde tabel voor die klant",
+    "Bij een factuuritem kun je een dossiernummer nu ook direct intypen (in plaats van alleen aanklikken in de suggestielijst), en met komma's of puntkomma's meteen meerdere dossiers achter elkaar toevoegen of plakken",
+    "Instellingen → Landen (beheerder): volledige, bewerkbare landenlijst (NL/EN, ISO-code) — de landnamen op de specificatie en interne overzichten volgen deze lijst",
+    "Klantscherm: schakelaar 'Facturen per e-mail versturen' — uitzetten als de klant met een eigen billing-systeem werkt; er wordt dan alleen nog een PDF aangemaakt, niet verstuurd",
+    "Teams kunnen nu een team-e-mailadres krijgen bij Instellingen, dat automatisch in cc gaat bij het versturen van facturen van klanten die dat team bedient",
   ],
   wijzigingen: [
-    "Dossiernummer-lettercodes: 'CA' heet nu 'Cancellations' (was 'Cancellation Actions'); 'A' (overeenkomsten) en '@' (domeinnamen) toegevoegd",
-    "Dashboard: 'Nog te factureren' en 'Gefactureerd' volgen nu dezelfde periode-/jaarfilter als de rest van het dashboard, in plaats van altijd het volledige verleden te tonen",
+    "Factuuritems-tabel: dossier-subtekst toont nu de merknaam in plaats van dienst/land, medewerker wordt getoond als initialen-tag, er is een nieuwe kolom 'Land', lange omschrijvingen breken nu netjes af, en 'Bewerken' is een icoon geworden",
+    "Factuuritem-formulier: dossiers en klantgegevens (incl. adres) staan naast elkaar, net als omschrijving en interne opmerking; bedragvelden tonen een €-teken en 'Aantal' toont altijd 1 decimaal",
+    "Alle invoervelden en knoppen hebben iets meer padding gekregen; modals hebben nu ruime padding rondom (2rem) in plaats van krap",
+    "De zijbalk (Profiel/Instellingen) blijft nu altijd in beeld, ook als de hoofdpagina lang is",
   ],
-  bugfixes: [],
+  bugfixes: [
+    "Landcode 'SV' werd onterecht als Sri Lanka getoond (moet El Salvador zijn, conform ISO 3166-1) — de volledige landenlijst is nagelopen en gecorrigeerd",
+    "Een factuuritem bewerken waarvan een dossier inmiddels inactief was gaf onterecht de foutmelding 'Voeg minimaal één dossier toe' bij opslaan, ook zonder wijzigingen — dossiers worden nu op dossiernummer herleid in plaats van op een lijst die alleen actieve dossiers bevat",
+  ],
   bekende_beperkingen: [
     "Het daadwerkelijk versturen van de e-mail vraagt een Resend API-key en een geverifieerd verzenddomein — zonder die configuratie wordt de PDF wel gemaakt en opgeslagen, maar niet verstuurd",
     "Een kopie van de factuur in het Patricia-dossier hangen kan pas zodra de echte Patricia-koppeling er is (staat op de backlog)",
   ],
-  gebruikersactie:
-    "Voor daadwerkelijke e-mailverzending: RESEND_API_KEY instellen in de omgevingsvariabelen (en optioneel FACTUUR_AFZENDER voor het afzenderadres).",
+  gebruikersactie: null,
 };
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;

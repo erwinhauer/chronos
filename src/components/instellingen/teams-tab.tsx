@@ -2,7 +2,7 @@
 
 import { useActionState, useMemo, useState, useTransition } from "react";
 import { Plus, Search, Pencil } from "lucide-react";
-import { createTeam, setTeamLeden, type TeamFormState } from "@/actions/admin";
+import { createTeam, setTeamLeden, updateTeamEmail, type TeamFormState } from "@/actions/admin";
 import { setTeamdoel } from "@/actions/teamdoelen";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,7 @@ import { euro } from "@/lib/factuurbedragen";
 import { sortRows, type SortRichting } from "@/lib/table-utils";
 
 type Profile = { id: string; full_name: string };
-type Team = { id: string; naam: string };
+type Team = { id: string; naam: string; email: string | null };
 type Doel = { bruto: number; netto: number | null };
 type SortKey = "naam" | "leden" | "doel";
 
@@ -162,6 +162,7 @@ function TeamBewerkenDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [leden, setLeden] = useState<string[]>(huidigeLeden);
+  const [email, setEmail] = useState(team.email ?? "");
   const [brutoDoel, setBrutoDoel] = useState(huidigDoel ? String(huidigDoel.bruto) : "");
   const [nettoDoel, setNettoDoel] = useState(huidigDoel?.netto != null ? String(huidigDoel.netto) : "");
   const [pending, startTransition] = useTransition();
@@ -171,7 +172,7 @@ function TeamBewerkenDialog({
     startTransition(async () => {
       setError(null);
       try {
-        const acties = [setTeamLeden(team.id, leden)];
+        const acties = [setTeamLeden(team.id, leden), updateTeamEmail(team.id, email)];
         if (brutoDoel.trim() !== "") {
           acties.push(
             setTeamdoel(team.id, jaar, Number(brutoDoel), nettoDoel.trim() !== "" ? Number(nettoDoel) : null)
@@ -213,6 +214,18 @@ function TeamBewerkenDialog({
                 </label>
               ))}
             </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor={`team-email-${team.id}`}>Team-mailadres (optioneel)</Label>
+            <Input
+              id={`team-email-${team.id}`}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="team@knijff.com"
+            />
+            <p className="text-xs text-muted-foreground">Gaat in cc bij het versturen van facturen voor dit team.</p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -287,6 +300,10 @@ function NewTeamDialog() {
           <div className="flex flex-col gap-2">
             <Label htmlFor="naam">Teamnaam</Label>
             <Input id="naam" name="naam" placeholder="Bijv. Team Benelux" required />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="email">Team-mailadres (optioneel)</Label>
+            <Input id="email" name="email" type="email" placeholder="team@knijff.com" />
           </div>
           {state.error && (
             <p role="alert" className="text-sm text-destructive">

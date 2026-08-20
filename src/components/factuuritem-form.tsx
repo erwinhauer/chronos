@@ -27,6 +27,7 @@ import type { PrijsType, KortingType } from "@/lib/supabase/types";
 type Klant = {
   id: string;
   naam: string;
+  adres: string | null;
   kantoorkosten_actief: boolean;
   kantoorkosten_percentage: number;
   specificatietaal: "nl" | "en";
@@ -35,8 +36,7 @@ type Project = { id: string; naam: string; po_nummer: string | null };
 
 type Initial = {
   id: string;
-  dossier_ids: string[];
-  onbekende_dossiers?: { dossiernummer: string; type_dienst: string | null; land: string | null }[];
+  dossiernummers: string[];
   // Alleen als weergave-terugval als geen van de dossiers op dit item (meer)
   // in de dummy-lijst voorkomt — submission herleidt de klant altijd opnieuw
   // server-side uit de daadwerkelijk geselecteerde dossiers.
@@ -95,11 +95,12 @@ export function FactuurItemForm({
   }
 
   const [projectId, setProjectId] = useState(initial?.project_id ?? "");
-  const [dossierSelectie, setDossierSelectie] = useState<string[]>(initial?.dossier_ids ?? []);
+  const [dossierSelectie, setDossierSelectie] = useState<string[]>(initial?.dossiernummers ?? []);
   const [datum, setDatum] = useState(initial?.datum ?? new Date().toISOString().slice(0, 10));
   const [omschrijvingKlant, setOmschrijvingKlant] = useState(initial?.omschrijving_klant ?? "");
   const [interneOpmerking, setInterneOpmerking] = useState(initial?.interne_opmerking ?? "");
-  const [qty, setQty] = useState(initial?.qty ?? 1);
+  const [qtyInput, setQtyInput] = useState((initial?.qty ?? 1).toFixed(1));
+  const qty = Number(qtyInput) || 0;
   const [prijstype, setPrijstype] = useState<PrijsType | "">(initial?.prijstype ?? "");
   const [tarief, setTarief] = useState<number | null>(initial?.tarief ?? null);
   const [externeKosten, setExterneKosten] = useState(initial?.externe_kosten ?? 0);
@@ -115,7 +116,7 @@ export function FactuurItemForm({
   // gegevens bij een bewerking) om te kunnen bepalen of de gebruiker al iets
   // heeft ingevuld/gewijzigd voordat "Sluiten" een bevestiging vraagt.
   const [startSnapshot] = useState(() => ({
-    dossierSelectie: initial?.dossier_ids ?? [],
+    dossierSelectie: initial?.dossiernummers ?? [],
     projectId: initial?.project_id ?? "",
     omschrijvingKlant: initial?.omschrijving_klant ?? "",
     interneOpmerking: initial?.interne_opmerking ?? "",
@@ -130,7 +131,7 @@ export function FactuurItemForm({
   // Klant is niet langer een handmatige keuze — hij volgt uit het/de gekozen
   // dossier(s) (allemaal van dezelfde klant, zie DossierSelect's klant-lock).
   const klantId = useMemo(() => {
-    const eerste = dossiers.find((d) => dossierSelectie.includes(d.id));
+    const eerste = dossiers.find((d) => dossierSelectie.includes(d.dossiernummer));
     return eerste?.klant_id ?? initial?.klant_id_fallback ?? "";
   }, [dossiers, dossierSelectie, initial?.klant_id_fallback]);
   const klant = klanten.find((k) => k.id === klantId);
@@ -151,8 +152,8 @@ export function FactuurItemForm({
 
   function handleDossierChange(nieuweSelectie: string[]) {
     if (omschrijvingKlant === "" && dossierSelectie.length === 0 && nieuweSelectie.length > 0) {
-      const eerste = dossiers.find((d) => d.id === nieuweSelectie[0]);
-      if (eerste) setOmschrijvingKlant(eerste.matter_naam);
+      const eerste = dossiers.find((d) => d.dossiernummer === nieuweSelectie[0]);
+      if (eerste?.matter_naam) setOmschrijvingKlant(eerste.matter_naam);
     }
     setDossierSelectie(nieuweSelectie);
   }
@@ -208,8 +209,8 @@ export function FactuurItemForm({
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
-      {dossierSelectie.map((id) => (
-        <input key={id} type="hidden" name="dossier_ids" value={id} />
+      {dossierSelectie.map((d) => (
+        <input key={d} type="hidden" name="dossiernummers" value={d} />
       ))}
       <input type="hidden" name="project_id" value={projectId} />
       <input type="hidden" name="datum" value={datum} />
@@ -233,20 +234,20 @@ export function FactuurItemForm({
               <CardTitle className="text-base">Dossier en werkzaamheid</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-5">
-              <DossierSelect
-                dossiers={dossiers}
-                value={dossierSelectie}
-                onChange={handleDossierChange}
-                onbekendeDossiers={initial?.onbekende_dossiers}
-              />
-
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-6 sm:grid-cols-2">
+                <DossierSelect dossiers={dossiers} value={dossierSelectie} onChange={handleDossierChange} />
                 <div className="flex flex-col gap-2">
                   <Label>Klant</Label>
-                  <p className="flex h-8 items-center text-sm font-medium">
+                  <p className="flex h-9 items-center text-sm font-medium">
                     {klant?.naam ?? <span className="text-muted-foreground">Kies eerst een dossier</span>}
                   </p>
+                  {klant?.adres && (
+                    <p className="text-xs whitespace-pre-line text-muted-foreground">{klant.adres}</p>
+                  )}
                 </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
                 {klant && <TaalVeld klant={klant} />}
                 {projectenVoorKlant.length > 0 && (
                   <div className="flex flex-col gap-2">
@@ -269,38 +270,40 @@ export function FactuurItemForm({
                 )}
               </div>
 
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="omschrijving_klant">Omschrijving voor klant</Label>
-                <Textarea
-                  id="omschrijving_klant"
-                  name="omschrijving_klant"
-                  rows={3}
-                  value={omschrijvingKlant}
-                  onChange={(e) => setOmschrijvingKlant(e.target.value)}
-                  placeholder="Wat is er gedaan? Dit komt op de specificatie te staan."
-                  required
-                />
-              </div>
-
-              <div className="flex flex-col gap-2 rounded-lg border border-warning/30 bg-warning/5 p-3">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="interne_opmerking" className="mb-0">
-                    Interne opmerking (optioneel)
-                  </Label>
-                  <Badge variant="warning">
-                    <EyeOff className="size-3" />
-                    Niet zichtbaar voor klant
-                  </Badge>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="omschrijving_klant">Omschrijving voor klant</Label>
+                  <Textarea
+                    id="omschrijving_klant"
+                    name="omschrijving_klant"
+                    rows={3}
+                    value={omschrijvingKlant}
+                    onChange={(e) => setOmschrijvingKlant(e.target.value)}
+                    placeholder="Wat is er gedaan? Dit komt op de specificatie te staan."
+                    required
+                  />
                 </div>
-                <Textarea
-                  id="interne_opmerking"
-                  name="interne_opmerking"
-                  rows={2}
-                  value={interneOpmerking}
-                  onChange={(e) => setInterneOpmerking(e.target.value)}
-                  placeholder="Alleen intern zichtbaar."
-                  className="border-warning/40 bg-transparent focus-visible:border-warning focus-visible:ring-warning/30"
-                />
+
+                <div className="flex flex-col gap-2 rounded-lg border border-warning/30 bg-warning/5 p-3">
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="interne_opmerking" className="mb-0">
+                      Interne opmerking (optioneel)
+                    </Label>
+                    <Badge variant="warning">
+                      <EyeOff className="size-3" />
+                      Niet zichtbaar voor klant
+                    </Badge>
+                  </div>
+                  <Textarea
+                    id="interne_opmerking"
+                    name="interne_opmerking"
+                    rows={2}
+                    value={interneOpmerking}
+                    onChange={(e) => setInterneOpmerking(e.target.value)}
+                    placeholder="Alleen intern zichtbaar."
+                    className="border-warning/40 bg-transparent focus-visible:border-warning focus-visible:ring-warning/30"
+                  />
+                </div>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-3">
@@ -335,8 +338,9 @@ export function FactuurItemForm({
                     type="number"
                     step="0.1"
                     min="0"
-                    value={qty}
-                    onChange={(e) => setQty(Number(e.target.value))}
+                    value={qtyInput}
+                    onChange={(e) => setQtyInput(e.target.value)}
+                    onBlur={() => setQtyInput((Number(qtyInput) || 0).toFixed(1))}
                     required
                   />
                 </div>
@@ -368,15 +372,21 @@ export function FactuurItemForm({
 
               <div className="flex flex-col gap-2 sm:w-64">
                 <Label htmlFor="tarief_input">{prijstype === "vast_honorarium" ? "Vast honorarium (bedrag)" : "Prijs per uur"}</Label>
-                <Input
-                  id="tarief_input"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={tarief ?? ""}
-                  onChange={(e) => setTarief(e.target.value === "" ? null : Number(e.target.value))}
-                  required
-                />
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                    €
+                  </span>
+                  <Input
+                    id="tarief_input"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="pl-6"
+                    value={tarief ?? ""}
+                    onChange={(e) => setTarief(e.target.value === "" ? null : Number(e.target.value))}
+                    required
+                  />
+                </div>
                 {prijstype === "uren" && voorgesteldTarief !== null && (
                   <p className="text-xs text-muted-foreground">Voorgesteld tarief: {euro(voorgesteldTarief)}</p>
                 )}
@@ -385,14 +395,20 @@ export function FactuurItemForm({
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="externe_kosten_input">Kosten van derden (optioneel)</Label>
-                  <Input
-                    id="externe_kosten_input"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={externeKosten}
-                    onChange={(e) => setExterneKosten(Number(e.target.value))}
-                  />
+                  <div className="relative">
+                    <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                      €
+                    </span>
+                    <Input
+                      id="externe_kosten_input"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="pl-6"
+                      value={externeKosten}
+                      onChange={(e) => setExterneKosten(Number(e.target.value))}
+                    />
+                  </div>
                 </div>
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">
@@ -415,14 +431,20 @@ export function FactuurItemForm({
                     </div>
                   </div>
                   {kortingType === "bedrag" ? (
-                    <Input
-                      id="korting_input"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={kortingBedrag}
-                      onChange={(e) => setKortingBedrag(Number(e.target.value))}
-                    />
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                        €
+                      </span>
+                      <Input
+                        id="korting_input"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        className="pl-6"
+                        value={kortingBedrag}
+                        onChange={(e) => setKortingBedrag(Number(e.target.value))}
+                      />
+                    </div>
                   ) : (
                     <Input
                       id="korting_input"
@@ -587,7 +609,7 @@ function NativeSelect({
         onChange={(e) => onChange?.(e.target.value)}
         required={required}
         disabled={disabled}
-        className="h-8 w-full appearance-none rounded-lg border border-input bg-transparent px-2.5 py-1 text-base outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm dark:bg-input/30"
+        className="h-9 w-full appearance-none rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-base outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm dark:bg-input/30"
       >
         {children}
       </select>

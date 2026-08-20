@@ -98,6 +98,8 @@ const LANDNAMEN: Record<string, string> = {
   TR: "Turkije",
   RU: "Rusland",
   UA: "Oekraïne",
+  SV: "El Salvador",
+  LK: "Sri Lanka",
 };
 
 function tryParsePrefix(code: string, rest: string): DossiernummerParseResult | null {
@@ -131,7 +133,11 @@ export function parseDossiernummer(input: string): DossiernummerParseResult | nu
 
 export const DOSSIERNUMMER_VOORBEELD = "TM93905GB00";
 
-export function landNaamVoorIso(iso: string | null): string {
+// `landen` komt bij voorkeur van de beheerder-bewerkbare `landcodes`-tabel
+// (zie src/lib/landen.ts); zonder dat argument valt dit terug op de statische
+// lijst hierboven (die overigens ook de seed-data voor die tabel is).
+export function landNaamVoorIso(iso: string | null, landen?: Record<string, { nl: string; en: string }>): string {
   if (!iso) return "—";
+  if (landen?.[iso]) return landen[iso].nl;
   return LANDNAMEN[iso] ?? iso;
 }

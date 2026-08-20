@@ -19,7 +19,7 @@ export default async function FactuurItemBewerkenPage({
   const { data: item } = await supabase
     .from("factuuritems")
     .select(
-      "*, laatst_bewerkt_door_profiel:profiles!factuuritems_laatst_bewerkt_door_fkey(full_name), factuuritem_dossiers(dossiernummer, type_dienst, land, volgorde)"
+      "*, laatst_bewerkt_door_profiel:profiles!factuuritems_laatst_bewerkt_door_fkey(full_name), factuuritem_dossiers(dossiernummer, type_dienst, land, matter_naam, volgorde)"
     )
     .eq("id", id)
     .single();
@@ -33,28 +33,26 @@ export default async function FactuurItemBewerkenPage({
     redirect("/factuuritems");
   }
 
-  const [{ data: klanten }, { data: projecten }, { data: dossiers }] = await Promise.all([
+  const [{ data: klanten }, { data: projecten }, { data: actieveDossiers }] = await Promise.all([
     supabase
       .from("klanten")
-      .select("id, naam, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal")
+      .select("id, naam, adres, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal")
       .eq("status", "actief")
       .order("naam"),
     supabase.from("projecten").select("id, klant_id, naam, po_nummer").eq("actief", true).order("naam"),
-    supabase.from("patricia_dossiers").select("id, klant_id, dossiernummer, matter_naam").eq("actief", true).order("dossiernummer"),
+    supabase.from("patricia_dossiers").select("klant_id, dossiernummer, matter_naam").eq("actief", true).order("dossiernummer"),
   ]);
 
-  // Oudere factuuritems kunnen dossiernummers hebben die (nog) niet in de dummy-
-  // Patricia-lijst staan — die tonen we read-only i.p.v. ze stilzwijgend te laten
-  // vallen (zie plan §4).
-  const dossierIdPerNummer = new Map(
-    (dossiers ?? []).filter((d) => d.klant_id === item.klant_id).map((d) => [d.dossiernummer, d.id])
+  // De al aan dit item gekoppelde dossiers blijven altijd herleidbaar/bewerkbaar,
+  // ook als ze inmiddels inactief zijn — samengevoegd met de actieve suggesties
+  // voor de typeahead (dossiernummer is hier de sleutel, niet meer een id).
+  const dossiers = new Map<string, { klant_id: string; dossiernummer: string; matter_naam: string | null }>(
+    (actieveDossiers ?? []).map((d) => [d.dossiernummer, d])
   );
-  const dossierIds: string[] = [];
-  const onbekendeDossiers: { dossiernummer: string; type_dienst: string | null; land: string | null }[] = [];
   for (const d of dossiersOpItem) {
-    const gevondenId = dossierIdPerNummer.get(d.dossiernummer);
-    if (gevondenId) dossierIds.push(gevondenId);
-    else onbekendeDossiers.push({ dossiernummer: d.dossiernummer, type_dienst: d.type_dienst, land: d.land });
+    if (!dossiers.has(d.dossiernummer)) {
+      dossiers.set(d.dossiernummer, { klant_id: item.klant_id, dossiernummer: d.dossiernummer, matter_naam: d.matter_naam });
+    }
   }
 
   const projectenPerKlant: Record<string, { id: string; naam: string; po_nummer: string | null }[]> = {};
@@ -74,14 +72,14 @@ export default async function FactuurItemBewerkenPage({
       </div>
       <FactuurItemForm
         klanten={klanten ?? []}
-        dossiers={dossiers ?? []}
+        dossiers={Array.from(dossiers.values())}
         projectenPerKlant={projectenPerKlant}
         action={updateFactuurItem.bind(null, item.id)}
         medewerkerId={user.id}
         initial={{
           id: item.id,
-          dossier_ids: dossierIds,
-          onbekende_dossiers: onbekendeDossiers,
+          dossiernummers: dossiersOpItem.map((d) => d.dossiernummer),
+          klant_id_fallback: item.klant_id,
           project_id: item.project_id,
           datum: item.datum,
           omschrijving_klant: item.omschrijving_klant,

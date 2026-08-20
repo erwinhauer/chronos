@@ -5,6 +5,7 @@
 
 import { Document, Page, View, Text, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
 import { landNaamVoorIso } from "@/lib/dossiernummer";
+import type { LandenMap } from "@/lib/landen";
 import type {
   FactuurSpecificatieItem,
   FactuurSpecificatieKlant,
@@ -92,6 +93,7 @@ export async function genereerFactuurPdf({
   periodeEind,
   items,
   totalen,
+  landen,
 }: {
   klant: FactuurSpecificatieKlant;
   project: { naam: string; po_nummer: string | null } | null;
@@ -101,6 +103,7 @@ export async function genereerFactuurPdf({
   periodeEind: string;
   items: FactuurSpecificatieItem[];
   totalen: FactuurSpecificatieTotalen;
+  landen?: LandenMap;
 }): Promise<Buffer> {
   const taal = klant.specificatietaal;
   const t = LABELS[taal];
@@ -150,7 +153,7 @@ export async function genereerFactuurPdf({
         {items.map((item) => {
           const dossiers = item.dossiers.slice().sort((a, b) => a.volgorde - b.volgorde);
           const dossierTekst = dossiers
-            .map((d) => `${d.dossiernummer} · ${d.type_dienst}${d.land ? ` · ${landNaamVoorIso(d.land)}` : ""}`)
+            .map((d) => `${d.dossiernummer} · ${d.type_dienst}${d.land ? ` · ${landNaamVoorIso(d.land, landen)}` : ""}`)
             .join("\n");
           const waarden: Record<string, string> = {
             datum: formatDatum(item.datum, taal),

@@ -5,6 +5,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { GebruikersTab } from "@/components/instellingen/gebruikers-tab";
 import { TeamsTab } from "@/components/instellingen/teams-tab";
 import { ChangelogTab } from "@/components/instellingen/changelog-tab";
+import { LandenTab } from "@/components/instellingen/landen-tab";
 import type { UserRole } from "@/lib/supabase/types";
 
 export default async function InstellingenPage() {
@@ -20,13 +21,15 @@ export default async function InstellingenPage() {
     { data: changelog },
     { data: teamdoelen },
     { data: profileRoles },
+    { data: landen },
   ] = await Promise.all([
     supabase.from("profiles").select("id, full_name, voornaam, achternaam, email, role, actief, initialen").order("full_name"),
-    supabase.from("teams").select("id, naam").order("naam"),
+    supabase.from("teams").select("id, naam, email").order("naam"),
     supabase.from("team_members").select("team_id, profile_id"),
     supabase.from("productchangelog").select("*").order("releasedatum", { ascending: false }),
     supabase.from("teamdoelen").select("team_id, bruto_bedrag, netto_bedrag").eq("jaar", jaar),
     supabase.from("profile_roles").select("profile_id, role"),
+    supabase.from("landcodes").select("iso_code, naam_nl, naam_en").order("naam_nl"),
   ]);
 
   const teamIdsPerProfile: Record<string, string[]> = {};
@@ -54,6 +57,7 @@ export default async function InstellingenPage() {
         <TabsList>
           <TabsTrigger value="gebruikers">Gebruikers</TabsTrigger>
           <TabsTrigger value="teams">Teams</TabsTrigger>
+          <TabsTrigger value="landen">Landen</TabsTrigger>
           <TabsTrigger value="changelog">Changelog</TabsTrigger>
         </TabsList>
         <TabsContent value="gebruikers">
@@ -72,6 +76,9 @@ export default async function InstellingenPage() {
             doelPerTeam={doelPerTeam}
             jaar={jaar}
           />
+        </TabsContent>
+        <TabsContent value="landen">
+          <LandenTab landen={landen ?? []} />
         </TabsContent>
         <TabsContent value="changelog">
           <ChangelogTab entries={changelog ?? []} />

@@ -27,6 +27,7 @@ type Klant = {
   specificatietaal: "nl" | "en";
   kantoorkosten_actief: boolean;
   kolom_externe_kosten_zichtbaar: boolean;
+  verzending_toegestaan: boolean;
   opmerkingen: string | null;
 };
 
@@ -36,6 +37,7 @@ export function EditKlantDialog({ klant }: { klant: Klant }) {
   const [open, setOpen] = useState(false);
   const [kantoorkostenActief, setKantoorkostenActief] = useState(klant.kantoorkosten_actief);
   const [kostenDerdenApart, setKostenDerdenApart] = useState(klant.kolom_externe_kosten_zichtbaar);
+  const [verzendingToegestaan, setVerzendingToegestaan] = useState(klant.verzending_toegestaan);
   const [state, formAction, pending] = useActionState(async (prev: KlantFormState, formData: FormData) => {
     const result = await updateKlant(klant.id, prev, formData);
     if (result.success) setOpen(false);
@@ -95,7 +97,7 @@ export function EditKlantDialog({ klant }: { klant: Klant }) {
                 id="specificatietaal"
                 name="specificatietaal"
                 defaultValue={klant.specificatietaal}
-                className="h-8 w-full appearance-none rounded-lg border border-input bg-transparent px-2.5 py-1 text-base outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm dark:bg-input/30"
+                className="h-9 w-full appearance-none rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-base outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm dark:bg-input/30"
               >
                 <option value="nl">Nederlands</option>
                 <option value="en">Engels</option>
@@ -120,6 +122,15 @@ export function EditKlantDialog({ klant }: { klant: Klant }) {
             />
             <input type="hidden" name="kolom_externe_kosten_zichtbaar" value={kostenDerdenApart ? "on" : ""} />
             Kosten van derden apart tonen op de specificatie
+          </label>
+
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={verzendingToegestaan}
+              onCheckedChange={(checked) => setVerzendingToegestaan(checked === true)}
+            />
+            <input type="hidden" name="verzending_toegestaan" value={verzendingToegestaan ? "on" : ""} />
+            Facturen per e-mail versturen (uitzetten als de klant een eigen billing-systeem heeft)
           </label>
 
           <div className="flex flex-col gap-2">

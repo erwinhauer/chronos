@@ -2,48 +2,78 @@
 
 import { useMemo, useState } from "react";
 import { X } from "lucide-react";
-import { parseDossiernummer } from "@/lib/dossiernummer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export type PatriciaDossierOptie = { id: string; klant_id: string; dossiernummer: string; matter_naam: string };
+export type PatriciaDossierOptie = { klant_id: string; dossiernummer: string; matter_naam: string | null };
+
+// Komma/puntkomma splitst een geplakte of ingetypte lijst in losse pogingen.
+const SPLIT_PATTERN = /[,;]+/;
 
 export function DossierSelect({
   dossiers,
   value,
   onChange,
-  onbekendeDossiers = [],
 }: {
+  /** Bekende dossiers: actieve suggesties én (voor bewerken) de al aan dit item
+   * gekoppelde dossiers, zodat die altijd herleidbaar en verwijderbaar blijven. */
   dossiers: PatriciaDossierOptie[];
   value: string[];
   onChange: (value: string[]) => void;
-  /** Dossiernummers van een bestaand factuuritem die niet (meer) in de dummy-lijst
-   * voorkomen — non-editable getoond zodat historische dossierinfo nooit stilzwijgend verloren gaat. */
-  onbekendeDossiers?: { dossiernummer: string; type_dienst: string | null; land: string | null }[];
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
+  const [nietGevonden, setNietGevonden] = useState<string[]>([]);
 
-  const geselecteerd = useMemo(() => dossiers.filter((d) => value.includes(d.id)), [dossiers, value]);
-  const lockedKlantId = geselecteerd[0]?.klant_id ?? null;
+  const perNummer = useMemo(() => new Map(dossiers.map((d) => [d.dossiernummer, d])), [dossiers]);
+  const geselecteerd = useMemo(() => value.map((d) => ({ dossiernummer: d, optie: perNummer.get(d) ?? null })), [
+    value,
+    perNummer,
+  ]);
+  const lockedKlantId = geselecteerd.find((g) => g.optie)?.optie?.klant_id ?? null;
 
   const beschikbaar = useMemo(() => {
     const q = query.trim().toLowerCase();
     return dossiers.filter((d) => {
-      if (value.includes(d.id)) return false;
+      if (value.includes(d.dossiernummer)) return false;
       if (lockedKlantId && d.klant_id !== lockedKlantId) return false;
       if (!q) return true;
-      return d.dossiernummer.toLowerCase().includes(q) || d.matter_naam.toLowerCase().includes(q);
+      return d.dossiernummer.toLowerCase().includes(q) || (d.matter_naam ?? "").toLowerCase().includes(q);
     });
   }, [dossiers, value, lockedKlantId, query]);
 
-  function toevoegen(id: string) {
-    onChange([...value, id]);
+  function toevoegen(dossiernummer: string) {
+    if (!value.includes(dossiernummer)) onChange([...value, dossiernummer]);
     setQuery("");
   }
 
-  function verwijderen(id: string) {
-    onChange(value.filter((v) => v !== id));
+  function verwijderen(dossiernummer: string) {
+    onChange(value.filter((v) => v !== dossiernummer));
+  }
+
+  function verwerkTekst(tekst: string) {
+    const kandidaten = tekst
+      .split(SPLIT_PATTERN)
+      .map((t) => t.trim().toUpperCase())
+      .filter(Boolean);
+    if (kandidaten.length === 0) return;
+
+    // Eén onChange-aanroep met het volledige resultaat — niet per kandidaat,
+    // anders leest elke aanroep dezelfde (nog niet bijgewerkte) `value` en
+    // overschrijft de laatste toevoeging alle eerdere in dezelfde batch.
+    const nietGevondenNieuw: string[] = [];
+    const nieuweWaarde = [...value];
+    for (const kandidaat of kandidaten) {
+      const optie = perNummer.get(kandidaat);
+      if (optie && (!lockedKlantId || optie.klant_id === lockedKlantId)) {
+        if (!nieuweWaarde.includes(kandidaat)) nieuweWaarde.push(kandidaat);
+      } else {
+        nietGevondenNieuw.push(kandidaat);
+      }
+    }
+    if (nieuweWaarde.length !== value.length) onChange(nieuweWaarde);
+    setNietGevonden(nietGevondenNieuw);
+    setQuery("");
   }
 
   return (
@@ -56,10 +86,24 @@ export function DossierSelect({
           onChange={(e) => {
             setQuery(e.target.value);
             setOpen(true);
+            setNietGevonden([]);
           }}
           onFocus={() => setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 150)}
-          placeholder="Zoek op dossiernummer of omschrijving…"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === "," || e.key === ";") {
+              e.preventDefault();
+              verwerkTekst(query);
+            }
+          }}
+          onPaste={(e) => {
+            const tekst = e.clipboardData.getData("text");
+            if (SPLIT_PATTERN.test(tekst)) {
+              e.preventDefault();
+              verwerkTekst(tekst);
+            }
+          }}
+          placeholder="Zoek of typ een dossiernummer, komma/puntkomma voor meerdere…"
           autoComplete="off"
         />
         {open && (
@@ -71,10 +115,10 @@ export function DossierSelect({
             ) : (
               beschikbaar.map((d) => (
                 <button
-                  key={d.id}
+                  key={d.dossiernummer}
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => toevoegen(d.id)}
+                  onClick={() => toevoegen(d.dossiernummer)}
                   className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm hover:bg-accent"
                 >
                   <span className="font-medium">{d.dossiernummer}</span>
@@ -88,53 +132,30 @@ export function DossierSelect({
       {lockedKlantId && (
         <p className="text-xs text-muted-foreground">Dossiers van andere klanten worden niet getoond.</p>
       )}
-      {onbekendeDossiers.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {onbekendeDossiers.map((d) => (
-            <span
-              key={d.dossiernummer}
-              title="Niet (meer) gevonden in de dossierlijst — alleen ter referentie, niet te verwijderen."
-              className="inline-flex flex-col gap-0.5 rounded-md border border-dashed border-border bg-muted/50 px-2 py-1 text-sm text-muted-foreground"
-            >
-              <span className="font-medium">{d.dossiernummer}</span>
-              {d.type_dienst && (
-                <span className="text-xs">
-                  {d.type_dienst}
-                  {d.land ? ` · ${d.land}` : ""}
-                </span>
-              )}
-            </span>
-          ))}
-        </div>
+      {nietGevonden.length > 0 && (
+        <p className="text-xs text-destructive">Niet gevonden: {nietGevonden.join(", ")}</p>
       )}
       {geselecteerd.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {geselecteerd.map((d) => {
-            const parsed = parseDossiernummer(d.dossiernummer);
-            return (
-              <span
-                key={d.id}
-                className="inline-flex flex-col gap-0.5 rounded-md border border-border bg-muted px-2 py-1 text-sm"
-              >
-                <span className="flex items-center gap-1.5">
-                  <span className="font-medium">{d.dossiernummer}</span>
-                  <button
-                    type="button"
-                    onClick={() => verwijderen(d.id)}
-                    aria-label={`${d.dossiernummer} verwijderen`}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-                {parsed && (
-                  <span className="text-xs text-muted-foreground">
-                    {parsed.typeLabel} · {parsed.landNaam}
-                  </span>
-                )}
+        <div className="flex flex-col gap-2">
+          {geselecteerd.map(({ dossiernummer, optie }) => (
+            <div
+              key={dossiernummer}
+              className="flex flex-col gap-0.5 rounded-md border border-border bg-muted px-2.5 py-1.5 text-sm"
+            >
+              <span className="flex items-center justify-between gap-1.5">
+                <span className="font-medium">{dossiernummer}</span>
+                <button
+                  type="button"
+                  onClick={() => verwijderen(dossiernummer)}
+                  aria-label={`${dossiernummer} verwijderen`}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-3 w-3" />
+                </button>
               </span>
-            );
-          })}
+              <span className="text-xs text-muted-foreground">{optie?.matter_naam ?? "Onbekend dossier"}</span>
+            </div>
+          ))}
         </div>
       )}
     </div>

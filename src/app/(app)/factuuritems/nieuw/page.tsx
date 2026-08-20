@@ -14,11 +14,11 @@ export default async function NieuwFactuurItemPage() {
   const [{ data: klanten }, { data: projecten }, { data: dossiers }] = await Promise.all([
     supabase
       .from("klanten")
-      .select("id, naam, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal")
+      .select("id, naam, adres, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal")
       .eq("status", "actief")
       .order("naam"),
     supabase.from("projecten").select("id, klant_id, naam, po_nummer").eq("actief", true).order("naam"),
-    supabase.from("patricia_dossiers").select("id, klant_id, dossiernummer, matter_naam").eq("actief", true).order("dossiernummer"),
+    supabase.from("patricia_dossiers").select("klant_id, dossiernummer, matter_naam").eq("actief", true).order("dossiernummer"),
   ]);
 
   const projectenPerKlant: Record<string, { id: string; naam: string; po_nummer: string | null }[]> = {};

@@ -502,9 +502,15 @@ async function main() {
     if (itemsError) throw itemsError;
 
     const idPerSleutel = new Map(ingevoegd.map((i) => [`${i.omschrijving_klant}|${i.medewerker_id}`, i.id]));
+    const matterNaamPerDossiernummer = new Map(patriciaDossiersGewenst.map((d) => [d.dossiernummer, d.matter_naam]));
     const dossierRijen = nieuweItems.flatMap((i) => {
       const factuuritemId = idPerSleutel.get(`${i.omschrijving_klant}|${i.medewerker_id}`);
-      return i._dossiers.map((d, index) => ({ factuuritem_id: factuuritemId, volgorde: index, ...d }));
+      return i._dossiers.map((d, index) => ({
+        factuuritem_id: factuuritemId,
+        volgorde: index,
+        matter_naam: matterNaamPerDossiernummer.get(d.dossiernummer) ?? null,
+        ...d,
+      }));
     });
     const { error: dossierError } = await admin.from("factuuritem_dossiers").insert(dossierRijen);
     if (dossierError) throw dossierError;

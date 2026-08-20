@@ -121,7 +121,7 @@ function AppShellContent({
 
   return (
     <div className="flex min-h-screen">
-      <aside className="hidden w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground lg:flex print:hidden">
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground lg:flex print:hidden">
         <div className="flex h-16 items-center px-5">
           <ChronosLogo className="text-sidebar-foreground" />
         </div>
@@ -139,12 +139,12 @@ function AppShellContent({
       </aside>
 
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="left" className="w-72 border-sidebar-border bg-sidebar p-0 text-sidebar-foreground">
+        <SheetContent side="left" className="flex w-72 flex-col border-sidebar-border bg-sidebar p-0 text-sidebar-foreground">
           <SheetTitle className="sr-only">Navigatie</SheetTitle>
-          <div className="flex h-16 items-center px-5">
+          <div className="flex h-16 shrink-0 items-center px-5">
             <ChronosLogo className="text-sidebar-foreground" />
           </div>
-          <div className="px-3 py-2">
+          <div className="flex-1 overflow-y-auto px-3 py-2">
             <NavLinks role={profile.role} onNavigate={() => setMobileOpen(false)} />
           </div>
           {NAV_ITEMS_BOTTOM.some((item) => item.roles.includes(profile.role)) && (

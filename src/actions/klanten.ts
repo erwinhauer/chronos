@@ -13,6 +13,7 @@ export async function createKlant(_prevState: KlantFormState, formData: FormData
   const specificatietaal = String(formData.get("specificatietaal") ?? "nl").trim();
   const kantoorkosten_actief = formData.get("kantoorkosten_actief") === "on";
   const kolom_externe_kosten_zichtbaar = formData.get("kolom_externe_kosten_zichtbaar") === "on";
+  const verzending_toegestaan = formData.get("verzending_toegestaan") === "on";
   const opmerkingen = String(formData.get("opmerkingen") ?? "").trim();
 
   if (!naam || !contactpersoon_naam || !contact_email) {
@@ -31,6 +32,7 @@ export async function createKlant(_prevState: KlantFormState, formData: FormData
     specificatietaal: specificatietaal as "nl" | "en",
     kantoorkosten_actief,
     kolom_externe_kosten_zichtbaar,
+    verzending_toegestaan,
     opmerkingen: opmerkingen || null,
     status: "actief",
   });
@@ -59,6 +61,7 @@ export async function updateKlant(
   const specificatietaal = String(formData.get("specificatietaal") ?? "nl").trim();
   const kantoorkosten_actief = formData.get("kantoorkosten_actief") === "on";
   const kolom_externe_kosten_zichtbaar = formData.get("kolom_externe_kosten_zichtbaar") === "on";
+  const verzending_toegestaan = formData.get("verzending_toegestaan") === "on";
   const opmerkingen = String(formData.get("opmerkingen") ?? "").trim();
 
   if (!naam || !contactpersoon_naam || !contact_email) {
@@ -79,6 +82,7 @@ export async function updateKlant(
       specificatietaal: specificatietaal as "nl" | "en",
       kantoorkosten_actief,
       kolom_externe_kosten_zichtbaar,
+      verzending_toegestaan,
       opmerkingen: opmerkingen || null,
     })
     .eq("id", id);

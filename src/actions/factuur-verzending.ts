@@ -5,6 +5,7 @@ import { Resend } from "resend";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { genereerFactuurPdf } from "@/lib/factuur-pdf";
+import { haalLandenMap } from "@/lib/landen";
 
 export type VerstuurFactuurResultaat = { success: boolean; error: string | null };
 
@@ -31,7 +32,9 @@ export async function verstuurFactuur(batchId: string): Promise<VerstuurFactuurR
     if (!batch) throw new Error("Factuur niet gevonden.");
     const klant = batch.klanten;
     if (!klant) throw new Error("Klant niet gevonden.");
-    if (!batch.verzend_email) throw new Error("Geen e-mailadres bekend voor deze factuur.");
+    if (klant.verzending_toegestaan && !batch.verzend_email) {
+      throw new Error("Geen e-mailadres bekend voor deze factuur.");
+    }
     const project = batch.projecten as unknown as { naam: string; po_nummer: string | null } | null;
 
     const { data: items } = await supabase
@@ -43,8 +46,20 @@ export async function verstuurFactuur(batchId: string): Promise<VerstuurFactuurR
       .order("datum", { ascending: true });
 
     const medewerkerIds = Array.from(new Set((items ?? []).map((i) => i.medewerker_id)));
-    const { data: medewerkers } = await supabase.from("profiles").select("email").in("id", medewerkerIds);
-    const teamEmails = (medewerkers ?? []).map((m) => m.email).filter(Boolean);
+    const [{ data: medewerkers }, { data: teamMembers }] = await Promise.all([
+      supabase.from("profiles").select("email").in("id", medewerkerIds),
+      supabase.from("team_members").select("team_id").in("profile_id", medewerkerIds),
+    ]);
+    const teamIds = Array.from(new Set((teamMembers ?? []).map((t) => t.team_id)));
+    const { data: teams } =
+      teamIds.length > 0 ? await supabase.from("teams").select("email").in("id", teamIds) : { data: [] };
+    const isNietLeeg = (v: string | null): v is string => Boolean(v);
+    const teamEmails = [
+      ...(medewerkers ?? []).map((m) => m.email).filter(isNietLeeg),
+      ...(teams ?? []).map((t) => t.email).filter(isNietLeeg),
+    ];
+
+    const landen = await haalLandenMap(supabase);
 
     const pdfBuffer = await genereerFactuurPdf({
       klant,
@@ -53,6 +68,7 @@ export async function verstuurFactuur(batchId: string): Promise<VerstuurFactuurR
       factuurnummer: batch.accountview_factuurnummer,
       periodeStart: batch.periode_start,
       periodeEind: batch.periode_eind,
+      landen,
       items: (items ?? []).map((item) => ({
         id: item.id,
         datum: item.datum,
@@ -82,6 +98,17 @@ export async function verstuurFactuur(batchId: string): Promise<VerstuurFactuurR
       .upload(pdfStoragePath, pdfBuffer, { contentType: "application/pdf", upsert: true });
     if (uploadError) throw new Error(`Opslaan van de PDF is mislukt: ${uploadError.message}`);
 
+    if (!klant.verzending_toegestaan) {
+      // Klant werkt met een eigen billing-systeem: alleen de PDF aanmaken/opslaan,
+      // niet versturen. Geen fout — verzonden_op blijft bewust null.
+      await supabase
+        .from("facturatiebatches")
+        .update({ pdf_storage_path: pdfStoragePath, verzend_fout: null })
+        .eq("id", batchId);
+      revalidatePath(`/facturatiebatches/${batchId}`);
+      return { success: true, error: null };
+    }
+
     const resendApiKey = process.env.RESEND_API_KEY;
     if (!resendApiKey) {
       await supabase
@@ -92,8 +119,10 @@ export async function verstuurFactuur(batchId: string): Promise<VerstuurFactuurR
       return { success: false, error: "RESEND_API_KEY ontbreekt — de PDF is aangemaakt maar niet verstuurd." };
     }
 
+    if (!batch.verzend_email) throw new Error("Geen e-mailadres bekend voor deze factuur.");
+
     const resend = new Resend(resendApiKey);
-    const cc = [...(batch.verzend_cc ?? []), ...teamEmails];
+    const cc = [...(batch.verzend_cc ?? []).filter(isNietLeeg), ...teamEmails];
     const { error: sendError } = await resend.emails.send({
       from: process.env.FACTUUR_AFZENDER ?? "Chronos <facturatie@knijff.com>",
       to: batch.verzend_email,

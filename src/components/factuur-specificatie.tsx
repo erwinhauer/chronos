@@ -1,4 +1,5 @@
 import { landNaamVoorIso } from "@/lib/dossiernummer";
+import type { LandenMap } from "@/lib/landen";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const LABELS = {
@@ -86,6 +87,7 @@ export function FactuurSpecificatie({
   periodeEind,
   items,
   totalen,
+  landen,
 }: {
   klant: FactuurSpecificatieKlant;
   project: { naam: string; po_nummer: string | null } | null;
@@ -95,6 +97,7 @@ export function FactuurSpecificatie({
   periodeEind: string;
   items: FactuurSpecificatieItem[];
   totalen: FactuurSpecificatieTotalen;
+  landen?: LandenMap;
 }) {
   const taal = klant.specificatietaal;
   const t = LABELS[taal];
@@ -149,7 +152,7 @@ export function FactuurSpecificatie({
                         <span className="text-muted-foreground">
                           {" "}
                           · {d.type_dienst}
-                          {d.land ? ` · ${landNaamVoorIso(d.land)}` : ""}
+                          {d.land ? ` · ${landNaamVoorIso(d.land, landen)}` : ""}
                         </span>
                       </div>
                     ))}

@@ -199,6 +199,10 @@ export default async function KlantDetailPage({ params }: { params: Promise<{ id
             <span className="text-muted-foreground">Kosten van derden: </span>
             {klant.kolom_externe_kosten_zichtbaar ? "Apart getoond op de specificatie" : "Meegenomen in het honorarium"}
           </div>
+          <div>
+            <span className="text-muted-foreground">Facturen versturen: </span>
+            {klant.verzending_toegestaan ? "Per e-mail" : "Alleen PDF (eigen billing-systeem)"}
+          </div>
           {klant.opmerkingen && (
             <div className="sm:col-span-2">
               <span className="text-muted-foreground">Opmerkingen: </span>

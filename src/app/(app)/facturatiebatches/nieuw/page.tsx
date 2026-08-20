@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { berekenFactuurtotalen } from "@/lib/factuurbedragen";
+import { haalLandenMap } from "@/lib/landen";
 import { SetBreadcrumb } from "@/lib/breadcrumb-context";
 import { NieuweFactuurForm } from "@/components/nieuwe-factuur-form";
 
@@ -23,7 +24,7 @@ export default async function NieuweFactuurPagina({
 
   const supabase = await createClient();
 
-  const [{ data: klant }, { data: items }] = await Promise.all([
+  const [{ data: klant }, { data: items }, landen] = await Promise.all([
     supabase.from("klanten").select("*").eq("id", klant_id).single(),
     supabase
       .from("factuuritems")
@@ -34,6 +35,7 @@ export default async function NieuweFactuurPagina({
       .eq("status", "aangemaakt")
       .in("id", itemIds)
       .order("datum", { ascending: true }),
+    haalLandenMap(supabase),
   ]);
 
   if (!klant || !items || items.length !== itemIds.length) {
@@ -72,6 +74,7 @@ export default async function NieuweFactuurPagina({
         itemIds={items.map((i) => i.id)}
         periodeStart={periodeStart}
         periodeEind={periodeEind}
+        landen={landen}
         items={items.map((item) => ({
           id: item.id,
           datum: item.datum,

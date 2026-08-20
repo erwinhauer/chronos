@@ -35,12 +35,13 @@ export type TeamFormState = { error: string | null; success: boolean };
 export async function createTeam(_prevState: TeamFormState, formData: FormData): Promise<TeamFormState> {
   await assertBeheerder();
   const naam = String(formData.get("naam") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim();
   if (!naam) {
     return { error: "Teamnaam is verplicht.", success: false };
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.from("teams").insert({ naam });
+  const { error } = await supabase.from("teams").insert({ naam, email: email || null });
   if (error) {
     return {
       error: error.code === "23505" ? "Er bestaat al een team met deze naam." : "Aanmaken van team is mislukt.",
@@ -50,6 +51,17 @@ export async function createTeam(_prevState: TeamFormState, formData: FormData):
 
   revalidatePath("/instellingen");
   return { error: null, success: true };
+}
+
+export async function updateTeamEmail(teamId: string, email: string) {
+  await assertBeheerder();
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("teams")
+    .update({ email: email.trim() || null })
+    .eq("id", teamId);
+  if (error) throw new Error("Bijwerken van het team-e-mailadres is mislukt.");
+  revalidatePath("/instellingen");
 }
 
 export async function setTeamLeden(teamId: string, profileIds: string[]) {

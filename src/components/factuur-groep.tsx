@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Receipt } from "lucide-react";
+import { Receipt, Pencil } from "lucide-react";
 import { landNaamVoorIso } from "@/lib/dossiernummer";
 import { euro, regelbedrag } from "@/lib/factuurbedragen";
+import type { LandenMap } from "@/lib/landen";
 import { VerplaatsProjectDialog } from "@/components/verplaats-project-dialog";
 import { LinkButton } from "@/components/link-button";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,7 @@ type Project = { id: string; naam: string; po_nummer: string | null };
 export type FactuurGroepItem = {
   id: string;
   datum: string;
-  dossiers: { dossiernummer: string; type_dienst: string | null; land: string | null }[];
+  dossiers: { dossiernummer: string; type_dienst: string | null; land: string | null; matter_naam: string | null }[];
   omschrijving_klant: string;
   eenheidstype: string;
   qty: number;
@@ -28,6 +29,7 @@ export type FactuurGroepItem = {
   status: FactuurItemStatus;
   medewerkerId: string;
   medewerkerNaam: string | null;
+  medewerkerInitialen: string | null;
   laatstBewerktDoor: string | null;
   projectId: string | null;
   projectNaam: string | null;
@@ -49,6 +51,7 @@ export function FactuurGroep({
   toonMedewerker,
   kanFactureren,
   huidigeGebruikerId,
+  landen,
 }: {
   klantId: string;
   klantNaam: string;
@@ -57,6 +60,7 @@ export function FactuurGroep({
   toonMedewerker: boolean;
   kanFactureren: boolean;
   huidigeGebruikerId?: string;
+  landen: LandenMap;
 }) {
   const subtotaalHonorarium = items.reduce((sum, r) => sum + r.honorarium, 0);
   const subtotaalKosten = items.reduce((sum, r) => sum + r.externe_kosten, 0);
@@ -102,6 +106,7 @@ export function FactuurGroep({
             toonMedewerker={toonMedewerker}
             kanFactureren={kanFactureren}
             huidigeGebruikerId={huidigeGebruikerId}
+            landen={landen}
           />
         ))}
       </CardContent>
@@ -117,6 +122,7 @@ function ProjectSectieBlok({
   toonMedewerker,
   kanFactureren,
   huidigeGebruikerId,
+  landen,
 }: {
   klantId: string;
   sectie: ProjectSectie;
@@ -125,6 +131,7 @@ function ProjectSectieBlok({
   toonMedewerker: boolean;
   kanFactureren: boolean;
   huidigeGebruikerId?: string;
+  landen: LandenMap;
 }) {
   const [geselecteerd, setGeselecteerd] = useState<Set<string>>(new Set());
 
@@ -196,6 +203,7 @@ function ProjectSectieBlok({
           huidigeGebruikerId={huidigeGebruikerId}
           geselecteerd={geselecteerd}
           onToggle={toggle}
+          landen={landen}
         />
       </div>
     </div>
@@ -209,6 +217,7 @@ function FactuurItemsTabel({
   huidigeGebruikerId,
   geselecteerd,
   onToggle,
+  landen,
 }: {
   items: FactuurGroepItem[];
   toonMedewerker: boolean;
@@ -216,6 +225,7 @@ function FactuurItemsTabel({
   huidigeGebruikerId?: string;
   geselecteerd: Set<string>;
   onToggle: (id: string, checked: boolean) => void;
+  landen: LandenMap;
 }) {
   return (
     <Table className="table-fixed">
@@ -224,11 +234,12 @@ function FactuurItemsTabel({
           {kanFactureren && <TableHead className="w-8" />}
           <TableHead className="w-24">Datum</TableHead>
           <TableHead className="w-56">Dossier</TableHead>
-          {toonMedewerker && <TableHead className="w-32">Medewerker</TableHead>}
+          <TableHead className="w-32">Land</TableHead>
+          {toonMedewerker && <TableHead className="w-16">Medewerker</TableHead>}
           <TableHead>Omschrijving</TableHead>
           <TableHead className="w-24">Qty</TableHead>
           <TableHead className="w-28 text-right">Bedrag</TableHead>
-          <TableHead className="w-24 text-right">Acties</TableHead>
+          <TableHead className="w-12 text-right">Acties</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -236,6 +247,7 @@ function FactuurItemsTabel({
           const bewerkbaar = r.medewerkerId === huidigeGebruikerId && r.status === "aangemaakt";
           const bedrag = regelbedrag(r);
           const [eerste, ...rest] = r.dossiers;
+          const landen_op_regel = Array.from(new Set(r.dossiers.map((d) => d.land).filter(Boolean))) as string[];
 
           return (
             <TableRow key={r.id}>
@@ -267,18 +279,20 @@ function FactuurItemsTabel({
                     )}
                   </div>
                 )}
-                {eerste && (
-                  <div className="text-xs text-muted-foreground">
-                    {eerste.type_dienst}
-                    {eerste.land ? ` · ${landNaamVoorIso(eerste.land)}` : ""}
-                  </div>
-                )}
+                {eerste && <div className="text-xs text-muted-foreground">{eerste.matter_naam ?? "—"}</div>}
               </TableCell>
-              {toonMedewerker && <TableCell className="truncate">{r.medewerkerNaam}</TableCell>}
-              <TableCell className="truncate" title={r.omschrijving_klant}>
+              <TableCell className="text-sm text-muted-foreground">
+                {landen_op_regel.length > 0 ? landen_op_regel.map((l) => landNaamVoorIso(l, landen)).join(", ") : "—"}
+              </TableCell>
+              {toonMedewerker && (
+                <TableCell>
+                  {r.medewerkerInitialen && <Badge variant="secondary">{r.medewerkerInitialen}</Badge>}
+                </TableCell>
+              )}
+              <TableCell className="whitespace-normal break-words" title={r.omschrijving_klant}>
                 {r.omschrijving_klant}
                 {r.laatstBewerktDoor && (
-                  <div className="truncate text-xs font-normal text-muted-foreground">
+                  <div className="text-xs font-normal text-muted-foreground">
                     Laatst bewerkt door {r.laatstBewerktDoor}
                   </div>
                 )}
@@ -289,8 +303,13 @@ function FactuurItemsTabel({
               <TableCell className="text-right tabular-figures">{euro(bedrag)}</TableCell>
               <TableCell className="text-right">
                 {bewerkbaar && (
-                  <LinkButton size="sm" variant="outline" href={`/factuuritems/${r.id}`}>
-                    Bewerken
+                  <LinkButton
+                    size="icon-sm"
+                    variant="outline"
+                    href={`/factuuritems/${r.id}`}
+                    aria-label="Bewerken"
+                  >
+                    <Pencil className="h-4 w-4" />
                   </LinkButton>
                 )}
               </TableCell>
