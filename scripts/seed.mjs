@@ -14,13 +14,21 @@ const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
 });
 
 const USERS = [
-  { email: "vera.vermeer@chronos.local", full_name: "Vera Vermeer", role: "medewerker", initialen: "VVM" },
-  { email: "anna.aerts@chronos.local", full_name: "Anna Aerts", role: "medewerker", initialen: "AA" },
-  { email: "lucas.berg@chronos.local", full_name: "Lucas Berg", role: "medewerker", initialen: "LB" },
-  { email: "tom.teunissen@chronos.local", full_name: "Tom Teunissen", role: "teamleider", initialen: "TT" },
-  { email: "fatima.faber@chronos.local", full_name: "Fatima Faber", role: "finance", initialen: "FF" },
-  { email: "bram.beheer@chronos.local", full_name: "Bram Beheer", role: "beheerder", initialen: "BB" },
-  { email: "diana.directie@chronos.local", full_name: "Diana Directie", role: "directie", initialen: "DD" },
+  { email: "vera.vermeer@chronos.local", voornaam: "Vera", achternaam: "Vermeer", role: "medewerker", initialen: "VVM" },
+  { email: "anna.aerts@chronos.local", voornaam: "Anna", achternaam: "Aerts", role: "medewerker", initialen: "AA" },
+  { email: "lucas.berg@chronos.local", voornaam: "Lucas", achternaam: "Berg", role: "medewerker", initialen: "LB" },
+  { email: "tom.teunissen@chronos.local", voornaam: "Tom", achternaam: "Teunissen", role: "teamleider", initialen: "TT" },
+  { email: "fatima.faber@chronos.local", voornaam: "Fatima", achternaam: "Faber", role: "finance", initialen: "FF" },
+  {
+    email: "bram.beheer@chronos.local",
+    voornaam: "Bram",
+    achternaam: "Beheer",
+    role: "beheerder",
+    initialen: "BB",
+    // Extra toegekende rol, puur om de rol-wisselaar in de sidebar te kunnen testen.
+    extraRollen: ["finance"],
+  },
+  { email: "diana.directie@chronos.local", voornaam: "Diana", achternaam: "Directie", role: "directie", initialen: "DD" },
 ];
 
 function round2(n) {
@@ -39,7 +47,7 @@ async function upsertUser(user) {
     email: user.email,
     password: DEV_PASSWORD,
     email_confirm: true,
-    user_metadata: { full_name: user.full_name, role: user.role },
+    user_metadata: { voornaam: user.voornaam, achternaam: user.achternaam, role: user.role },
   });
   if (error) throw error;
   console.log(`✓ aangemaakt: ${user.email} (${user.role})`);
@@ -60,6 +68,17 @@ async function main() {
     if (initialenError) throw initialenError;
   }
   console.log("✓ initialen ingesteld voor demo-gebruikers");
+
+  const extraRolRijen = USERS.flatMap((user) =>
+    (user.extraRollen ?? []).map((role) => ({ profile_id: ids[user.email], role }))
+  );
+  if (extraRolRijen.length > 0) {
+    const { error: extraRolError } = await admin
+      .from("profile_roles")
+      .upsert(extraRolRijen, { onConflict: "profile_id,role" });
+    if (extraRolError) throw extraRolError;
+    console.log(`✓ extra rollen toegekend: ${extraRolRijen.length}`);
+  }
 
   const teamleiderId = ids["tom.teunissen@chronos.local"];
   const veraId = ids["vera.vermeer@chronos.local"];

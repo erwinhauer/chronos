@@ -496,9 +496,34 @@ export type Database = {
         }
         Relationships: []
       }
+      profile_roles: {
+        Row: {
+          profile_id: string
+          role: Database["public"]["Enums"]["user_role"]
+        }
+        Insert: {
+          profile_id: string
+          role: Database["public"]["Enums"]["user_role"]
+        }
+        Update: {
+          profile_id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_roles_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
+          achternaam: string
           actief: boolean
+          avatar_url: string | null
           created_at: string
           email: string
           full_name: string
@@ -506,19 +531,25 @@ export type Database = {
           initialen: string | null
           role: Database["public"]["Enums"]["user_role"]
           updated_at: string
+          voornaam: string
         }
         Insert: {
+          achternaam?: string
           actief?: boolean
+          avatar_url?: string | null
           created_at?: string
           email: string
-          full_name: string
+          full_name?: string
           id: string
           initialen?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
+          voornaam: string
         }
         Update: {
+          achternaam?: string
           actief?: boolean
+          avatar_url?: string | null
           created_at?: string
           email?: string
           full_name?: string
@@ -526,6 +557,7 @@ export type Database = {
           initialen?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
+          voornaam?: string
         }
         Relationships: []
       }
@@ -784,6 +816,10 @@ export type Database = {
         Returns: number
       }
       shares_team_with: { Args: { target_profile: string }; Returns: boolean }
+      switch_active_role: {
+        Args: { target_role: Database["public"]["Enums"]["user_role"] }
+        Returns: undefined
+      }
     }
     Enums: {
       audit_actie:

@@ -28,6 +28,8 @@ import type { UserRole } from "@/lib/supabase/types";
 type ProfileRow = {
   id: string;
   full_name: string;
+  voornaam: string;
+  achternaam: string;
   email: string;
   role: UserRole;
   actief: boolean;
@@ -41,10 +43,12 @@ export function GebruikersTab({
   profiles,
   teams,
   teamIdsPerProfile,
+  rolIdsPerProfile,
 }: {
   profiles: ProfileRow[];
   teams: Team[];
   teamIdsPerProfile: Record<string, string[]>;
+  rolIdsPerProfile: Record<string, UserRole[]>;
 }) {
   const [zoek, setZoek] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("naam");
@@ -118,6 +122,7 @@ export function GebruikersTab({
                     profile={p}
                     teams={teams}
                     huidigeTeamIds={teamIdsPerProfile[p.id] ?? []}
+                    huidigeRolIds={rolIdsPerProfile[p.id] ?? [p.role]}
                   />
                 ))
               )}
@@ -133,10 +138,12 @@ function GebruikerRij({
   profile,
   teams,
   huidigeTeamIds,
+  huidigeRolIds,
 }: {
   profile: ProfileRow;
   teams: Team[];
   huidigeTeamIds: string[];
+  huidigeRolIds: UserRole[];
 }) {
   const teamNamen = teams.filter((t) => huidigeTeamIds.includes(t.id)).map((t) => t.naam);
 
@@ -147,7 +154,13 @@ function GebruikerRij({
         <div className="text-xs text-muted-foreground">{profile.email}</div>
       </TableCell>
       <TableCell>
-        <Badge variant="outline">{ROLE_LABELS[profile.role]}</Badge>
+        <div className="flex flex-wrap gap-1">
+          {huidigeRolIds.map((role) => (
+            <Badge key={role} variant={role === profile.role ? "default" : "outline"} className="text-xs">
+              {ROLE_LABELS[role]}
+            </Badge>
+          ))}
+        </div>
       </TableCell>
       <TableCell>
         {teamNamen.length > 0 ? (
@@ -169,7 +182,12 @@ function GebruikerRij({
         </Badge>
       </TableCell>
       <TableCell className="text-right">
-        <GebruikerBewerkenDialog profile={profile} teams={teams} huidigeTeamIds={huidigeTeamIds} />
+        <GebruikerBewerkenDialog
+          profile={profile}
+          teams={teams}
+          huidigeTeamIds={huidigeTeamIds}
+          huidigeRolIds={huidigeRolIds}
+        />
       </TableCell>
     </TableRow>
   );
@@ -181,10 +199,12 @@ function GebruikerBewerkenDialog({
   profile,
   teams,
   huidigeTeamIds,
+  huidigeRolIds,
 }: {
   profile: ProfileRow;
   teams: Team[];
   huidigeTeamIds: string[];
+  huidigeRolIds: UserRole[];
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState(async (prev: UpdateGebruikerFormState, formData: FormData) => {
@@ -192,7 +212,9 @@ function GebruikerBewerkenDialog({
     if (result.success) setOpen(false);
     return result;
   }, initialState);
-  const [role, setRole] = useState<UserRole>(profile.role);
+  const [voornaam, setVoornaam] = useState(profile.voornaam);
+  const [achternaam, setAchternaam] = useState(profile.achternaam);
+  const [roleIds, setRoleIds] = useState<UserRole[]>(huidigeRolIds);
   const [actief, setActief] = useState(profile.actief);
   const [teamIds, setTeamIds] = useState<string[]>(huidigeTeamIds);
   const [initialen, setInitialen] = useState(profile.initialen ?? suggestInitialen(profile.full_name));
@@ -209,6 +231,9 @@ function GebruikerBewerkenDialog({
           {teamIds.map((id) => (
             <input key={id} type="hidden" name="team_ids" value={id} />
           ))}
+          {roleIds.map((role) => (
+            <input key={role} type="hidden" name="role_ids" value={role} />
+          ))}
           <DialogHeader>
             <DialogTitle>{profile.full_name}</DialogTitle>
             <DialogDescription>{profile.email}</DialogDescription>
@@ -216,36 +241,51 @@ function GebruikerBewerkenDialog({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">Rol</label>
-              <select
-                name="role"
-                value={role}
-                onChange={(e) => setRole(e.target.value as UserRole)}
-                className="h-8 appearance-none rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none dark:bg-input/30"
-              >
-                {Object.entries(ROLE_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
+              <label className="text-sm font-medium">Voornaam</label>
+              <Input name="voornaam" value={voornaam} onChange={(e) => setVoornaam(e.target.value)} required />
             </div>
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">Initialen</label>
-              <Input
-                name="initialen"
-                className="uppercase"
-                maxLength={3}
-                value={initialen}
-                onChange={(e) => setInitialen(e.target.value.toUpperCase().slice(0, 3))}
-              />
+              <label className="text-sm font-medium">Achternaam</label>
+              <Input name="achternaam" value={achternaam} onChange={(e) => setAchternaam(e.target.value)} />
             </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium">Initialen</label>
+            <Input
+              name="initialen"
+              className="w-20 uppercase"
+              maxLength={3}
+              value={initialen}
+              onChange={(e) => setInitialen(e.target.value.toUpperCase().slice(0, 3))}
+            />
           </div>
 
           <label className="flex items-center gap-2 text-sm">
             <Checkbox checked={actief} onCheckedChange={(checked) => setActief(checked === true)} />
             Actief
           </label>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium">Rollen</label>
+            <div className="flex flex-wrap gap-3">
+              {Object.entries(ROLE_LABELS).map(([value, label]) => (
+                <label key={value} className="flex items-center gap-1.5 text-sm">
+                  <Checkbox
+                    checked={roleIds.includes(value as UserRole)}
+                    onCheckedChange={(checked) =>
+                      setRoleIds((prev) =>
+                        checked === true
+                          ? [...prev, value as UserRole]
+                          : prev.filter((role) => role !== (value as UserRole))
+                      )
+                    }
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </div>
 
           {teams.length > 0 && (
             <div className="flex flex-col gap-2">

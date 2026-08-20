@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { usePathname } from "next/navigation";
+import { useState, useTransition } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Menu, LogOut, ChevronRight } from "lucide-react";
 import { ChronosLogo } from "@/components/chronos-logo";
 import { NavLinks } from "@/components/nav-links";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,16 +18,61 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { signOut } from "@/actions/auth";
+import { wisselActieveRol } from "@/actions/profiel";
 import { ALL_NAV_ITEMS, NAV_ITEMS_BOTTOM, ROLE_LABELS } from "@/lib/nav";
 import { suggestInitialen } from "@/lib/initials";
 import { BreadcrumbProvider, useBreadcrumbSegments } from "@/lib/breadcrumb-context";
-import type { Profile } from "@/lib/supabase/types";
+import type { Profile, UserRole } from "@/lib/supabase/types";
 
-export function AppShell({ profile, children }: { profile: Profile; children: React.ReactNode }) {
+export function AppShell({
+  profile,
+  toegekendeRollen,
+  children,
+}: {
+  profile: Profile;
+  toegekendeRollen: UserRole[];
+  children: React.ReactNode;
+}) {
   return (
     <BreadcrumbProvider>
-      <AppShellContent profile={profile}>{children}</AppShellContent>
+      <AppShellContent profile={profile} toegekendeRollen={toegekendeRollen}>
+        {children}
+      </AppShellContent>
     </BreadcrumbProvider>
+  );
+}
+
+function RolWisselaar({ profile, toegekendeRollen }: { profile: Profile; toegekendeRollen: UserRole[] }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+
+  if (toegekendeRollen.length <= 1) {
+    return (
+      <Badge variant="secondary" className="w-full justify-center bg-sidebar-accent text-sidebar-accent-foreground">
+        {ROLE_LABELS[profile.role]}
+      </Badge>
+    );
+  }
+
+  return (
+    <select
+      value={profile.role}
+      disabled={pending}
+      onChange={(e) => {
+        const target = e.target.value as UserRole;
+        startTransition(async () => {
+          await wisselActieveRol(target);
+          router.refresh();
+        });
+      }}
+      className="h-8 w-full appearance-none rounded-lg border border-sidebar-border bg-sidebar-accent px-2.5 text-sm text-sidebar-accent-foreground outline-none"
+    >
+      {toegekendeRollen.map((role) => (
+        <option key={role} value={role}>
+          {ROLE_LABELS[role]}
+        </option>
+      ))}
+    </select>
   );
 }
 
@@ -59,7 +104,15 @@ function HeaderTitle({ fallback }: { fallback: string }) {
   );
 }
 
-function AppShellContent({ profile, children }: { profile: Profile; children: React.ReactNode }) {
+function AppShellContent({
+  profile,
+  toegekendeRollen,
+  children,
+}: {
+  profile: Profile;
+  toegekendeRollen: UserRole[];
+  children: React.ReactNode;
+}) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const currentLabel = ALL_NAV_ITEMS.find(
@@ -81,9 +134,7 @@ function AppShellContent({ profile, children }: { profile: Profile; children: Re
           </div>
         )}
         <div className="border-t border-sidebar-border px-3 py-3">
-          <Badge variant="secondary" className="w-full justify-center bg-sidebar-accent text-sidebar-accent-foreground">
-            {ROLE_LABELS[profile.role]}
-          </Badge>
+          <RolWisselaar profile={profile} toegekendeRollen={toegekendeRollen} />
         </div>
       </aside>
 
@@ -122,6 +173,7 @@ function AppShellContent({ profile, children }: { profile: Profile; children: Re
           <DropdownMenu>
             <DropdownMenuTrigger className="flex items-center gap-2 rounded-full outline-none ring-ring/50 focus-visible:ring-2">
               <Avatar className="h-8 w-8">
+                {profile.avatar_url && <AvatarImage src={profile.avatar_url} alt="" />}
                 <AvatarFallback className="bg-primary text-primary-foreground text-xs font-medium">
                   {profile.initialen || suggestInitialen(profile.full_name)}
                 </AvatarFallback>
@@ -133,6 +185,7 @@ function AppShellContent({ profile, children }: { profile: Profile; children: Re
                 <span className="text-xs font-normal text-muted-foreground">{profile.email}</span>
               </div>
               <DropdownMenuSeparator />
+              <DropdownMenuItem render={<Link href="/profiel" />}>Profiel</DropdownMenuItem>
               <DropdownMenuItem onClick={() => signOut()}>
                 <LogOut className="h-4 w-4" />
                 Uitloggen

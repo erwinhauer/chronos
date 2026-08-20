@@ -6,21 +6,20 @@ import { createClient } from "@supabase/supabase-js";
 
 // Vóór elke commit bijwerken met de wijzigingen van die release.
 const CHANGELOG_ENTRY = {
-  versienummer: "0.8.0",
+  versienummer: "0.9.0",
   releasedatum: "2026-08-20",
-  titel: "Dashboard: bruto/nettotargets, omzet-periodefilter en rol 'Directie'",
+  titel: "Meerdere rollen per gebruiker, profielpagina en profielfoto",
   nieuwe_functies: [
-    "Elk team heeft nu een apart bruto- en nettotarget (was één jaardoel); nettotarget instelbaar naast het bestaande brutotarget in Instellingen → Teams",
-    "Bruto-omzet en uren-omzet per team en per teamlid, filterbaar op maand, kwartaal of halfjaar naast de standaard YTD-weergave",
-    "Nieuwe tabel 'Nog te factureren per klant' op het dashboard",
-    "Nieuwe rol 'Directie': read-only toegang tot de financiële dashboardinformatie van alle teams, geen navigatie naar Factuuritems/Klanten/Instellingen",
+    "Een gebruiker kan nu meerdere rollen toegekend krijgen (door een beheerder) en zelf wisselen tussen zijn toegekende rollen via de sidebar — dit wisselt direct de daadwerkelijke rechten, niet alleen de weergave",
+    "Nieuwe pagina 'Profiel' (voor elke rol): toont naam, team(s) en toegekende rollen, en laat de gebruiker zelf een profielfoto uploaden",
+    "Voornaam en achternaam zijn nu apart instelbaar bij het aanmaken/bewerken van een gebruiker (was één vrij-tekstveld 'Naam')",
   ],
   wijzigingen: [
-    "De 'omzet per teamlid'-grafiek is niet langer firm-wide maar per team gescoped, zoals de rest van het dashboard al was",
+    "Instellingen → Gebruikers: het rolveld is een aanvinklijst geworden (meerdere rollen per gebruiker) in plaats van een keuzelijst met precies één rol",
   ],
   bugfixes: [],
   bekende_beperkingen: [
-    "Nettotarget toont alleen het ingestelde bedrag; de bijbehorende werkelijke netto-omzet en 'on target'-vergelijking volgen in een latere ronde",
+    "Naam, team en rol zijn op de Profiel-pagina alleen-lezen — wijzigen kan alleen door een beheerder via Instellingen",
   ],
   gebruikersactie: null,
 };

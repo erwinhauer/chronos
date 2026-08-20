@@ -87,22 +87,24 @@ export async function createGebruiker(
   await assertBeheerder();
 
   const email = String(formData.get("email") ?? "").trim();
-  const full_name = String(formData.get("full_name") ?? "").trim();
-  const role = String(formData.get("role") ?? "medewerker") as UserRole;
+  const voornaam = String(formData.get("voornaam") ?? "").trim();
+  const achternaam = String(formData.get("achternaam") ?? "").trim();
+  const roles = formData.getAll("role_ids").map(String) as UserRole[];
   const teamIds = formData.getAll("team_ids").map(String);
   const initialen = String(formData.get("initialen") ?? "").trim().toUpperCase().slice(0, 3);
 
-  if (!email || !full_name) {
-    return { error: "Naam en e-mailadres zijn verplicht.", success: false };
+  if (!email || !voornaam || roles.length === 0) {
+    return { error: "Voornaam, e-mailadres en minimaal één rol zijn verplicht.", success: false };
   }
 
+  const actieveRol = roles[0];
   const tempWachtwoord = genereerTijdelijkWachtwoord();
   const admin = createAdminClient();
   const { data, error } = await admin.auth.admin.createUser({
     email,
     password: tempWachtwoord,
     email_confirm: true,
-    user_metadata: { full_name, role },
+    user_metadata: { voornaam, achternaam, role: actieveRol },
   });
 
   if (error || !data.user) {
@@ -114,12 +116,19 @@ export async function createGebruiker(
     };
   }
 
-  const supabase = await createClient();
+  // handle_new_user() zet de eerste rol al in profile_roles; de rest hier aanvullen.
+  await admin
+    .from("profile_roles")
+    .upsert(
+      roles.map((role) => ({ profile_id: data.user.id, role })),
+      { onConflict: "profile_id,role" }
+    );
+
   if (initialen) {
-    await supabase.from("profiles").update({ initialen }).eq("id", data.user.id);
+    await admin.from("profiles").update({ initialen }).eq("id", data.user.id);
   }
   if (teamIds.length > 0) {
-    await supabase.from("team_members").insert(teamIds.map((team_id) => ({ team_id, profile_id: data.user.id })));
+    await admin.from("team_members").insert(teamIds.map((team_id) => ({ team_id, profile_id: data.user.id })));
   }
 
   revalidatePath("/instellingen");
@@ -135,26 +144,49 @@ export async function updateGebruiker(
 ): Promise<UpdateGebruikerFormState> {
   await assertBeheerder();
 
-  const role = String(formData.get("role") ?? "") as UserRole;
+  const voornaam = String(formData.get("voornaam") ?? "").trim();
+  const achternaam = String(formData.get("achternaam") ?? "").trim();
+  const roles = formData.getAll("role_ids").map(String) as UserRole[];
   const actief = formData.get("actief") === "on";
   const teamIds = formData.getAll("team_ids").map(String);
   const initialen = String(formData.get("initialen") ?? "").trim().toUpperCase().slice(0, 3);
 
-  const supabase = await createClient();
-  const { error } = await supabase
+  if (!voornaam || roles.length === 0) {
+    return { error: "Voornaam en minimaal één rol zijn verplicht.", success: false };
+  }
+
+  // Service-role: admin-bewerkingen lopen hiermee altijd door, los van de
+  // zelfbedienings-trigger die gewone gebruikers hun eigen rij/rol laat aanpassen.
+  const admin = createAdminClient();
+
+  const { data: huidig } = await admin.from("profiles").select("role").eq("id", profileId).single();
+  const actieveRol = huidig && roles.includes(huidig.role) ? huidig.role : roles[0];
+
+  const { error } = await admin
     .from("profiles")
-    .update({ role, actief, initialen: initialen || null })
+    .update({ voornaam, achternaam, role: actieveRol, actief, initialen: initialen || null })
     .eq("id", profileId);
   if (error) {
     return { error: "Bijwerken van de gebruiker is mislukt.", success: false };
   }
 
-  const { error: deleteError } = await supabase.from("team_members").delete().eq("profile_id", profileId);
+  const { error: rolDeleteError } = await admin.from("profile_roles").delete().eq("profile_id", profileId);
+  if (rolDeleteError) {
+    return { error: "Bijwerken van rollen is mislukt.", success: false };
+  }
+  const { error: rolInsertError } = await admin
+    .from("profile_roles")
+    .insert(roles.map((role) => ({ profile_id: profileId, role })));
+  if (rolInsertError) {
+    return { error: "Bijwerken van rollen is mislukt.", success: false };
+  }
+
+  const { error: deleteError } = await admin.from("team_members").delete().eq("profile_id", profileId);
   if (deleteError) {
     return { error: "Bijwerken van teams is mislukt.", success: false };
   }
   if (teamIds.length > 0) {
-    const { error: insertError } = await supabase
+    const { error: insertError } = await admin
       .from("team_members")
       .insert(teamIds.map((team_id) => ({ team_id, profile_id: profileId })));
     if (insertError) {
@@ -163,6 +195,8 @@ export async function updateGebruiker(
   }
 
   revalidatePath("/instellingen");
+  revalidatePath("/profiel");
+  revalidatePath("/dashboard");
   return { error: null, success: true };
 }
 

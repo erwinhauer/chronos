@@ -5,6 +5,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { GebruikersTab } from "@/components/instellingen/gebruikers-tab";
 import { TeamsTab } from "@/components/instellingen/teams-tab";
 import { ChangelogTab } from "@/components/instellingen/changelog-tab";
+import type { UserRole } from "@/lib/supabase/types";
 
 export default async function InstellingenPage() {
   const profile = await getCurrentProfile();
@@ -12,14 +13,21 @@ export default async function InstellingenPage() {
 
   const supabase = await createClient();
   const jaar = new Date().getFullYear();
-  const [{ data: profiles }, { data: teams }, { data: teamMembers }, { data: changelog }, { data: teamdoelen }] =
-    await Promise.all([
-      supabase.from("profiles").select("id, full_name, email, role, actief, initialen").order("full_name"),
-      supabase.from("teams").select("id, naam").order("naam"),
-      supabase.from("team_members").select("team_id, profile_id"),
-      supabase.from("productchangelog").select("*").order("releasedatum", { ascending: false }),
-      supabase.from("teamdoelen").select("team_id, bruto_bedrag, netto_bedrag").eq("jaar", jaar),
-    ]);
+  const [
+    { data: profiles },
+    { data: teams },
+    { data: teamMembers },
+    { data: changelog },
+    { data: teamdoelen },
+    { data: profileRoles },
+  ] = await Promise.all([
+    supabase.from("profiles").select("id, full_name, voornaam, achternaam, email, role, actief, initialen").order("full_name"),
+    supabase.from("teams").select("id, naam").order("naam"),
+    supabase.from("team_members").select("team_id, profile_id"),
+    supabase.from("productchangelog").select("*").order("releasedatum", { ascending: false }),
+    supabase.from("teamdoelen").select("team_id, bruto_bedrag, netto_bedrag").eq("jaar", jaar),
+    supabase.from("profile_roles").select("profile_id, role"),
+  ]);
 
   const teamIdsPerProfile: Record<string, string[]> = {};
   const ledenPerTeam: Record<string, string[]> = {};
@@ -30,6 +38,10 @@ export default async function InstellingenPage() {
   const doelPerTeam: Record<string, { bruto: number; netto: number | null }> = {};
   for (const row of teamdoelen ?? []) {
     doelPerTeam[row.team_id] = { bruto: row.bruto_bedrag, netto: row.netto_bedrag };
+  }
+  const rolIdsPerProfile: Record<string, UserRole[]> = {};
+  for (const row of profileRoles ?? []) {
+    (rolIdsPerProfile[row.profile_id] ??= []).push(row.role);
   }
 
   return (
@@ -45,7 +57,12 @@ export default async function InstellingenPage() {
           <TabsTrigger value="changelog">Changelog</TabsTrigger>
         </TabsList>
         <TabsContent value="gebruikers">
-          <GebruikersTab profiles={profiles ?? []} teams={teams ?? []} teamIdsPerProfile={teamIdsPerProfile} />
+          <GebruikersTab
+            profiles={profiles ?? []}
+            teams={teams ?? []}
+            teamIdsPerProfile={teamIdsPerProfile}
+            rolIdsPerProfile={rolIdsPerProfile}
+          />
         </TabsContent>
         <TabsContent value="teams">
           <TeamsTab

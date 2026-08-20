@@ -18,6 +18,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ROLE_LABELS } from "@/lib/nav";
+import type { UserRole } from "@/lib/supabase/types";
 
 const initialState: GebruikerFormState = { error: null, success: false };
 
@@ -46,12 +47,14 @@ export function NewGebruikerDialog({ teams }: { teams: { id: string; naam: strin
 
 function GebruikerDialogBody({ teams, onDone }: { teams: { id: string; naam: string }[]; onDone: () => void }) {
   const [teamIds, setTeamIds] = useState<string[]>([]);
-  const [fullName, setFullName] = useState("");
+  const [roleIds, setRoleIds] = useState<UserRole[]>(["medewerker"]);
+  const [voornaam, setVoornaam] = useState("");
+  const [achternaam, setAchternaam] = useState("");
   const [initialen, setInitialen] = useState("");
   const [initialenHandmatig, setInitialenHandmatig] = useState(false);
   const [state, formAction, pending] = useActionState(createGebruiker, initialState);
 
-  const getoondeInitialen = initialenHandmatig ? initialen : suggestInitialen(fullName);
+  const getoondeInitialen = initialenHandmatig ? initialen : suggestInitialen(`${voornaam} ${achternaam}`.trim());
 
   if (state.success && state.tempWachtwoord) {
     return (
@@ -75,10 +78,25 @@ function GebruikerDialogBody({ teams, onDone }: { teams: { id: string; naam: str
         <DialogDescription>Er wordt direct een account aangemaakt met een tijdelijk wachtwoord.</DialogDescription>
       </DialogHeader>
 
+      <div className="grid grid-cols-2 gap-4">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="voornaam">Voornaam</Label>
+          <Input id="voornaam" name="voornaam" value={voornaam} onChange={(e) => setVoornaam(e.target.value)} required />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="achternaam">Achternaam</Label>
+          <Input
+            id="achternaam"
+            name="achternaam"
+            value={achternaam}
+            onChange={(e) => setAchternaam(e.target.value)}
+          />
+        </div>
+      </div>
       <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
         <div className="flex flex-col gap-2">
-          <Label htmlFor="full_name">Naam</Label>
-          <Input id="full_name" name="full_name" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+          <Label htmlFor="email">E-mailadres</Label>
+          <Input id="email" name="email" type="email" required />
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="initialen">Initialen</Label>
@@ -96,23 +114,27 @@ function GebruikerDialogBody({ teams, onDone }: { teams: { id: string; naam: str
         </div>
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="email">E-mailadres</Label>
-        <Input id="email" name="email" type="email" required />
-      </div>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="role">Rol</Label>
-        <select
-          id="role"
-          name="role"
-          defaultValue="medewerker"
-          className="h-8 w-full appearance-none rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none dark:bg-input/30"
-        >
+        <Label>Rollen</Label>
+        <div className="flex flex-wrap gap-3">
           {Object.entries(ROLE_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
+            <label key={value} className="flex items-center gap-1.5 text-sm">
+              <Checkbox
+                checked={roleIds.includes(value as UserRole)}
+                onCheckedChange={(checked) =>
+                  setRoleIds((prev) =>
+                    checked === true
+                      ? [...prev, value as UserRole]
+                      : prev.filter((role) => role !== (value as UserRole))
+                  )
+                }
+              />
               {label}
-            </option>
+            </label>
           ))}
-        </select>
+        </div>
+        {roleIds.map((role) => (
+          <input key={role} type="hidden" name="role_ids" value={role} />
+        ))}
       </div>
 
       {teams.length > 0 && (
