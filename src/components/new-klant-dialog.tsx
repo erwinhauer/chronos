@@ -23,6 +23,7 @@ const initialState: KlantFormState = { error: null, success: false };
 export function NewKlantDialog() {
   const [open, setOpen] = useState(false);
   const [kantoorkostenActief, setKantoorkostenActief] = useState(true);
+  const [kostenDerdenApart, setKostenDerdenApart] = useState(false);
   const [state, formAction, pending] = useActionState(async (prev: KlantFormState, formData: FormData) => {
     const result = await createKlant(prev, formData);
     if (result.success) setOpen(false);
@@ -87,6 +88,15 @@ export function NewKlantDialog() {
             />
             <input type="hidden" name="kantoorkosten_actief" value={kantoorkostenActief ? "on" : ""} />
             Kantoorkosten (6%) van toepassing bij deze klant
+          </label>
+
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={kostenDerdenApart}
+              onCheckedChange={(checked) => setKostenDerdenApart(checked === true)}
+            />
+            <input type="hidden" name="kolom_externe_kosten_zichtbaar" value={kostenDerdenApart ? "on" : ""} />
+            Kosten van derden apart tonen op de specificatie
           </label>
 
           <div className="flex flex-col gap-2">

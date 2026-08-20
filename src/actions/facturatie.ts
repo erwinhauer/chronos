@@ -4,12 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
+import { berekenFactuurtotalen, round2 } from "@/lib/factuurbedragen";
+import { verstuurFactuur } from "@/actions/factuur-verzending";
 
 export type FactureerFormState = { error: string | null; success: boolean };
-
-function round2(n: number) {
-  return Math.round(n * 100) / 100;
-}
 
 export async function createFacturatiebatch(
   _prevState: FactureerFormState,
@@ -24,6 +22,12 @@ export async function createFacturatiebatch(
   const itemIds = formData.getAll("item_ids").map(String);
   const periode_start = String(formData.get("periode_start") ?? "");
   const periode_eind = String(formData.get("periode_eind") ?? "");
+  const extra_korting = round2(Number(formData.get("extra_korting") ?? 0)) || 0;
+  const verzend_email = String(formData.get("verzend_email") ?? "").trim();
+  const verzend_cc = String(formData.get("verzend_cc") ?? "")
+    .split(",")
+    .map((e) => e.trim())
+    .filter(Boolean);
 
   if (!klant_id || itemIds.length === 0) {
     return { error: "Selecteer minimaal één factuuritem.", success: false };
@@ -33,6 +37,9 @@ export async function createFacturatiebatch(
   }
   if (periode_eind < periode_start) {
     return { error: "Einddatum van de periode mag niet vóór de startdatum liggen.", success: false };
+  }
+  if (extra_korting < 0) {
+    return { error: "Extra korting kan niet negatief zijn.", success: false };
   }
 
   const supabase = await createClient();
@@ -72,20 +79,13 @@ export async function createFacturatiebatch(
     return { error: "Ophalen van de klantgegevens is mislukt.", success: false };
   }
 
-  const totaalHonorarium = round2(items.reduce((som, i) => som + i.honorarium, 0));
-  const totaalExterneKosten = round2(items.reduce((som, i) => som + i.externe_kosten, 0));
-  const totaalKorting = round2(items.reduce((som, i) => som + i.korting, 0));
-  const kantoorkostenGrondslag = round2(
-    items.reduce(
-      (som, i) => som + (i.kantoorkosten_van_toepassing ? i.honorarium + i.externe_kosten - i.korting : 0),
-      0
-    )
-  );
-  const ruweKantoorkosten = round2(kantoorkostenGrondslag * (klant.kantoorkosten_percentage / 100));
-  // Minimaal €15, maximaal €200 per factuur — maar geen vloer als er niets van
-  // toepassing is (dan blijft het gewoon €0).
-  const totaalKantoorkosten = ruweKantoorkosten > 0 ? Math.min(Math.max(ruweKantoorkosten, 15), 200) : 0;
-  const totaalBedrag = round2(totaalHonorarium + totaalExterneKosten - totaalKorting + totaalKantoorkosten);
+  const { totaalHonorarium, totaalExterneKosten, totaalKorting, totaalKantoorkosten, subtotaalVoorExtraKorting } =
+    berekenFactuurtotalen(items, klant.kantoorkosten_percentage);
+
+  if (extra_korting > subtotaalVoorExtraKorting) {
+    return { error: "Extra korting kan niet groter zijn dan het factuurbedrag.", success: false };
+  }
+  const totaalBedrag = round2(subtotaalVoorExtraKorting - extra_korting);
 
   const {
     data: { user },
@@ -103,7 +103,10 @@ export async function createFacturatiebatch(
       totaal_externe_kosten: totaalExterneKosten,
       totaal_korting: totaalKorting,
       totaal_kantoorkosten: totaalKantoorkosten,
+      extra_korting,
       totaal_bedrag: totaalBedrag,
+      verzend_email: verzend_email || null,
+      verzend_cc: verzend_cc.length > 0 ? verzend_cc : null,
       goedgekeurd_door: user?.id,
       goedgekeurd_op: new Date().toISOString(),
     })
@@ -125,6 +128,11 @@ export async function createFacturatiebatch(
   if (updateError) {
     return { error: "Koppelen van de items aan de factuur is mislukt.", success: false };
   }
+
+  // De omzet is nu geboekt (status "gefactureerd"/"definitief"), onafhankelijk
+  // van of de PDF hierna daadwerkelijk verstuurd raakt — een mislukte
+  // verzending draait dit bewust niet terug (zie routekaart, fase 3-besluit).
+  await verstuurFactuur(batch.id);
 
   revalidatePath("/factuuritems");
   revalidatePath("/dashboard");

@@ -38,6 +38,11 @@ export default async function KlantDetailPage({ params }: { params: Promise<{ id
 
   if (!klant) notFound();
 
+  const magProjectenBeheren =
+    profile?.role === "beheerder" ||
+    (profile?.role === "teamleider" &&
+      (await supabase.rpc("team_services_klant", { target_klant_id: id })).data === true);
+
   const rows = items ?? [];
   const nogTeFactureren = rows
     .filter((r) => isNogTeFactureren(r.status, r.declarabel))
@@ -167,7 +172,7 @@ export default async function KlantDetailPage({ params }: { params: Promise<{ id
         </CardContent>
       </Card>
 
-      {profile?.role === "beheerder" && <ProjectenKaart klantId={id} projecten={projecten ?? []} />}
+      {magProjectenBeheren && <ProjectenKaart klantId={id} projecten={projecten ?? []} />}
 
       <Card>
         <CardHeader>
@@ -189,6 +194,10 @@ export default async function KlantDetailPage({ params }: { params: Promise<{ id
           <div>
             <span className="text-muted-foreground">Valuta: </span>
             {klant.valuta}
+          </div>
+          <div>
+            <span className="text-muted-foreground">Kosten van derden: </span>
+            {klant.kolom_externe_kosten_zichtbaar ? "Apart getoond op de specificatie" : "Meegenomen in het honorarium"}
           </div>
           {klant.opmerkingen && (
             <div className="sm:col-span-2">

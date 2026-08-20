@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, EyeOff } from "lucide-react";
 import type { FactuurItemFormState } from "@/actions/factuuritems";
+import { wisselKlantTaal } from "@/actions/klanten";
 import { createClient } from "@/lib/supabase/client";
 import { DossierSelect, type PatriciaDossierOptie } from "@/components/dossier-select";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,13 @@ import {
 } from "@/components/ui/dialog";
 import type { PrijsType, KortingType } from "@/lib/supabase/types";
 
-type Klant = { id: string; naam: string; kantoorkosten_actief: boolean; kantoorkosten_percentage: number };
+type Klant = {
+  id: string;
+  naam: string;
+  kantoorkosten_actief: boolean;
+  kantoorkosten_percentage: number;
+  specificatietaal: "nl" | "en";
+};
 type Project = { id: string; naam: string; po_nummer: string | null };
 
 type Initial = {
@@ -233,13 +240,14 @@ export function FactuurItemForm({
                 onbekendeDossiers={initial?.onbekende_dossiers}
               />
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-3">
                 <div className="flex flex-col gap-2">
                   <Label>Klant</Label>
                   <p className="flex h-8 items-center text-sm font-medium">
                     {klant?.naam ?? <span className="text-muted-foreground">Kies eerst een dossier</span>}
                   </p>
                 </div>
+                {klant && <TaalVeld klant={klant} />}
                 {projectenVoorKlant.length > 0 && (
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="project">Project (optioneel)</Label>
@@ -513,6 +521,31 @@ export function FactuurItemForm({
         </DialogContent>
       </Dialog>
     </form>
+  );
+}
+
+function TaalVeld({ klant }: { klant: Klant }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+
+  return (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor="klant_taal">Taal</Label>
+      <NativeSelect
+        id="klant_taal"
+        value={klant.specificatietaal}
+        disabled={pending}
+        onChange={(taal) => {
+          startTransition(async () => {
+            await wisselKlantTaal(klant.id, taal as "nl" | "en");
+            router.refresh();
+          });
+        }}
+      >
+        <option value="nl">Nederlands</option>
+        <option value="en">Engels</option>
+      </NativeSelect>
+    </div>
   );
 }
 

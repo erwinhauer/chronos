@@ -4,12 +4,14 @@
 
 export type Periode =
   | { type: "ytd" }
+  | { type: "jaar" }
   | { type: "maand"; maand: number } // 0-11
   | { type: "kwartaal"; kwartaal: number } // 1-4
   | { type: "halfjaar"; helft: 1 | 2 };
 
 const PERIODE_LABELS: Record<string, string> = {
   ytd: "Dit jaar (YTD)",
+  jaar: "Heel jaar",
   "maand-0": "Januari",
   "maand-1": "Februari",
   "maand-2": "Maart",
@@ -32,6 +34,7 @@ const PERIODE_LABELS: Record<string, string> = {
 
 export function periodeKey(periode: Periode): string {
   if (periode.type === "ytd") return "ytd";
+  if (periode.type === "jaar") return "jaar";
   if (periode.type === "maand") return `maand-${periode.maand}`;
   if (periode.type === "kwartaal") return `kwartaal-${periode.kwartaal}`;
   return `halfjaar-${periode.helft}`;
@@ -43,6 +46,7 @@ export function periodeLabel(periode: Periode): string {
 
 export function parsePeriodeKey(key: string | undefined): Periode {
   if (!key || key === "ytd") return { type: "ytd" };
+  if (key === "jaar") return { type: "jaar" };
   const [type, waarde] = key.split("-");
   const nummer = Number(waarde);
   if (type === "maand" && nummer >= 0 && nummer <= 11) return { type: "maand", maand: nummer };
@@ -53,6 +57,7 @@ export function parsePeriodeKey(key: string | undefined): Periode {
 
 export const ALLE_PERIODES: Periode[] = [
   { type: "ytd" },
+  { type: "jaar" },
   ...[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((maand): Periode => ({ type: "maand", maand })),
   ...[1, 2, 3, 4].map((kwartaal): Periode => ({ type: "kwartaal", kwartaal })),
   { type: "halfjaar", helft: 1 },
@@ -64,6 +69,9 @@ export const ALLE_PERIODES: Periode[] = [
 function periodeRange(periode: Periode, jaar: number): { start: Date; eind: Date } {
   if (periode.type === "ytd") {
     return { start: new Date(jaar, 0, 1), eind: new Date() };
+  }
+  if (periode.type === "jaar") {
+    return { start: new Date(jaar, 0, 1), eind: new Date(jaar + 1, 0, 1) };
   }
   if (periode.type === "maand") {
     return { start: new Date(jaar, periode.maand, 1), eind: new Date(jaar, periode.maand + 1, 1) };

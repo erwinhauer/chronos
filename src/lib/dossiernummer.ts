@@ -15,11 +15,13 @@ export type DossiernummerParseResult = {
 
 // Langste prefix eerst, anders zou "CA12345NL00" fout als "C" + "A12345..." gelezen worden.
 const TYPE_PREFIXES: { code: string; label: string }[] = [
-  { code: "CA", label: "Cancellation Actions" },
+  { code: "CA", label: "Cancellations" },
   { code: "TM", label: "Merken" },
   { code: "D", label: "Modellen" },
   { code: "O", label: "Opposities" },
   { code: "I", label: "Inbreuken" },
+  { code: "A", label: "Overeenkomsten" },
+  { code: "@", label: "Domeinnamen" },
   { code: "G", label: "Algemeen" },
   { code: "C", label: "Mutaties" },
   { code: "W", label: "Bewaking" },

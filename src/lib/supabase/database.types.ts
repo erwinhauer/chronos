@@ -83,10 +83,12 @@ export type Database = {
           accountview_factuurdatum: string | null
           accountview_factuurnummer: string | null
           created_at: string
+          extra_korting: number
           goedgekeurd_door: string | null
           goedgekeurd_op: string | null
           id: string
           klant_id: string
+          pdf_storage_path: string | null
           periode_eind: string
           periode_start: string
           project_id: string | null
@@ -98,15 +100,21 @@ export type Database = {
           totaal_korting: number
           updated_at: string
           valuta: string
+          verzend_cc: string[] | null
+          verzend_email: string | null
+          verzend_fout: string | null
+          verzonden_op: string | null
         }
         Insert: {
           accountview_factuurdatum?: string | null
           accountview_factuurnummer?: string | null
           created_at?: string
+          extra_korting?: number
           goedgekeurd_door?: string | null
           goedgekeurd_op?: string | null
           id?: string
           klant_id: string
+          pdf_storage_path?: string | null
           periode_eind: string
           periode_start: string
           project_id?: string | null
@@ -118,15 +126,21 @@ export type Database = {
           totaal_korting?: number
           updated_at?: string
           valuta?: string
+          verzend_cc?: string[] | null
+          verzend_email?: string | null
+          verzend_fout?: string | null
+          verzonden_op?: string | null
         }
         Update: {
           accountview_factuurdatum?: string | null
           accountview_factuurnummer?: string | null
           created_at?: string
+          extra_korting?: number
           goedgekeurd_door?: string | null
           goedgekeurd_op?: string | null
           id?: string
           klant_id?: string
+          pdf_storage_path?: string | null
           periode_eind?: string
           periode_start?: string
           project_id?: string | null
@@ -138,6 +152,10 @@ export type Database = {
           totaal_korting?: number
           updated_at?: string
           valuta?: string
+          verzend_cc?: string[] | null
+          verzend_email?: string | null
+          verzend_fout?: string | null
+          verzonden_op?: string | null
         }
         Relationships: [
           {
@@ -815,10 +833,21 @@ export type Database = {
         Args: { p_datum: string; p_klant_id: string; p_medewerker_id: string }
         Returns: number
       }
+      set_klant_taal: {
+        Args: {
+          nieuwe_taal: Database["public"]["Enums"]["specificatietaal"]
+          target_klant_id: string
+        }
+        Returns: undefined
+      }
       shares_team_with: { Args: { target_profile: string }; Returns: boolean }
       switch_active_role: {
         Args: { target_role: Database["public"]["Enums"]["user_role"] }
         Returns: undefined
+      }
+      team_services_klant: {
+        Args: { target_klant_id: string }
+        Returns: boolean
       }
     }
     Enums: {

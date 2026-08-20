@@ -14,7 +14,7 @@ export default async function NieuwFactuurItemPage() {
   const [{ data: klanten }, { data: projecten }, { data: dossiers }] = await Promise.all([
     supabase
       .from("klanten")
-      .select("id, naam, kantoorkosten_actief, kantoorkosten_percentage")
+      .select("id, naam, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal")
       .eq("status", "actief")
       .order("naam"),
     supabase.from("projecten").select("id, klant_id, naam, po_nummer").eq("actief", true).order("naam"),

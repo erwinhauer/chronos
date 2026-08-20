@@ -26,7 +26,10 @@ export async function createProject(
 
   if (error) {
     return {
-      error: error.code === "42501" ? "Alleen beheerders kunnen projecten aanmaken." : "Aanmaken van het project is mislukt.",
+      error:
+        error.code === "42501"
+          ? "Alleen beheerders, of teamleiders van een team dat deze klant al bedient, kunnen projecten beheren."
+          : "Aanmaken van het project is mislukt.",
       success: false,
     };
   }
@@ -58,7 +61,10 @@ export async function updateProject(
 
   if (error || !project) {
     return {
-      error: error?.code === "42501" ? "Alleen beheerders kunnen projecten bewerken." : "Opslaan is mislukt.",
+      error:
+        error?.code === "42501"
+          ? "Alleen beheerders, of teamleiders van een team dat deze klant al bedient, kunnen projecten beheren."
+          : "Opslaan is mislukt.",
       success: false,
     };
   }

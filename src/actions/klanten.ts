@@ -12,6 +12,7 @@ export async function createKlant(_prevState: KlantFormState, formData: FormData
   const contact_email = String(formData.get("contact_email") ?? "").trim();
   const specificatietaal = String(formData.get("specificatietaal") ?? "nl").trim();
   const kantoorkosten_actief = formData.get("kantoorkosten_actief") === "on";
+  const kolom_externe_kosten_zichtbaar = formData.get("kolom_externe_kosten_zichtbaar") === "on";
   const opmerkingen = String(formData.get("opmerkingen") ?? "").trim();
 
   if (!naam || !contactpersoon_naam || !contact_email) {
@@ -29,6 +30,7 @@ export async function createKlant(_prevState: KlantFormState, formData: FormData
     contact_email,
     specificatietaal: specificatietaal as "nl" | "en",
     kantoorkosten_actief,
+    kolom_externe_kosten_zichtbaar,
     opmerkingen: opmerkingen || null,
     status: "actief",
   });
@@ -56,6 +58,7 @@ export async function updateKlant(
   const contact_email = String(formData.get("contact_email") ?? "").trim();
   const specificatietaal = String(formData.get("specificatietaal") ?? "nl").trim();
   const kantoorkosten_actief = formData.get("kantoorkosten_actief") === "on";
+  const kolom_externe_kosten_zichtbaar = formData.get("kolom_externe_kosten_zichtbaar") === "on";
   const opmerkingen = String(formData.get("opmerkingen") ?? "").trim();
 
   if (!naam || !contactpersoon_naam || !contact_email) {
@@ -75,6 +78,7 @@ export async function updateKlant(
       contact_email,
       specificatietaal: specificatietaal as "nl" | "en",
       kantoorkosten_actief,
+      kolom_externe_kosten_zichtbaar,
       opmerkingen: opmerkingen || null,
     })
     .eq("id", id);
@@ -88,4 +92,16 @@ export async function updateKlant(
   revalidatePath("/klanten");
   revalidatePath(`/klanten/${id}`);
   return { error: null, success: true };
+}
+
+export async function wisselKlantTaal(klantId: string, taal: "nl" | "en") {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_klant_taal", { target_klant_id: klantId, nieuwe_taal: taal });
+  if (error) {
+    throw new Error("Wijzigen van de taal is mislukt.");
+  }
+
+  revalidatePath("/factuuritems");
+  revalidatePath("/klanten");
+  revalidatePath(`/klanten/${klantId}`);
 }

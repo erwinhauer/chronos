@@ -5,6 +5,7 @@ import { euro, isGefactureerd, isNogTeFactureren, regelbedrag } from "@/lib/fact
 import { parsePeriodeKey, periodeLabel, inPeriode } from "@/lib/omzet-periode";
 import { OmzetGrafiek, type OmzetRij } from "@/components/omzet-grafiek";
 import { PeriodeSelect } from "@/components/periode-select";
+import { JaarSelect } from "@/components/jaar-select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { StatIcon } from "@/components/stat-icon";
@@ -16,6 +17,27 @@ const MAX_SERIES = 5;
 
 function firstName(fullName: string) {
   return fullName.split(" ")[0];
+}
+
+type FactuurRegel = {
+  medewerker_id: string;
+  klant_id: string;
+  honorarium: number;
+  externe_kosten: number;
+  korting: number;
+  status: "aangemaakt" | "definitief";
+  declarabel: boolean;
+  datum: string;
+  prijstype: string;
+  klanten: { naam: string } | null;
+  factuuritem_dossiers: { type_dienst: string | null; volgorde: number }[];
+};
+
+function eersteDienst(r: FactuurRegel): string {
+  const dossiers = r.factuuritem_dossiers ?? [];
+  if (dossiers.length === 0) return "Onbekend";
+  const eerste = dossiers.slice().sort((a, b) => a.volgorde - b.volgorde)[0];
+  return eerste.type_dienst ?? "Onbekend";
 }
 
 function buildOmzetGrafiekData(
@@ -61,14 +83,15 @@ function buildOmzetGrafiekData(
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ periode?: string }>;
+  searchParams: Promise<{ periode?: string; jaar?: string }>;
 }) {
-  const { periode: periodeParam } = await searchParams;
+  const { periode: periodeParam, jaar: jaarParam } = await searchParams;
   const periode = parsePeriodeKey(periodeParam);
+  const echtHuidigJaar = new Date().getFullYear();
+  const gekozenJaar = jaarParam && /^\d{4}$/.test(jaarParam) ? Number(jaarParam) : echtHuidigJaar;
 
   const supabase = await createClient();
   const profile = await getCurrentProfile();
-  const huidigJaar = new Date().getFullYear();
 
   const [{ count: klantenCount }, { data: items }, { data: teamdoelen }, { data: teamMembers }, { data: profiles }] =
     await Promise.all([
@@ -76,24 +99,25 @@ export default async function DashboardPage({
       supabase
         .from("factuuritems")
         .select(
-          "medewerker_id, klant_id, honorarium, externe_kosten, korting, status, declarabel, datum, prijstype, klanten(naam)"
+          "medewerker_id, klant_id, honorarium, externe_kosten, korting, status, declarabel, datum, prijstype, klanten(naam), factuuritem_dossiers(type_dienst, volgorde)"
         ),
-      supabase.from("teamdoelen").select("bruto_bedrag, netto_bedrag, teams(id, naam)").eq("jaar", huidigJaar),
+      supabase.from("teamdoelen").select("bruto_bedrag, netto_bedrag, teams(id, naam)").eq("jaar", gekozenJaar),
       supabase.from("team_members").select("team_id, profile_id"),
       supabase.from("profiles").select("id, full_name"),
     ]);
 
-  const rows = items ?? [];
-  const nogTeFactureren = rows
-    .filter((r) => isNogTeFactureren(r.status, r.declarabel))
-    .reduce((sum, r) => sum + regelbedrag(r), 0);
-  const gefactureerd = rows.filter((r) => isGefactureerd(r.status)).reduce((sum, r) => sum + regelbedrag(r), 0);
+  const rows = (items ?? []) as unknown as FactuurRegel[];
 
-  const ditJaar = rows.filter((r) => isGefactureerd(r.status) && new Date(r.datum).getFullYear() === huidigJaar);
-  // Periode-gefilterd (voor de nieuwe bruto-/uren-omzet-uitsplitsingen) — los van
-  // "ditJaar", dat altijd het volledige lopende jaar blijft voor de on-target-berekening.
-  const inGekozenPeriode = ditJaar.filter((r) => inPeriode(r.datum, periode, huidigJaar));
+  const ditJaar = rows.filter((r) => isGefactureerd(r.status) && new Date(r.datum).getFullYear() === gekozenJaar);
+  // Periode-gefilterd (voor de omzet-uitsplitsingen en de stat-tegels) — los van
+  // "ditJaar", dat altijd het volledige gekozen jaar blijft voor de on-target-berekening.
+  const inGekozenPeriode = ditJaar.filter((r) => inPeriode(r.datum, periode, gekozenJaar));
   const inGekozenPeriodeUren = inGekozenPeriode.filter((r) => r.prijstype === "uren");
+
+  const nogTeFactureren = rows
+    .filter((r) => isNogTeFactureren(r.status, r.declarabel) && inPeriode(r.datum, periode, gekozenJaar))
+    .reduce((sum, r) => sum + regelbedrag(r), 0);
+  const gefactureerd = inGekozenPeriode.reduce((sum, r) => sum + regelbedrag(r), 0);
 
   const namenPerId = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
 
@@ -140,6 +164,17 @@ export default async function DashboardPage({
       }
       const teamlidRijen = Array.from(perTeamlid.values()).sort((a, b) => b.bruto - a.bruto);
 
+      const perKlant = new Map<string, { naam: string; omzet: number }>();
+      for (const r of teamItemsInPeriode) {
+        const naam = r.klanten?.naam ?? "Onbekend";
+        const bestaand = perKlant.get(r.klant_id) ?? { naam, omzet: 0 };
+        bestaand.omzet += regelbedrag(r);
+        perKlant.set(r.klant_id, bestaand);
+      }
+      const top3Klanten = Array.from(perKlant.values())
+        .sort((a, b) => b.omzet - a.omzet)
+        .slice(0, 3);
+
       const teamLeden = ditJaar.filter((r) => leden.has(r.medewerker_id));
       const { chartData, medewerkerNamen } = buildOmzetGrafiekData(teamLeden, namenPerId);
 
@@ -152,6 +187,7 @@ export default async function DashboardPage({
         brutoOmzetTeam,
         urenOmzetTeam,
         teamlidRijen,
+        top3Klanten,
         chartData,
         medewerkerNamen,
       };
@@ -159,11 +195,42 @@ export default async function DashboardPage({
     .filter((v): v is NonNullable<typeof v> => v !== null)
     .sort((a, b) => a.teamNaam.localeCompare(b.teamNaam));
 
-  // Nog te factureren per klant — geen periodefilter, net als de stat-tegel hierboven.
+  // Omzet per medewerker, over alle teams heen — alleen zinvol voor rollen die
+  // meer dan hun eigen team zien; anders is dit hetzelfde als de teamkaart.
+  const omzetPerMedewerkerMap = new Map<string, { naam: string; bruto: number; uren: number }>();
+  for (const r of inGekozenPeriode) {
+    const naam = namenPerId.get(r.medewerker_id) ?? "Onbekend";
+    const bestaand = omzetPerMedewerkerMap.get(r.medewerker_id) ?? { naam, bruto: 0, uren: 0 };
+    bestaand.bruto += regelbedrag(r);
+    omzetPerMedewerkerMap.set(r.medewerker_id, bestaand);
+  }
+  for (const r of inGekozenPeriodeUren) {
+    const rij = omzetPerMedewerkerMap.get(r.medewerker_id);
+    if (rij) rij.uren += regelbedrag(r);
+  }
+  const omzetPerMedewerker = Array.from(omzetPerMedewerkerMap.values()).sort((a, b) => b.bruto - a.bruto);
+
+  // Verkochte diensten — op basis van de dossiernummer-afgeleide dienst van het
+  // eerste dossier op het item (bij meerdere dossiers op één regel is dat de
+  // conventie die de rest van de app ook al aanhoudt bij weergave).
+  const perDienst = new Map<string, { aantal: number; omzet: number; uren: number }>();
+  for (const r of inGekozenPeriode) {
+    const dienst = eersteDienst(r);
+    const bestaand = perDienst.get(dienst) ?? { aantal: 0, omzet: 0, uren: 0 };
+    bestaand.aantal += 1;
+    bestaand.omzet += regelbedrag(r);
+    if (r.prijstype === "uren") bestaand.uren += regelbedrag(r);
+    perDienst.set(dienst, bestaand);
+  }
+  const dienstenTabel = Array.from(perDienst.entries())
+    .map(([dienst, v]) => ({ dienst, ...v }))
+    .sort((a, b) => b.omzet - a.omzet);
+
+  // Nog te factureren per klant — dezelfde periode/jaar-filter als de rest van het dashboard.
   const nogTeFacturenPerKlant = new Map<string, { naam: string; bedrag: number }>();
   for (const r of rows) {
-    if (!isNogTeFactureren(r.status, r.declarabel)) continue;
-    const naam = (r.klanten as unknown as { naam: string } | null)?.naam ?? "Onbekend";
+    if (!isNogTeFactureren(r.status, r.declarabel) || !inPeriode(r.datum, periode, gekozenJaar)) continue;
+    const naam = r.klanten?.naam ?? "Onbekend";
     const bestaand = nogTeFacturenPerKlant.get(r.klant_id) ?? { naam, bedrag: 0 };
     bestaand.bedrag += regelbedrag(r);
     nogTeFacturenPerKlant.set(r.klant_id, bestaand);
@@ -187,6 +254,12 @@ export default async function DashboardPage({
         </LinkButton>
       </div>
 
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <span className="text-sm text-muted-foreground">Periode:</span>
+        <PeriodeSelect />
+        <JaarSelect huidigJaar={gekozenJaar} />
+      </div>
+
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardContent className="flex items-center gap-4">
@@ -201,7 +274,9 @@ export default async function DashboardPage({
           <CardContent className="flex items-center gap-4">
             <StatIcon icon={Receipt} tint="warning" />
             <div>
-              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Nog te factureren</p>
+              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                Nog te factureren · {periodeLabel(periode)}
+              </p>
               <div className="text-2xl font-semibold tabular-figures text-warning">{euro(nogTeFactureren)}</div>
             </div>
           </CardContent>
@@ -210,22 +285,46 @@ export default async function DashboardPage({
           <CardContent className="flex items-center gap-4">
             <StatIcon icon={PiggyBank} tint="success" />
             <div>
-              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Gefactureerd</p>
+              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                Gefactureerd · {periodeLabel(periode)}
+              </p>
               <div className="text-2xl font-semibold tabular-figures text-success">{euro(gefactureerd)}</div>
             </div>
           </CardContent>
         </Card>
       </div>
 
+      {zietAlleTeams && omzetPerMedewerker.length > 0 && (
+        <Card className="rounded-2xl">
+          <CardHeader>
+            <CardTitle className="text-base">Omzet per medewerker · alle teams · {periodeLabel(periode)}</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Medewerker</TableHead>
+                  <TableHead className="text-right">Bruto-omzet</TableHead>
+                  <TableHead className="text-right">Uren-omzet</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {omzetPerMedewerker.map((m) => (
+                  <TableRow key={m.naam}>
+                    <TableCell>{m.naam}</TableCell>
+                    <TableCell className="text-right tabular-figures">{euro(m.bruto)}</TableCell>
+                    <TableCell className="text-right tabular-figures">{euro(m.uren)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
       {teamKaarten.length > 0 && (
         <div className="flex flex-col gap-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h3 className="text-lg font-semibold tracking-tight">Teams</h3>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Omzet-periode:</span>
-              <PeriodeSelect />
-            </div>
-          </div>
+          <h3 className="text-lg font-semibold tracking-tight">Teams</h3>
 
           {teamKaarten.map((t) => (
             <Card key={t.teamId} className="rounded-2xl">
@@ -235,7 +334,7 @@ export default async function DashboardPage({
               <CardContent className="flex flex-col gap-6">
                 <div className="flex flex-col gap-1.5">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium">Brutotarget {huidigJaar}</span>
+                    <span className="font-medium">Brutotarget {gekozenJaar}</span>
                     <span className="tabular-figures text-muted-foreground">
                       {euro(t.gefactureerdDitJaar)} / {euro(t.brutoDoel)}
                     </span>
@@ -243,7 +342,7 @@ export default async function DashboardPage({
                   <Progress value={t.brutoDoel > 0 ? (t.gefactureerdDitJaar / t.brutoDoel) * 100 : 0} />
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Nettotarget {huidigJaar}: {t.nettoDoel !== null ? euro(t.nettoDoel) : "nog niet ingesteld"}
+                  Nettotarget {gekozenJaar}: {t.nettoDoel !== null ? euro(t.nettoDoel) : "nog niet ingesteld"}
                 </p>
 
                 <div className="grid gap-4 border-t border-border pt-4 sm:grid-cols-2">
@@ -283,14 +382,40 @@ export default async function DashboardPage({
                 </div>
 
                 <div className="border-t border-border pt-4">
+                  <p className="mb-2 text-sm text-muted-foreground">Top 3 klanten · {periodeLabel(periode)}</p>
+                  {t.top3Klanten.length > 0 ? (
+                    <div className="overflow-hidden rounded-lg border border-border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Klant</TableHead>
+                            <TableHead className="text-right">Omzet</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {t.top3Klanten.map((k) => (
+                            <TableRow key={k.naam}>
+                              <TableCell>{k.naam}</TableCell>
+                              <TableCell className="text-right tabular-figures">{euro(k.omzet)}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Geen omzet in deze periode.</p>
+                  )}
+                </div>
+
+                <div className="border-t border-border pt-4">
                   <p className="mb-2 text-sm text-muted-foreground">
-                    Bruto-omzet per teamlid, per maand ({huidigJaar} — ongefilterd, trendweergave)
+                    Bruto-omzet per teamlid, per maand ({gekozenJaar} — ongefilterd, trendweergave)
                   </p>
                   {t.medewerkerNamen.length > 0 ? (
                     <OmzetGrafiek data={t.chartData} medewerkerNamen={t.medewerkerNamen} />
                   ) : (
                     <p className="py-6 text-center text-sm text-muted-foreground">
-                      Nog geen gefactureerde factuuritems in {huidigJaar}.
+                      Nog geen gefactureerde factuuritems in {gekozenJaar}.
                     </p>
                   )}
                 </div>
@@ -302,7 +427,39 @@ export default async function DashboardPage({
 
       <Card className="rounded-2xl">
         <CardHeader>
-          <CardTitle className="text-base">Nog te factureren per klant</CardTitle>
+          <CardTitle className="text-base">Verkochte diensten · {periodeLabel(periode)}</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {dienstenTabel.length === 0 ? (
+            <p className="p-6 text-center text-sm text-muted-foreground">Nog geen omzet in deze periode.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Dienst</TableHead>
+                  <TableHead className="text-right">Aantal</TableHead>
+                  <TableHead className="text-right">Bruto-omzet</TableHead>
+                  <TableHead className="text-right">Uren-omzet</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {dienstenTabel.map((d) => (
+                  <TableRow key={d.dienst}>
+                    <TableCell>{d.dienst}</TableCell>
+                    <TableCell className="text-right tabular-figures">{d.aantal}</TableCell>
+                    <TableCell className="text-right tabular-figures">{euro(d.omzet)}</TableCell>
+                    <TableCell className="text-right tabular-figures">{euro(d.uren)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-2xl">
+        <CardHeader>
+          <CardTitle className="text-base">Nog te factureren per klant · {periodeLabel(periode)}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {nogTeFacturenTabel.length === 0 ? (

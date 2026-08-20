@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { Receipt } from "lucide-react";
 import { landNaamVoorIso } from "@/lib/dossiernummer";
 import { euro, regelbedrag } from "@/lib/factuurbedragen";
-import { FactureerDialog } from "@/components/factureer-dialog";
 import { VerplaatsProjectDialog } from "@/components/verplaats-project-dialog";
 import { LinkButton } from "@/components/link-button";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -95,7 +96,6 @@ export function FactuurGroep({
           <ProjectSectieBlok
             key={sectie.sleutel}
             klantId={klantId}
-            klantNaam={klantNaam}
             sectie={sectie}
             projecten={projecten}
             toonHeader={toonProjectHeaders}
@@ -111,7 +111,6 @@ export function FactuurGroep({
 
 function ProjectSectieBlok({
   klantId,
-  klantNaam,
   sectie,
   projecten,
   toonHeader,
@@ -120,7 +119,6 @@ function ProjectSectieBlok({
   huidigeGebruikerId,
 }: {
   klantId: string;
-  klantNaam: string;
   sectie: ProjectSectie;
   projecten: Project[];
   toonHeader: boolean;
@@ -156,7 +154,20 @@ function ProjectSectieBlok({
         projecten={projecten}
         huidigProjectId={huidigProjectId}
       />
-      <FactureerDialog klantId={klantId} klantNaam={klantNaam} selectie={selectie} />
+      {selectie.length === 0 ? (
+        <Button size="sm" disabled>
+          <Receipt className="h-4 w-4" />
+          Factureren (0)
+        </Button>
+      ) : (
+        <LinkButton
+          size="sm"
+          href={`/facturatiebatches/nieuw?klant_id=${klantId}&item_ids=${selectie.map((s) => s.id).join(",")}`}
+        >
+          <Receipt className="h-4 w-4" />
+          Factureren ({selectie.length})
+        </LinkButton>
+      )}
     </div>
   );
 
