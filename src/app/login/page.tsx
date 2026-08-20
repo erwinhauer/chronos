@@ -38,10 +38,8 @@ export default async function LoginPage({
       <div className="flex flex-col items-center justify-center gap-8 px-6 py-16">
         <div className="flex w-full max-w-sm flex-col gap-8">
           <div className="flex flex-col gap-3">
-            <ChronosLogo className="text-foreground" />
-            <p className="text-sm text-muted-foreground">
-              Uren, werkzaamheden en facturatie van Knijff, op één centrale plek.
-            </p>
+            <ChronosLogo className="text-foreground [&>span]:text-[2rem]" />
+            <p className="text-sm text-muted-foreground">Tijdschrijf- en facturatiesysteem</p>
           </div>
           <LoginForm next={next ?? "/dashboard"} />
         </div>

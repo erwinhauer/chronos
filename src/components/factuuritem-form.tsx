@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ChevronDown, EyeOff } from "lucide-react";
 import type { FactuurItemFormState } from "@/actions/factuuritems";
 import { createClient } from "@/lib/supabase/client";
@@ -12,6 +13,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { PrijsType, KortingType } from "@/lib/supabase/types";
 
 type Klant = { id: string; naam: string; kantoorkosten_actief: boolean; kantoorkosten_percentage: number };
@@ -64,6 +73,7 @@ export function FactuurItemForm({
   initial?: Initial;
   medewerkerId: string;
 }) {
+  const router = useRouter();
   const [state, formAction, pending] = useActionState(action, initialState);
 
   // React reset native <select>-elementen na elke form-action (ook bij een
@@ -92,6 +102,23 @@ export function FactuurItemForm({
   const [kantoorkostenActief, setKantoorkostenActief] = useState(initial?.kantoorkosten_van_toepassing ?? true);
   const [declarabel, setDeclarabel] = useState(initial?.declarabel ?? true);
   const [voorgesteldTarief, setVoorgesteldTarief] = useState<number | null>(null);
+  const [toonSluitenBevestiging, setToonSluitenBevestiging] = useState(false);
+
+  // Momentopname van de startwaarden (leeg bij een nieuw item, de geladen
+  // gegevens bij een bewerking) om te kunnen bepalen of de gebruiker al iets
+  // heeft ingevuld/gewijzigd voordat "Sluiten" een bevestiging vraagt.
+  const [startSnapshot] = useState(() => ({
+    dossierSelectie: initial?.dossier_ids ?? [],
+    projectId: initial?.project_id ?? "",
+    omschrijvingKlant: initial?.omschrijving_klant ?? "",
+    interneOpmerking: initial?.interne_opmerking ?? "",
+    qty: initial?.qty ?? 1,
+    prijstype: initial?.prijstype ?? "",
+    tarief: initial?.tarief ?? null,
+    externeKosten: initial?.externe_kosten ?? 0,
+    kortingBedrag: initial?.korting ?? 0,
+    kortingPercentage: initial?.korting_percentage ?? 0,
+  }));
 
   // Klant is niet langer een handmatige keuze — hij volgt uit het/de gekozen
   // dossier(s) (allemaal van dezelfde klant, zie DossierSelect's klant-lock).
@@ -147,8 +174,30 @@ export function FactuurItemForm({
   const regelbedrag = round2(honorarium + externeKosten - kortingBerekend);
   const kantoorkostenPercentage = klant?.kantoorkosten_percentage ?? 6;
   const kantoorkostenBedrag = kantoorkostenActief ? round2(regelbedrag * (kantoorkostenPercentage / 100)) : 0;
-  const tariefWijktAf =
-    prijstype === "uren" && voorgesteldTarief !== null && tarief !== null && Math.abs(voorgesteldTarief - tarief) > 0.001;
+  const kortingPercentageVanHonorarium =
+    honorarium > 0 ? (kortingType === "percentage" ? kortingPercentage : (kortingBerekend / honorarium) * 100) : 0;
+  const kortingTeHoog = kortingBerekend > 0 && kortingPercentageVanHonorarium > 25;
+
+  const isFormGewijzigd =
+    dossierSelectie.length !== startSnapshot.dossierSelectie.length ||
+    dossierSelectie.some((id) => !startSnapshot.dossierSelectie.includes(id)) ||
+    projectId !== startSnapshot.projectId ||
+    omschrijvingKlant !== startSnapshot.omschrijvingKlant ||
+    interneOpmerking !== startSnapshot.interneOpmerking ||
+    qty !== startSnapshot.qty ||
+    prijstype !== startSnapshot.prijstype ||
+    tarief !== startSnapshot.tarief ||
+    externeKosten !== startSnapshot.externeKosten ||
+    kortingBedrag !== startSnapshot.kortingBedrag ||
+    kortingPercentage !== startSnapshot.kortingPercentage;
+
+  function handleSluiten() {
+    if (isFormGewijzigd) {
+      setToonSluitenBevestiging(true);
+    } else {
+      router.push("/factuuritems");
+    }
+  }
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
@@ -321,12 +370,7 @@ export function FactuurItemForm({
                   required
                 />
                 {prijstype === "uren" && voorgesteldTarief !== null && (
-                  <p className="text-xs text-muted-foreground">
-                    Voorgesteld tarief: {euro(voorgesteldTarief)}
-                    {tariefWijktAf && (
-                      <span className="ml-1 font-medium text-warning">— wijkt af, wordt gelogd</span>
-                    )}
-                  </p>
+                  <p className="text-xs text-muted-foreground">Voorgesteld tarief: {euro(voorgesteldTarief)}</p>
                 )}
               </div>
 
@@ -385,6 +429,11 @@ export function FactuurItemForm({
                   <p className="text-xs text-muted-foreground">
                     Max. het honorarium ({euro(honorarium)}), nooit over kosten van derden.
                   </p>
+                  {kortingTeHoog && (
+                    <p className="text-xs font-medium text-warning">
+                      Let op: dit is meer dan 25% korting op onze opslag!
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -433,14 +482,36 @@ export function FactuurItemForm({
                 </p>
               </CardContent>
             )}
-            <CardFooter>
-              <Button type="submit" disabled={pending} className="w-full">
+            <CardFooter className="flex gap-2">
+              <Button type="button" variant="outline" className="flex-1" onClick={handleSluiten}>
+                Sluiten
+              </Button>
+              <Button type="submit" disabled={pending} className="flex-1">
                 {pending ? "Bezig…" : initial ? "Wijzigingen opslaan" : "Factuuritem aanmaken"}
               </Button>
             </CardFooter>
           </Card>
         </div>
       </div>
+
+      <Dialog open={toonSluitenBevestiging} onOpenChange={setToonSluitenBevestiging}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Weet je het zeker?</DialogTitle>
+            <DialogDescription>
+              Er zijn al gegevens ingevuld op dit factuuritem. Als je nu sluit, gaan deze verloren.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setToonSluitenBevestiging(false)}>
+              Terug naar het formulier
+            </Button>
+            <Button type="button" variant="destructive" onClick={() => router.push("/factuuritems")}>
+              Sluiten zonder opslaan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </form>
   );
 }

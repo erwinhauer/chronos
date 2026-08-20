@@ -6,21 +6,20 @@ import { createClient } from "@supabase/supabase-js";
 
 // Vóór elke commit bijwerken met de wijzigingen van die release.
 const CHANGELOG_ENTRY = {
-  versienummer: "0.9.0",
+  versienummer: "0.10.0",
   releasedatum: "2026-08-20",
-  titel: "Meerdere rollen per gebruiker, profielpagina en profielfoto",
+  titel: "Login-scherm opgefrist en validaties op nieuw factuuritem",
   nieuwe_functies: [
-    "Een gebruiker kan nu meerdere rollen toegekend krijgen (door een beheerder) en zelf wisselen tussen zijn toegekende rollen via de sidebar — dit wisselt direct de daadwerkelijke rechten, niet alleen de weergave",
-    "Nieuwe pagina 'Profiel' (voor elke rol): toont naam, team(s) en toegekende rollen, en laat de gebruiker zelf een profielfoto uploaden",
-    "Voornaam en achternaam zijn nu apart instelbaar bij het aanmaken/bewerken van een gebruiker (was één vrij-tekstveld 'Naam')",
+    "Nieuw factuuritem: knop 'Sluiten' om het formulier te verlaten — vraagt om bevestiging als er al gegevens zijn ingevuld",
+    "Nieuw factuuritem: melding bij meer dan 25% korting op het honorarium",
   ],
   wijzigingen: [
-    "Instellingen → Gebruikers: het rolveld is een aanvinklijst geworden (meerdere rollen per gebruiker) in plaats van een keuzelijst met precies één rol",
+    "Login-scherm: 'Wachtwoord vergeten?' staat nu onder het wachtwoordveld in plaats van erboven",
+    "Login-scherm: 'Chronos' boven de inlogvelden groter weergegeven en de tekst daaronder aangepast naar 'Tijdschrijf- en facturatiesysteem'",
+    "Nieuw factuuritem: de melding dat een ingevoerd uurtarief afwijkt van het voorgestelde tarief is verwijderd",
   ],
   bugfixes: [],
-  bekende_beperkingen: [
-    "Naam, team en rol zijn op de Profiel-pagina alleen-lezen — wijzigen kan alleen door een beheerder via Instellingen",
-  ],
+  bekende_beperkingen: [],
   gebruikersactie: null,
 };
 
