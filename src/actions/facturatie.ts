@@ -63,15 +63,28 @@ export async function createFacturatiebatch(
   }
   const project_id = items[0]?.project_id ?? null;
 
+  const { data: klant, error: klantError } = await supabase
+    .from("klanten")
+    .select("kantoorkosten_percentage")
+    .eq("id", klant_id)
+    .single();
+  if (klantError || !klant) {
+    return { error: "Ophalen van de klantgegevens is mislukt.", success: false };
+  }
+
   const totaalHonorarium = round2(items.reduce((som, i) => som + i.honorarium, 0));
   const totaalExterneKosten = round2(items.reduce((som, i) => som + i.externe_kosten, 0));
   const totaalKorting = round2(items.reduce((som, i) => som + i.korting, 0));
-  const totaalKantoorkosten = round2(
+  const kantoorkostenGrondslag = round2(
     items.reduce(
-      (som, i) => som + (i.kantoorkosten_van_toepassing ? (i.honorarium + i.externe_kosten - i.korting) * 0.06 : 0),
+      (som, i) => som + (i.kantoorkosten_van_toepassing ? i.honorarium + i.externe_kosten - i.korting : 0),
       0
     )
   );
+  const ruweKantoorkosten = round2(kantoorkostenGrondslag * (klant.kantoorkosten_percentage / 100));
+  // Minimaal €15, maximaal €200 per factuur — maar geen vloer als er niets van
+  // toepassing is (dan blijft het gewoon €0).
+  const totaalKantoorkosten = ruweKantoorkosten > 0 ? Math.min(Math.max(ruweKantoorkosten, 15), 200) : 0;
   const totaalBedrag = round2(totaalHonorarium + totaalExterneKosten - totaalKorting + totaalKantoorkosten);
 
   const {

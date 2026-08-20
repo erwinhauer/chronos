@@ -215,9 +215,12 @@ export type Database = {
           kantoorkosten_van_toepassing: boolean
           klant_id: string
           korting: number
+          korting_percentage: number | null
+          korting_type: Database["public"]["Enums"]["korting_type"]
           laatst_bewerkt_door: string | null
           medewerker_id: string
           omschrijving_klant: string
+          prijstype: Database["public"]["Enums"]["prijstype"]
           project_id: string | null
           qty: number
           status: Database["public"]["Enums"]["factuuritem_status"]
@@ -238,9 +241,12 @@ export type Database = {
           kantoorkosten_van_toepassing?: boolean
           klant_id: string
           korting?: number
+          korting_percentage?: number | null
+          korting_type?: Database["public"]["Enums"]["korting_type"]
           laatst_bewerkt_door?: string | null
           medewerker_id: string
           omschrijving_klant: string
+          prijstype: Database["public"]["Enums"]["prijstype"]
           project_id?: string | null
           qty: number
           status?: Database["public"]["Enums"]["factuuritem_status"]
@@ -261,9 +267,12 @@ export type Database = {
           kantoorkosten_van_toepassing?: boolean
           klant_id?: string
           korting?: number
+          korting_percentage?: number | null
+          korting_type?: Database["public"]["Enums"]["korting_type"]
           laatst_bewerkt_door?: string | null
           medewerker_id?: string
           omschrijving_klant?: string
+          prijstype?: Database["public"]["Enums"]["prijstype"]
           project_id?: string | null
           qty?: number
           status?: Database["public"]["Enums"]["factuuritem_status"]
@@ -403,6 +412,41 @@ export type Database = {
             columns: ["standaard_teamleider_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patricia_dossiers: {
+        Row: {
+          actief: boolean
+          created_at: string
+          dossiernummer: string
+          id: string
+          klant_id: string
+          matter_naam: string
+        }
+        Insert: {
+          actief?: boolean
+          created_at?: string
+          dossiernummer: string
+          id?: string
+          klant_id: string
+          matter_naam: string
+        }
+        Update: {
+          actief?: boolean
+          created_at?: string
+          dossiernummer?: string
+          id?: string
+          klant_id?: string
+          matter_naam?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patricia_dossiers_klant_id_fkey"
+            columns: ["klant_id"]
+            isOneToOne: false
+            referencedRelation: "klanten"
             referencedColumns: ["id"]
           },
         ]
@@ -756,6 +800,8 @@ export type Database = {
         | "gefactureerd"
       factuuritem_status: "aangemaakt" | "definitief"
       klant_status: "actief" | "inactief"
+      korting_type: "bedrag" | "percentage"
+      prijstype: "uren" | "vast_honorarium"
       specificatietaal: "nl" | "en"
       specificatietype: "simple" | "extended"
       user_role: "medewerker" | "teamleider" | "finance" | "beheerder"
@@ -908,6 +954,8 @@ export const Constants = {
       ],
       factuuritem_status: ["aangemaakt", "definitief"],
       klant_status: ["actief", "inactief"],
+      korting_type: ["bedrag", "percentage"],
+      prijstype: ["uren", "vast_honorarium"],
       specificatietaal: ["nl", "en"],
       specificatietype: ["simple", "extended"],
       user_role: ["medewerker", "teamleider", "finance", "beheerder"],

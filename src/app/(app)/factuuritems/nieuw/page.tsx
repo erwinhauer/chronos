@@ -11,9 +11,14 @@ export default async function NieuwFactuurItemPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [{ data: klanten }, { data: projecten }] = await Promise.all([
-    supabase.from("klanten").select("id, naam, kantoorkosten_actief").eq("status", "actief").order("naam"),
+  const [{ data: klanten }, { data: projecten }, { data: dossiers }] = await Promise.all([
+    supabase
+      .from("klanten")
+      .select("id, naam, kantoorkosten_actief, kantoorkosten_percentage")
+      .eq("status", "actief")
+      .order("naam"),
     supabase.from("projecten").select("id, klant_id, naam, po_nummer").eq("actief", true).order("naam"),
+    supabase.from("patricia_dossiers").select("id, klant_id, dossiernummer, matter_naam").eq("actief", true).order("dossiernummer"),
   ]);
 
   const projectenPerKlant: Record<string, { id: string; naam: string; po_nummer: string | null }[]> = {};
@@ -30,6 +35,7 @@ export default async function NieuwFactuurItemPage() {
       </div>
       <FactuurItemForm
         klanten={klanten ?? []}
+        dossiers={dossiers ?? []}
         projectenPerKlant={projectenPerKlant}
         action={createFactuurItem}
         medewerkerId={user.id}

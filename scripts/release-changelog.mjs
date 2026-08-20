@@ -6,16 +6,18 @@ import { createClient } from "@supabase/supabase-js";
 
 // Vóór elke commit bijwerken met de wijzigingen van die release.
 const CHANGELOG_ENTRY = {
-  versienummer: "0.6.0",
+  versienummer: "0.7.0",
   releasedatum: "2026-08-20",
-  titel: "Breadcrumbs en vernieuwd loginscherm",
+  titel: "Nieuw factuuritem: dossierlookup, prijstype en kortingpercentage",
   nieuwe_functies: [
-    "Detailpagina's (klant, factuuritem, specificatie) tonen nu een breadcrumb-pad in de header, bv. 'Klanten / Arcadis', met de vorige stappen klikbaar",
+    "Dossier(s) kiezen via een zoekbare lijst (tijdelijke dummy-databank ter voorbereiding op de Patricia-koppeling) i.p.v. vrije tekst — de klant en een startomschrijving worden hieruit automatisch afgeleid",
+    "Prijstype (Uren / Fixed fee) is nu een verplichte keuze zonder standaardwaarde",
+    "Korting kan nu ook als percentage van het honorarium ingevoerd worden, naast een vast bedrag",
+    "Interne opmerking is visueel duidelijk anders gestyled ('Niet zichtbaar voor klant'-label), zodat nooit per ongeluk gedacht wordt dat de klant dit ziet",
   ],
   wijzigingen: [
-    "Loginscherm: linkerdeel toont nu een sfeerfoto in plaats van alleen een kleurverloop",
-    "Loginscherm: rechterdeel toont het Chronos-logo en de standaard tagline in plaats van 'Welkom terug'",
-    "Loginscherm: Tab vanuit het e-mailveld springt nu direct naar het wachtwoordveld in plaats van naar 'Wachtwoord vergeten?'",
+    "Kantoorkosten bij het factureren worden nu berekend met het percentage van de klant zelf (was altijd hardcoded 6%), met een minimum van €15 en maximum van €200 per factuur",
+    "Korting mag nooit meer zijn dan het honorarium (voorheen: honorarium + externe kosten)",
   ],
   bugfixes: [],
   bekende_beperkingen: [],

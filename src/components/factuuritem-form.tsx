@@ -1,34 +1,42 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, EyeOff } from "lucide-react";
 import type { FactuurItemFormState } from "@/actions/factuuritems";
 import { createClient } from "@/lib/supabase/client";
-import { DossiernummerTagInput } from "@/components/dossiernummer-tag-input";
+import { DossierSelect, type PatriciaDossierOptie } from "@/components/dossier-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import type { PrijsType, KortingType } from "@/lib/supabase/types";
 
-type Klant = { id: string; naam: string; kantoorkosten_actief: boolean };
+type Klant = { id: string; naam: string; kantoorkosten_actief: boolean; kantoorkosten_percentage: number };
 type Project = { id: string; naam: string; po_nummer: string | null };
 
 type Initial = {
   id: string;
-  klant_id: string;
+  dossier_ids: string[];
+  onbekende_dossiers?: { dossiernummer: string; type_dienst: string | null; land: string | null }[];
+  // Alleen als weergave-terugval als geen van de dossiers op dit item (meer)
+  // in de dummy-lijst voorkomt — submission herleidt de klant altijd opnieuw
+  // server-side uit de daadwerkelijk geselecteerde dossiers.
+  klant_id_fallback?: string;
   project_id: string | null;
-  dossiernummers: string[];
   datum: string;
   omschrijving_klant: string;
   interne_opmerking: string | null;
   eenheidstype: string;
   qty: number;
+  prijstype: PrijsType;
   tarief: number | null;
-  honorarium: number;
   externe_kosten: number;
   korting: number;
+  korting_type: KortingType;
+  korting_percentage: number | null;
   kantoorkosten_van_toepassing: boolean;
   declarabel: boolean;
 };
@@ -43,12 +51,14 @@ function euro(n: number) {
 
 export function FactuurItemForm({
   klanten,
+  dossiers,
   projectenPerKlant,
   action,
   initial,
   medewerkerId,
 }: {
   klanten: Klant[];
+  dossiers: PatriciaDossierOptie[];
   projectenPerKlant: Record<string, Project[]>;
   action: (prevState: FactuurItemFormState, formData: FormData) => Promise<FactuurItemFormState>;
   initial?: Initial;
@@ -67,38 +77,50 @@ export function FactuurItemForm({
     setSelectResetKey((k) => k + 1);
   }
 
-  const [klantId, setKlantId] = useState(initial?.klant_id ?? "");
   const [projectId, setProjectId] = useState(initial?.project_id ?? "");
-  const [dossiernummers, setDossiernummers] = useState<string[]>(initial?.dossiernummers ?? []);
+  const [dossierSelectie, setDossierSelectie] = useState<string[]>(initial?.dossier_ids ?? []);
   const [datum, setDatum] = useState(initial?.datum ?? new Date().toISOString().slice(0, 10));
   const [omschrijvingKlant, setOmschrijvingKlant] = useState(initial?.omschrijving_klant ?? "");
   const [interneOpmerking, setInterneOpmerking] = useState(initial?.interne_opmerking ?? "");
   const [qty, setQty] = useState(initial?.qty ?? 1);
-  const initieelVastHonorarium = !!initial && initial.tarief === null;
-  const [vastHonorariumActief, setVastHonorariumActief] = useState(initieelVastHonorarium);
+  const [prijstype, setPrijstype] = useState<PrijsType | "">(initial?.prijstype ?? "");
   const [tarief, setTarief] = useState<number | null>(initial?.tarief ?? null);
-  const [vastHonorarium, setVastHonorarium] = useState<number>(
-    initieelVastHonorarium ? (initial?.honorarium ?? 0) : 0
-  );
   const [externeKosten, setExterneKosten] = useState(initial?.externe_kosten ?? 0);
-  const [korting, setKorting] = useState(initial?.korting ?? 0);
+  const [kortingType, setKortingType] = useState<KortingType>(initial?.korting_type ?? "bedrag");
+  const [kortingBedrag, setKortingBedrag] = useState(initial?.korting ?? 0);
+  const [kortingPercentage, setKortingPercentage] = useState(initial?.korting_percentage ?? 0);
   const [kantoorkostenActief, setKantoorkostenActief] = useState(initial?.kantoorkosten_van_toepassing ?? true);
   const [declarabel, setDeclarabel] = useState(initial?.declarabel ?? true);
   const [voorgesteldTarief, setVoorgesteldTarief] = useState<number | null>(null);
 
+  // Klant is niet langer een handmatige keuze — hij volgt uit het/de gekozen
+  // dossier(s) (allemaal van dezelfde klant, zie DossierSelect's klant-lock).
+  const klantId = useMemo(() => {
+    const eerste = dossiers.find((d) => dossierSelectie.includes(d.id));
+    return eerste?.klant_id ?? initial?.klant_id_fallback ?? "";
+  }, [dossiers, dossierSelectie, initial?.klant_id_fallback]);
+  const klant = klanten.find((k) => k.id === klantId);
+
   const projectenVoorKlant = useMemo(() => projectenPerKlant[klantId] ?? [], [projectenPerKlant, klantId]);
 
-  // Wanneer de klant wijzigt: kantoorkosten-standaard overnemen, de oude
-  // tariefsuggestie laten vervallen en het projectveld resetten (projecten
-  // horen bij een klant). Render-fase aanpassing (React-patroon), geen
-  // effect: voorkomt een extra commit/re-render t.o.v. useEffect.
+  // Wanneer de (afgeleide) klant wijzigt: kantoorkosten-standaard overnemen, de
+  // oude tariefsuggestie laten vervallen en het projectveld resetten (projecten
+  // horen bij een klant). Render-fase aanpassing (React-patroon), geen effect:
+  // voorkomt een extra commit/re-render t.o.v. useEffect.
   const [klantIdVoorReset, setKlantIdVoorReset] = useState(klantId);
   if (klantId !== klantIdVoorReset) {
     setKlantIdVoorReset(klantId);
-    const klant = klanten.find((k) => k.id === klantId);
     setKantoorkostenActief(klant?.kantoorkosten_actief ?? true);
     setVoorgesteldTarief(null);
     setProjectId("");
+  }
+
+  function handleDossierChange(nieuweSelectie: string[]) {
+    if (omschrijvingKlant === "" && dossierSelectie.length === 0 && nieuweSelectie.length > 0) {
+      const eerste = dossiers.find((d) => d.id === nieuweSelectie[0]);
+      if (eerste) setOmschrijvingKlant(eerste.matter_naam);
+    }
+    setDossierSelectie(nieuweSelectie);
   }
 
   useEffect(() => {
@@ -120,25 +142,31 @@ export function FactuurItemForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [klantId, datum, medewerkerId]);
 
-  const honorarium = vastHonorariumActief ? vastHonorarium : round2(qty * (tarief ?? 0));
-  const regelbedrag = round2(honorarium + externeKosten - korting);
-  const kantoorkostenBedrag = kantoorkostenActief ? round2(regelbedrag * 0.06) : 0;
+  const honorarium = round2(qty * (tarief ?? 0));
+  const kortingBerekend = kortingType === "percentage" ? round2(honorarium * (kortingPercentage / 100)) : kortingBedrag;
+  const regelbedrag = round2(honorarium + externeKosten - kortingBerekend);
+  const kantoorkostenPercentage = klant?.kantoorkosten_percentage ?? 6;
+  const kantoorkostenBedrag = kantoorkostenActief ? round2(regelbedrag * (kantoorkostenPercentage / 100)) : 0;
   const tariefWijktAf =
-    !vastHonorariumActief && voorgesteldTarief !== null && tarief !== null && Math.abs(voorgesteldTarief - tarief) > 0.001;
+    prijstype === "uren" && voorgesteldTarief !== null && tarief !== null && Math.abs(voorgesteldTarief - tarief) > 0.001;
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
-      {dossiernummers.map((d) => (
-        <input key={d} type="hidden" name="dossiernummers" value={d} />
+      {dossierSelectie.map((id) => (
+        <input key={id} type="hidden" name="dossier_ids" value={id} />
       ))}
       <input type="hidden" name="project_id" value={projectId} />
       <input type="hidden" name="datum" value={datum} />
       <input type="hidden" name="qty" value={qty} />
-      <input type="hidden" name="vast_honorarium_actief" value={vastHonorariumActief ? "on" : ""} />
-      {!vastHonorariumActief && <input type="hidden" name="tarief" value={tarief ?? ""} />}
-      {vastHonorariumActief && <input type="hidden" name="vast_honorarium" value={vastHonorarium} />}
+      <input type="hidden" name="prijstype" value={prijstype} />
+      <input type="hidden" name="tarief" value={tarief ?? ""} />
       <input type="hidden" name="externe_kosten" value={externeKosten} />
-      <input type="hidden" name="korting" value={korting} />
+      <input type="hidden" name="korting_type" value={kortingType} />
+      {kortingType === "bedrag" ? (
+        <input type="hidden" name="korting" value={kortingBedrag} />
+      ) : (
+        <input type="hidden" name="korting_percentage" value={kortingPercentage} />
+      )}
       <input type="hidden" name="kantoorkosten_van_toepassing" value={kantoorkostenActief ? "on" : ""} />
       <input type="hidden" name="declarabel" value={declarabel ? "on" : ""} />
 
@@ -149,26 +177,19 @@ export function FactuurItemForm({
               <CardTitle className="text-base">Dossier en werkzaamheid</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-5">
+              <DossierSelect
+                dossiers={dossiers}
+                value={dossierSelectie}
+                onChange={handleDossierChange}
+                onbekendeDossiers={initial?.onbekende_dossiers}
+              />
+
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="klant">Klant</Label>
-                  <NativeSelect
-                    key={`klant-${selectResetKey}`}
-                    id="klant"
-                    name="klant_id"
-                    value={klantId}
-                    onChange={setKlantId}
-                    required
-                  >
-                    <option value="" disabled>
-                      Kies een klant
-                    </option>
-                    {klanten.map((k) => (
-                      <option key={k.id} value={k.id}>
-                        {k.naam}
-                      </option>
-                    ))}
-                  </NativeSelect>
+                  <Label>Klant</Label>
+                  <p className="flex h-8 items-center text-sm font-medium">
+                    {klant?.naam ?? <span className="text-muted-foreground">Kies eerst een dossier</span>}
+                  </p>
                 </div>
                 {projectenVoorKlant.length > 0 && (
                   <div className="flex flex-col gap-2">
@@ -191,8 +212,6 @@ export function FactuurItemForm({
                 )}
               </div>
 
-              <DossiernummerTagInput value={dossiernummers} onChange={setDossiernummers} />
-
               <div className="flex flex-col gap-2">
                 <Label htmlFor="omschrijving_klant">Omschrijving voor klant</Label>
                 <Textarea
@@ -206,8 +225,16 @@ export function FactuurItemForm({
                 />
               </div>
 
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="interne_opmerking">Interne opmerking (optioneel)</Label>
+              <div className="flex flex-col gap-2 rounded-lg border border-warning/30 bg-warning/5 p-3">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="interne_opmerking" className="mb-0">
+                    Interne opmerking (optioneel)
+                  </Label>
+                  <Badge variant="warning">
+                    <EyeOff className="size-3" />
+                    Niet zichtbaar voor klant
+                  </Badge>
+                </div>
                 <Textarea
                   id="interne_opmerking"
                   name="interne_opmerking"
@@ -215,6 +242,7 @@ export function FactuurItemForm({
                   value={interneOpmerking}
                   onChange={(e) => setInterneOpmerking(e.target.value)}
                   placeholder="Alleen intern zichtbaar."
+                  className="border-warning/40 bg-transparent focus-visible:border-warning focus-visible:ring-warning/30"
                 />
               </div>
 
@@ -264,49 +292,43 @@ export function FactuurItemForm({
               <CardTitle className="text-base">Honorarium en kosten</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-5">
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={vastHonorariumActief}
-                  onCheckedChange={(checked) => setVastHonorariumActief(checked === true)}
-                />
-                Vast honorarium in plaats van aantal &times; tarief
-              </label>
+              <div className="flex flex-col gap-2 sm:w-64">
+                <Label htmlFor="prijstype">Prijstype</Label>
+                <NativeSelect
+                  key={`prijstype-${selectResetKey}`}
+                  id="prijstype"
+                  value={prijstype}
+                  onChange={(v) => setPrijstype(v as PrijsType)}
+                  required
+                >
+                  <option value="" disabled>
+                    Kies…
+                  </option>
+                  <option value="uren">Uren</option>
+                  <option value="vast_honorarium">Fixed fee</option>
+                </NativeSelect>
+              </div>
 
-              {vastHonorariumActief ? (
-                <div className="flex flex-col gap-2 sm:w-64">
-                  <Label htmlFor="vast_honorarium_input">Vast honorarium</Label>
-                  <Input
-                    id="vast_honorarium_input"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={vastHonorarium}
-                    onChange={(e) => setVastHonorarium(Number(e.target.value))}
-                    required
-                  />
-                </div>
-              ) : (
-                <div className="flex flex-col gap-2 sm:w-64">
-                  <Label htmlFor="tarief_input">Tarief</Label>
-                  <Input
-                    id="tarief_input"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={tarief ?? ""}
-                    onChange={(e) => setTarief(e.target.value === "" ? null : Number(e.target.value))}
-                    required
-                  />
-                  {voorgesteldTarief !== null && (
-                    <p className="text-xs text-muted-foreground">
-                      Voorgesteld tarief: {euro(voorgesteldTarief)}
-                      {tariefWijktAf && (
-                        <span className="ml-1 font-medium text-warning">— wijkt af, wordt gelogd</span>
-                      )}
-                    </p>
-                  )}
-                </div>
-              )}
+              <div className="flex flex-col gap-2 sm:w-64">
+                <Label htmlFor="tarief_input">{prijstype === "vast_honorarium" ? "Vast honorarium (bedrag)" : "Prijs per uur"}</Label>
+                <Input
+                  id="tarief_input"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={tarief ?? ""}
+                  onChange={(e) => setTarief(e.target.value === "" ? null : Number(e.target.value))}
+                  required
+                />
+                {prijstype === "uren" && voorgesteldTarief !== null && (
+                  <p className="text-xs text-muted-foreground">
+                    Voorgesteld tarief: {euro(voorgesteldTarief)}
+                    {tariefWijktAf && (
+                      <span className="ml-1 font-medium text-warning">— wijkt af, wordt gelogd</span>
+                    )}
+                  </p>
+                )}
+              </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
@@ -321,15 +343,48 @@ export function FactuurItemForm({
                   />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="korting_input">Korting (optioneel, max. 1 per regel)</Label>
-                  <Input
-                    id="korting_input"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={korting}
-                    onChange={(e) => setKorting(Number(e.target.value))}
-                  />
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="korting_input">Korting (optioneel)</Label>
+                    <div className="flex overflow-hidden rounded-md border border-input">
+                      <button
+                        type="button"
+                        onClick={() => setKortingType("bedrag")}
+                        className={`px-2 py-0.5 text-xs ${kortingType === "bedrag" ? "bg-accent font-medium" : "text-muted-foreground"}`}
+                      >
+                        €
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setKortingType("percentage")}
+                        className={`px-2 py-0.5 text-xs ${kortingType === "percentage" ? "bg-accent font-medium" : "text-muted-foreground"}`}
+                      >
+                        %
+                      </button>
+                    </div>
+                  </div>
+                  {kortingType === "bedrag" ? (
+                    <Input
+                      id="korting_input"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={kortingBedrag}
+                      onChange={(e) => setKortingBedrag(Number(e.target.value))}
+                    />
+                  ) : (
+                    <Input
+                      id="korting_input"
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="100"
+                      value={kortingPercentage}
+                      onChange={(e) => setKortingPercentage(Number(e.target.value))}
+                    />
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Max. het honorarium ({euro(honorarium)}), nooit over kosten van derden.
+                  </p>
                 </div>
               </div>
 
@@ -339,7 +394,7 @@ export function FactuurItemForm({
                     checked={kantoorkostenActief}
                     onCheckedChange={(checked) => setKantoorkostenActief(checked === true)}
                   />
-                  Kantoorkosten (6%) van toepassing op deze regel
+                  Kantoorkosten ({kantoorkostenPercentage}%) van toepassing op deze regel
                 </label>
                 <label className="flex items-center gap-2 text-sm">
                   <Checkbox checked={declarabel} onCheckedChange={(checked) => setDeclarabel(checked === true)} />
@@ -358,10 +413,16 @@ export function FactuurItemForm({
             <CardContent className="flex flex-col gap-2 text-sm">
               <Row label="Honorarium" value={euro(honorarium)} />
               <Row label="Kosten van derden" value={euro(externeKosten)} />
-              <Row label="Korting" value={`- ${euro(korting)}`} />
+              <Row label="Korting" value={`- ${euro(kortingBerekend)}`} />
               <div className="my-1 border-t border-border" />
               <Row label="Regelbedrag" value={euro(regelbedrag)} bold />
-              <Row label="Kantoorkosten (6%)" value={kantoorkostenActief ? euro(kantoorkostenBedrag) : "n.v.t."} />
+              <Row
+                label={`Kantoorkosten (${kantoorkostenPercentage}%)`}
+                value={kantoorkostenActief ? euro(kantoorkostenBedrag) : "n.v.t."}
+              />
+              <p className="text-xs text-muted-foreground">
+                Indicatief per regel — het werkelijke bedrag (min. €15, max. €200) wordt per factuur bepaald.
+              </p>
               <div className="my-1 border-t border-border" />
               <Row label="Totaal" value={euro(round2(regelbedrag + kantoorkostenBedrag))} bold />
             </CardContent>

@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { parseDossiernummer, DOSSIERNUMMER_VOORBEELD } from "@/lib/dossiernummer";
+import { parseDossiernummer } from "@/lib/dossiernummer";
+import type { PrijsType, KortingType } from "@/lib/supabase/types";
 
 export type FactuurItemFormState = { error: string | null; success: boolean };
 
@@ -16,45 +17,38 @@ function round2(n: number) {
 }
 
 function parseInput(formData: FormData) {
-  const klant_id = String(formData.get("klant_id") ?? "");
   const project_id = String(formData.get("project_id") ?? "").trim() || null;
-  const dossiernummers = Array.from(
-    new Set(
-      formData
-        .getAll("dossiernummers")
-        .map((v) => String(v).trim().toUpperCase())
-        .filter(Boolean)
-    )
-  );
+  const dossier_ids = Array.from(new Set(formData.getAll("dossier_ids").map(String).filter(Boolean)));
   const datum = String(formData.get("datum") ?? "");
   const omschrijving_klant = String(formData.get("omschrijving_klant") ?? "").trim();
   const interne_opmerking = String(formData.get("interne_opmerking") ?? "").trim();
   const eenheidstype = String(formData.get("eenheidstype") ?? "uren").trim();
   const qty = round1(Number(formData.get("qty") ?? 0));
+  const prijstype = String(formData.get("prijstype") ?? "") as PrijsType | "";
   const tarief = formData.get("tarief") ? round2(Number(formData.get("tarief"))) : null;
-  const vastHonorarium = formData.get("vast_honorarium_actief") === "on";
-  const handmatigHonorarium = formData.get("vast_honorarium")
-    ? round2(Number(formData.get("vast_honorarium")))
-    : null;
   const externe_kosten = round2(Number(formData.get("externe_kosten") ?? 0));
-  const korting = round2(Number(formData.get("korting") ?? 0));
+  const korting_type = (String(formData.get("korting_type") ?? "bedrag")) as KortingType;
+  const korting_bedrag_ingevoerd = formData.get("korting") ? round2(Number(formData.get("korting"))) : 0;
+  const korting_percentage = formData.get("korting_percentage")
+    ? round2(Number(formData.get("korting_percentage")))
+    : null;
   const kantoorkosten_van_toepassing = formData.get("kantoorkosten_van_toepassing") === "on";
   const declarabel = formData.get("declarabel") === "on";
 
   return {
-    klant_id,
     project_id,
-    dossiernummers,
+    dossier_ids,
     datum,
     omschrijving_klant,
     interne_opmerking: interne_opmerking || null,
     eenheidstype,
     qty,
+    prijstype,
     tarief,
-    vastHonorarium,
-    handmatigHonorarium,
     externe_kosten,
-    korting,
+    korting_type,
+    korting_bedrag_ingevoerd,
+    korting_percentage,
     kantoorkosten_van_toepassing,
     declarabel,
   };
@@ -62,7 +56,7 @@ function parseInput(formData: FormData) {
 
 function mapDbError(error: { code?: string; message: string }) {
   if (error.code === "23514") {
-    return "Korting mag niet hoger zijn dan honorarium plus externe kosten.";
+    return "Korting mag niet hoger zijn dan het honorarium.";
   }
   if (error.code === "42501") {
     return "Dit factuuritem kan niet meer worden gewijzigd (al definitief/gefactureerd).";
@@ -75,26 +69,68 @@ function tariefWijktAf(voorgesteld: number | null | undefined, ingevuld: number 
   return Math.abs(voorgesteld - ingevuld) > 0.001;
 }
 
-type DossierParseResultaat =
+type DossierResolutie =
   | { ok: false; error: string }
-  | { ok: true; rijen: { dossiernummer: string; type_dienst: string; land: string; volgorde: number }[] };
+  | {
+      ok: true;
+      klant_id: string;
+      rijen: { dossiernummer: string; type_dienst: string; land: string; volgorde: number }[];
+    };
 
-function parseDossiernummers(dossiernummers: string[]): DossierParseResultaat {
-  if (dossiernummers.length === 0) {
-    return { ok: false, error: "Voeg minimaal één dossiernummer toe." };
+// Klant en dossierinfo komen altijd van de server af — de client kiest alleen
+// welke patricia_dossiers-ids het betreft, nooit de klant zelf. Dit is de
+// tijdelijke stand-in voor de nog te bouwen Patricia-koppeling (zie
+// supabase/migrations/20260820063624_patricia_dossiers_dummy.sql).
+async function resolveDossiers(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  dossierIds: string[]
+): Promise<DossierResolutie> {
+  if (dossierIds.length === 0) {
+    return { ok: false, error: "Voeg minimaal één dossier toe." };
   }
+
+  const { data: rows, error } = await supabase
+    .from("patricia_dossiers")
+    .select("id, klant_id, dossiernummer")
+    .in("id", dossierIds);
+
+  if (error || !rows || rows.length !== dossierIds.length) {
+    return { ok: false, error: "Een of meer geselecteerde dossiers zijn niet meer beschikbaar." };
+  }
+
+  const klantIds = new Set(rows.map((r) => r.klant_id));
+  if (klantIds.size > 1) {
+    return { ok: false, error: "Alle geselecteerde dossiers moeten bij dezelfde klant horen." };
+  }
+
   const rijen: { dossiernummer: string; type_dienst: string; land: string; volgorde: number }[] = [];
-  for (const [index, dossiernummer] of dossiernummers.entries()) {
-    const parsed = parseDossiernummer(dossiernummer);
+  for (const [index, row] of rows.entries()) {
+    const parsed = parseDossiernummer(row.dossiernummer);
     if (!parsed) {
-      return {
-        ok: false,
-        error: `Dossiernummer "${dossiernummer}" heeft niet het verwachte formaat (bv. ${DOSSIERNUMMER_VOORBEELD}).`,
-      };
+      return { ok: false, error: `Dossiernummer "${row.dossiernummer}" heeft niet het verwachte formaat.` };
     }
-    rijen.push({ dossiernummer, type_dienst: parsed.typeLabel, land: parsed.landIso, volgorde: index });
+    rijen.push({ dossiernummer: row.dossiernummer, type_dienst: parsed.typeLabel, land: parsed.landIso, volgorde: index });
   }
-  return { ok: true, rijen };
+
+  return { ok: true, klant_id: [...klantIds][0], rijen };
+}
+
+function valideerGedeeld(input: ReturnType<typeof parseInput>): string | null {
+  if (!input.datum || !input.omschrijving_klant || input.qty <= 0) {
+    return "Datum, omschrijving en aantal (groter dan 0) zijn verplicht.";
+  }
+  if (input.prijstype !== "uren" && input.prijstype !== "vast_honorarium") {
+    return "Kies of dit uren of een vast honorarium (fixed fee) is.";
+  }
+  if (input.tarief === null || input.tarief < 0) {
+    return "Vul een geldige prijs in.";
+  }
+  if (input.korting_type === "percentage") {
+    if (input.korting_percentage === null || input.korting_percentage < 0 || input.korting_percentage > 100) {
+      return "Vul een geldig kortingspercentage (0-100) in.";
+    }
+  }
+  return null;
 }
 
 export async function createFactuurItem(
@@ -103,21 +139,21 @@ export async function createFactuurItem(
 ): Promise<FactuurItemFormState> {
   const input = parseInput(formData);
 
-  if (!input.klant_id || !input.datum || !input.omschrijving_klant || input.qty <= 0) {
-    return { error: "Klant, datum, omschrijving en aantal (groter dan 0) zijn verplicht.", success: false };
+  const gedeeldeFout = valideerGedeeld(input);
+  if (gedeeldeFout) {
+    return { error: gedeeldeFout, success: false };
   }
-  const dossiers = parseDossiernummers(input.dossiernummers);
-  if (!dossiers.ok) {
-    return { error: dossiers.error, success: false };
-  }
-  if (!input.vastHonorarium && (input.tarief === null || input.tarief < 0)) {
-    return { error: "Vul een geldig tarief in, of kies voor een vast honorarium.", success: false };
-  }
-  if (input.vastHonorarium && input.handmatigHonorarium === null) {
-    return { error: "Vul het vaste honorarium in.", success: false };
+  // valideerGedeeld dekt dit al af; herhaald zodat TypeScript prijstype hier ook narrowt.
+  if (input.prijstype !== "uren" && input.prijstype !== "vast_honorarium") {
+    return { error: "Kies of dit uren of een vast honorarium (fixed fee) is.", success: false };
   }
 
   const supabase = await createClient();
+  const dossiers = await resolveDossiers(supabase, input.dossier_ids);
+  if (!dossiers.ok) {
+    return { error: dossiers.error, success: false };
+  }
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -126,23 +162,27 @@ export async function createFactuurItem(
   }
 
   const { data: voorgesteldTarief } = await supabase.rpc("resolve_tarief", {
-    p_klant_id: input.klant_id,
+    p_klant_id: dossiers.klant_id,
     p_medewerker_id: user.id,
     p_datum: input.datum,
   });
 
-  const honorarium = input.vastHonorarium ? input.handmatigHonorarium! : round2(input.qty * (input.tarief ?? 0));
+  const honorarium = round2(input.qty * (input.tarief ?? 0));
+  const korting =
+    input.korting_type === "percentage"
+      ? round2(honorarium * ((input.korting_percentage ?? 0) / 100))
+      : input.korting_bedrag_ingevoerd;
 
-  if (round2(input.korting) > round2(honorarium + input.externe_kosten)) {
-    return { error: "Korting mag niet hoger zijn dan honorarium plus externe kosten.", success: false };
+  if (round2(korting) > round2(honorarium)) {
+    return { error: "Korting mag niet hoger zijn dan het honorarium.", success: false };
   }
 
-  const afwijkend = !input.vastHonorarium && tariefWijktAf(voorgesteldTarief, input.tarief);
+  const afwijkend = input.prijstype === "uren" && tariefWijktAf(voorgesteldTarief, input.tarief);
 
   const { data: item, error } = await supabase
     .from("factuuritems")
     .insert({
-      klant_id: input.klant_id,
+      klant_id: dossiers.klant_id,
       project_id: input.project_id,
       medewerker_id: user.id,
       datum: input.datum,
@@ -150,11 +190,14 @@ export async function createFactuurItem(
       interne_opmerking: input.interne_opmerking,
       eenheidstype: input.eenheidstype,
       qty: input.qty,
-      tarief: input.vastHonorarium ? null : input.tarief,
+      prijstype: input.prijstype,
+      tarief: input.tarief,
       tarief_afwijkend: afwijkend,
       honorarium,
       externe_kosten: input.externe_kosten,
-      korting: input.korting,
+      korting,
+      korting_type: input.korting_type,
+      korting_percentage: input.korting_type === "percentage" ? input.korting_percentage : null,
       kantoorkosten_van_toepassing: input.kantoorkosten_van_toepassing,
       declarabel: input.declarabel,
     })
@@ -186,21 +229,21 @@ export async function updateFactuurItem(
 ): Promise<FactuurItemFormState> {
   const input = parseInput(formData);
 
-  if (!input.klant_id || !input.datum || !input.omschrijving_klant || input.qty <= 0) {
-    return { error: "Klant, datum, omschrijving en aantal (groter dan 0) zijn verplicht.", success: false };
+  const gedeeldeFout = valideerGedeeld(input);
+  if (gedeeldeFout) {
+    return { error: gedeeldeFout, success: false };
   }
-  const dossiers = parseDossiernummers(input.dossiernummers);
-  if (!dossiers.ok) {
-    return { error: dossiers.error, success: false };
-  }
-  if (!input.vastHonorarium && (input.tarief === null || input.tarief < 0)) {
-    return { error: "Vul een geldig tarief in, of kies voor een vast honorarium.", success: false };
-  }
-  if (input.vastHonorarium && input.handmatigHonorarium === null) {
-    return { error: "Vul het vaste honorarium in.", success: false };
+  // valideerGedeeld dekt dit al af; herhaald zodat TypeScript prijstype hier ook narrowt.
+  if (input.prijstype !== "uren" && input.prijstype !== "vast_honorarium") {
+    return { error: "Kies of dit uren of een vast honorarium (fixed fee) is.", success: false };
   }
 
   const supabase = await createClient();
+  const dossiers = await resolveDossiers(supabase, input.dossier_ids);
+  if (!dossiers.ok) {
+    return { error: dossiers.error, success: false };
+  }
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -209,34 +252,41 @@ export async function updateFactuurItem(
   }
 
   const { data: voorgesteldTarief } = await supabase.rpc("resolve_tarief", {
-    p_klant_id: input.klant_id,
+    p_klant_id: dossiers.klant_id,
     p_medewerker_id: user.id,
     p_datum: input.datum,
   });
 
-  const honorarium = input.vastHonorarium ? input.handmatigHonorarium! : round2(input.qty * (input.tarief ?? 0));
+  const honorarium = round2(input.qty * (input.tarief ?? 0));
+  const korting =
+    input.korting_type === "percentage"
+      ? round2(honorarium * ((input.korting_percentage ?? 0) / 100))
+      : input.korting_bedrag_ingevoerd;
 
-  if (round2(input.korting) > round2(honorarium + input.externe_kosten)) {
-    return { error: "Korting mag niet hoger zijn dan honorarium plus externe kosten.", success: false };
+  if (round2(korting) > round2(honorarium)) {
+    return { error: "Korting mag niet hoger zijn dan het honorarium.", success: false };
   }
 
-  const afwijkend = !input.vastHonorarium && tariefWijktAf(voorgesteldTarief, input.tarief);
+  const afwijkend = input.prijstype === "uren" && tariefWijktAf(voorgesteldTarief, input.tarief);
 
   const { error } = await supabase
     .from("factuuritems")
     .update({
-      klant_id: input.klant_id,
+      klant_id: dossiers.klant_id,
       project_id: input.project_id,
       datum: input.datum,
       omschrijving_klant: input.omschrijving_klant,
       interne_opmerking: input.interne_opmerking,
       eenheidstype: input.eenheidstype,
       qty: input.qty,
-      tarief: input.vastHonorarium ? null : input.tarief,
+      prijstype: input.prijstype,
+      tarief: input.tarief,
       tarief_afwijkend: afwijkend,
       honorarium,
       externe_kosten: input.externe_kosten,
-      korting: input.korting,
+      korting,
+      korting_type: input.korting_type,
+      korting_percentage: input.korting_type === "percentage" ? input.korting_percentage : null,
       kantoorkosten_van_toepassing: input.kantoorkosten_van_toepassing,
       declarabel: input.declarabel,
     })

@@ -151,6 +151,44 @@ async function main() {
 
   const arcadis = klantRows.find((k) => k.naam === "Arcadis");
   const lipton = klantRows.find((k) => k.naam === "Lipton Teas & Infusions");
+  const kantoorkostenPercentagePerKlant = new Map(klantRows.map((k) => [k.id, k.kantoorkosten_percentage]));
+
+  // Tijdelijke dummy-"Patricia"-dossiers: staan in voor de nog te bouwen koppeling met
+  // het externe zaaksysteem. Hergebruikt zoveel mogelijk dossiernummers die ook in de
+  // factuuritems-seed hieronder voorkomen, zodat de demo herkenbaar samenhangt.
+  const patriciaDossiersGewenst = [
+    { klant_id: arcadis.id, dossiernummer: "TM93905GB00", matter_naam: "GENX-merkfamilie (VK)" },
+    { klant_id: arcadis.id, dossiernummer: "O26921PL00", matter_naam: "Oppositie ARCADIS ./. ARKADIS (PL)" },
+    { klant_id: arcadis.id, dossiernummer: "O26922PL00", matter_naam: "Oppositie ARCADIS ./. ARKADIS (PL) — dossier 2" },
+    { klant_id: arcadis.id, dossiernummer: "TM94010NL00", matter_naam: "GENX-familie NL — registratie 1" },
+    { klant_id: arcadis.id, dossiernummer: "TM94011NL00", matter_naam: "GENX-familie NL — registratie 2" },
+    { klant_id: arcadis.id, dossiernummer: "TM94012NL00", matter_naam: "GENX-familie NL — registratie 3" },
+    { klant_id: arcadis.id, dossiernummer: "O27050DE00", matter_naam: "Oppositie voorbereiding Duitsland" },
+    { klant_id: arcadis.id, dossiernummer: "TM94500FR00", matter_naam: "Merkonderzoek Frankrijk" },
+    { klant_id: lipton.id, dossiernummer: "TM93669BD30", matter_naam: "LIPTON YELLOW LABEL TEA (Bangladesh)" },
+    { klant_id: lipton.id, dossiernummer: "TM102373US00", matter_naam: "ZEN-merkregistratie (VS)" },
+    { klant_id: lipton.id, dossiernummer: "O103109EU00", matter_naam: "Oppositie ELEPHANT ./. ELEPHANT BAY (EU)" },
+    { klant_id: lipton.id, dossiernummer: "TM95012JP00", matter_naam: "Merkregistratie Japan" },
+    { klant_id: lipton.id, dossiernummer: "TM95500CA00", matter_naam: "Merkregistratie Canada" },
+    { klant_id: lipton.id, dossiernummer: "TM96010GB00", matter_naam: "PURE GREEN-merkaanvraag (VK)" },
+    { klant_id: lipton.id, dossiernummer: "O26950NL00", matter_naam: "Oppositie SIR-thee (NL)" },
+    { klant_id: lipton.id, dossiernummer: "CA12000EU00", matter_naam: "Cancellation action — LEMON BREEZE (EU)" },
+  ];
+  const { data: bestaandeDossiers, error: dossiersLeesError } = await admin
+    .from("patricia_dossiers")
+    .select("klant_id, dossiernummer");
+  if (dossiersLeesError) throw dossiersLeesError;
+  const bestaandeDossierSleutels = new Set(bestaandeDossiers.map((d) => `${d.klant_id}|${d.dossiernummer}`));
+  const nieuweDossiers = patriciaDossiersGewenst.filter(
+    (d) => !bestaandeDossierSleutels.has(`${d.klant_id}|${d.dossiernummer}`)
+  );
+  if (nieuweDossiers.length > 0) {
+    const { error: dossiersError } = await admin.from("patricia_dossiers").insert(nieuweDossiers);
+    if (dossiersError) throw dossiersError;
+    console.log(`✓ patricia_dossiers: ${nieuweDossiers.length} toegevoegd`);
+  } else {
+    console.log("↺ patricia_dossiers bestaan al");
+  }
 
   const teamdoelen = [
     { team_id: benelux.id, jaar: 2026, bedrag: 250000 },
@@ -227,6 +265,7 @@ async function main() {
       datum: "2026-06-15",
       omschrijving_klant: "Merkonderzoek en aanvraag GENX",
       eenheidstype: "uren",
+      prijstype: "uren",
       qty: 2.5,
       tarief: 300,
       honorarium: 750,
@@ -248,6 +287,7 @@ async function main() {
       datum: "2026-07-01",
       omschrijving_klant: "Oppositie ARCADIS ./. ARKADIS voorbereiden (2 gelieerde dossiers)",
       eenheidstype: "uren",
+      prijstype: "uren",
       qty: 4,
       tarief: 310,
       honorarium: 1240,
@@ -270,6 +310,7 @@ async function main() {
       datum: "2026-01-20",
       omschrijving_klant: "Merkregistratie GENX-familie vervolgstap (3 registraties)",
       eenheidstype: "uren",
+      prijstype: "uren",
       qty: 2,
       tarief: 300,
       honorarium: 600,
@@ -288,6 +329,7 @@ async function main() {
       datum: "2026-03-10",
       omschrijving_klant: "Oppositie voorbereiding Duitsland",
       eenheidstype: "uren",
+      prijstype: "uren",
       qty: 2.9,
       tarief: 310,
       honorarium: 900,
@@ -306,6 +348,7 @@ async function main() {
       datum: "2025-11-05",
       omschrijving_klant: "Merkonderzoek Frankrijk",
       eenheidstype: "uren",
+      prijstype: "uren",
       qty: 1.7,
       tarief: 300,
       honorarium: 500,
@@ -324,6 +367,7 @@ async function main() {
       datum: "2026-07-10",
       omschrijving_klant: "Registratie LIPTON YELLOW LABEL TEA (label)",
       eenheidstype: "uren",
+      prijstype: "uren",
       qty: 1.5,
       tarief: 190,
       honorarium: 285,
@@ -342,6 +386,7 @@ async function main() {
       datum: "2026-06-20",
       omschrijving_klant: "Registratie ZEN voortzetten",
       eenheidstype: "uren",
+      prijstype: "uren",
       qty: 3,
       tarief: 190,
       honorarium: 570,
@@ -360,6 +405,7 @@ async function main() {
       datum: "2026-05-05",
       omschrijving_klant: "Oppositie ELEPHANT ./. ELEPHANT BAY",
       eenheidstype: "uren",
+      prijstype: "uren",
       qty: 2,
       tarief: 170,
       honorarium: 340,
@@ -378,6 +424,7 @@ async function main() {
       datum: "2026-02-14",
       omschrijving_klant: "Merkregistratie Japan",
       eenheidstype: "uren",
+      prijstype: "uren",
       qty: 4,
       tarief: 190,
       honorarium: 760,
@@ -396,6 +443,7 @@ async function main() {
       datum: "2026-04-08",
       omschrijving_klant: "Merkregistratie Canada",
       eenheidstype: "uren",
+      prijstype: "uren",
       qty: 1.4,
       tarief: 310,
       honorarium: 420,
@@ -477,9 +525,12 @@ async function main() {
     const totaalHonorarium = round2(items.reduce((som, i) => som + i.honorarium, 0));
     const totaalExterneKosten = round2(items.reduce((som, i) => som + i.externe_kosten, 0));
     const totaalKorting = round2(items.reduce((som, i) => som + i.korting, 0));
-    const totaalKantoorkosten = round2(
-      items.reduce((som, i) => som + (i.kantoorkosten_van_toepassing ? (i.honorarium + i.externe_kosten - i.korting) * 0.06 : 0), 0)
+    const percentage = kantoorkostenPercentagePerKlant.get(items[0].klant_id) ?? 6;
+    const kantoorkostenGrondslag = round2(
+      items.reduce((som, i) => som + (i.kantoorkosten_van_toepassing ? i.honorarium + i.externe_kosten - i.korting : 0), 0)
     );
+    const ruweKantoorkosten = round2(kantoorkostenGrondslag * (percentage / 100));
+    const totaalKantoorkosten = ruweKantoorkosten > 0 ? Math.min(Math.max(ruweKantoorkosten, 15), 200) : 0;
     const totaalBedrag = round2(totaalHonorarium + totaalExterneKosten - totaalKorting + totaalKantoorkosten);
 
     const { data: batch, error: batchError } = await admin
