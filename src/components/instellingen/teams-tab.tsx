@@ -25,6 +25,7 @@ import { sortRows, type SortRichting } from "@/lib/table-utils";
 
 type Profile = { id: string; full_name: string };
 type Team = { id: string; naam: string };
+type Doel = { bruto: number; netto: number | null };
 type SortKey = "naam" | "leden" | "doel";
 
 export function TeamsTab({
@@ -37,7 +38,7 @@ export function TeamsTab({
   teams: Team[];
   profiles: Profile[];
   ledenPerTeam: Record<string, string[]>;
-  doelPerTeam: Record<string, number>;
+  doelPerTeam: Record<string, Doel>;
   jaar: number;
 }) {
   const [zoek, setZoek] = useState("");
@@ -59,7 +60,7 @@ export function TeamsTab({
     const keyFn = {
       naam: (t: Team) => t.naam,
       leden: (t: Team) => (ledenPerTeam[t.id] ?? []).length,
-      doel: (t: Team) => doelPerTeam[t.id] ?? 0,
+      doel: (t: Team) => doelPerTeam[t.id]?.bruto ?? 0,
     }[sortKey];
     return sortRows(gefilterd, keyFn, sortRichting);
   }, [teams, zoek, sortKey, sortRichting, ledenPerTeam, doelPerTeam]);
@@ -86,7 +87,7 @@ export function TeamsTab({
                   onClick={() => toggleSort("leden")}
                 />
                 <SortableTh
-                  label={`Jaardoel ${jaar}`}
+                  label={`Brutodoel ${jaar}`}
                   actief={sortKey === "doel"}
                   richting={sortRichting}
                   onClick={() => toggleSort("doel")}
@@ -131,14 +132,14 @@ function TeamRij({
   team: Team;
   profiles: Profile[];
   huidigeLeden: string[];
-  huidigDoel?: number;
+  huidigDoel?: Doel;
   jaar: number;
 }) {
   return (
     <TableRow>
       <TableCell className="font-medium">{team.naam}</TableCell>
       <TableCell className="tabular-figures">{huidigeLeden.length}</TableCell>
-      <TableCell className="tabular-figures">{huidigDoel !== undefined ? euro(huidigDoel) : "—"}</TableCell>
+      <TableCell className="tabular-figures">{huidigDoel ? euro(huidigDoel.bruto) : "—"}</TableCell>
       <TableCell className="text-right">
         <TeamBewerkenDialog team={team} profiles={profiles} huidigeLeden={huidigeLeden} huidigDoel={huidigDoel} jaar={jaar} />
       </TableCell>
@@ -156,12 +157,13 @@ function TeamBewerkenDialog({
   team: Team;
   profiles: Profile[];
   huidigeLeden: string[];
-  huidigDoel?: number;
+  huidigDoel?: Doel;
   jaar: number;
 }) {
   const [open, setOpen] = useState(false);
   const [leden, setLeden] = useState<string[]>(huidigeLeden);
-  const [doel, setDoel] = useState(huidigDoel !== undefined ? String(huidigDoel) : "");
+  const [brutoDoel, setBrutoDoel] = useState(huidigDoel ? String(huidigDoel.bruto) : "");
+  const [nettoDoel, setNettoDoel] = useState(huidigDoel?.netto != null ? String(huidigDoel.netto) : "");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -170,7 +172,11 @@ function TeamBewerkenDialog({
       setError(null);
       try {
         const acties = [setTeamLeden(team.id, leden)];
-        if (doel.trim() !== "") acties.push(setTeamdoel(team.id, jaar, Number(doel)));
+        if (brutoDoel.trim() !== "") {
+          acties.push(
+            setTeamdoel(team.id, jaar, Number(brutoDoel), nettoDoel.trim() !== "" ? Number(nettoDoel) : null)
+          );
+        }
         await Promise.all(acties);
         setOpen(false);
       } catch (e) {
@@ -209,17 +215,31 @@ function TeamBewerkenDialog({
             </div>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <Label htmlFor={`doel-${team.id}`}>Jaardoel {jaar}</Label>
-            <Input
-              id={`doel-${team.id}`}
-              type="number"
-              step="1000"
-              min="0"
-              value={doel}
-              onChange={(e) => setDoel(e.target.value)}
-              placeholder="Bijv. 250000"
-            />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor={`bruto-doel-${team.id}`}>Brutodoel {jaar}</Label>
+              <Input
+                id={`bruto-doel-${team.id}`}
+                type="number"
+                step="1000"
+                min="0"
+                value={brutoDoel}
+                onChange={(e) => setBrutoDoel(e.target.value)}
+                placeholder="Bijv. 250000"
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor={`netto-doel-${team.id}`}>Nettodoel {jaar} (optioneel)</Label>
+              <Input
+                id={`netto-doel-${team.id}`}
+                type="number"
+                step="1000"
+                min="0"
+                value={nettoDoel}
+                onChange={(e) => setNettoDoel(e.target.value)}
+                placeholder="Bijv. 200000"
+              />
+            </div>
           </div>
 
           {error && (

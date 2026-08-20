@@ -20,6 +20,7 @@ const USERS = [
   { email: "tom.teunissen@chronos.local", full_name: "Tom Teunissen", role: "teamleider", initialen: "TT" },
   { email: "fatima.faber@chronos.local", full_name: "Fatima Faber", role: "finance", initialen: "FF" },
   { email: "bram.beheer@chronos.local", full_name: "Bram Beheer", role: "beheerder", initialen: "BB" },
+  { email: "diana.directie@chronos.local", full_name: "Diana Directie", role: "directie", initialen: "DD" },
 ];
 
 function round2(n) {
@@ -191,8 +192,8 @@ async function main() {
   }
 
   const teamdoelen = [
-    { team_id: benelux.id, jaar: 2026, bedrag: 250000 },
-    { team_id: international.id, jaar: 2026, bedrag: 150000 },
+    { team_id: benelux.id, jaar: 2026, bruto_bedrag: 250000, netto_bedrag: 200000 },
+    { team_id: international.id, jaar: 2026, bruto_bedrag: 150000, netto_bedrag: 120000 },
   ];
   const { error: teamdoelError } = await admin.from("teamdoelen").upsert(teamdoelen, { onConflict: "team_id,jaar" });
   if (teamdoelError) throw teamdoelError;

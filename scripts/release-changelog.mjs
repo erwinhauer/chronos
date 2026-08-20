@@ -6,21 +6,22 @@ import { createClient } from "@supabase/supabase-js";
 
 // Vóór elke commit bijwerken met de wijzigingen van die release.
 const CHANGELOG_ENTRY = {
-  versienummer: "0.7.0",
+  versienummer: "0.8.0",
   releasedatum: "2026-08-20",
-  titel: "Nieuw factuuritem: dossierlookup, prijstype en kortingpercentage",
+  titel: "Dashboard: bruto/nettotargets, omzet-periodefilter en rol 'Directie'",
   nieuwe_functies: [
-    "Dossier(s) kiezen via een zoekbare lijst (tijdelijke dummy-databank ter voorbereiding op de Patricia-koppeling) i.p.v. vrije tekst — de klant en een startomschrijving worden hieruit automatisch afgeleid",
-    "Prijstype (Uren / Fixed fee) is nu een verplichte keuze zonder standaardwaarde",
-    "Korting kan nu ook als percentage van het honorarium ingevoerd worden, naast een vast bedrag",
-    "Interne opmerking is visueel duidelijk anders gestyled ('Niet zichtbaar voor klant'-label), zodat nooit per ongeluk gedacht wordt dat de klant dit ziet",
+    "Elk team heeft nu een apart bruto- en nettotarget (was één jaardoel); nettotarget instelbaar naast het bestaande brutotarget in Instellingen → Teams",
+    "Bruto-omzet en uren-omzet per team en per teamlid, filterbaar op maand, kwartaal of halfjaar naast de standaard YTD-weergave",
+    "Nieuwe tabel 'Nog te factureren per klant' op het dashboard",
+    "Nieuwe rol 'Directie': read-only toegang tot de financiële dashboardinformatie van alle teams, geen navigatie naar Factuuritems/Klanten/Instellingen",
   ],
   wijzigingen: [
-    "Kantoorkosten bij het factureren worden nu berekend met het percentage van de klant zelf (was altijd hardcoded 6%), met een minimum van €15 en maximum van €200 per factuur",
-    "Korting mag nooit meer zijn dan het honorarium (voorheen: honorarium + externe kosten)",
+    "De 'omzet per teamlid'-grafiek is niet langer firm-wide maar per team gescoped, zoals de rest van het dashboard al was",
   ],
   bugfixes: [],
-  bekende_beperkingen: [],
+  bekende_beperkingen: [
+    "Nettotarget toont alleen het ingestelde bedrag; de bijbehorende werkelijke netto-omzet en 'on target'-vergelijking volgen in een latere ronde",
+  ],
   gebruikersactie: null,
 };
 

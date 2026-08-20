@@ -708,26 +708,29 @@ export type Database = {
       }
       teamdoelen: {
         Row: {
-          bedrag: number
+          bruto_bedrag: number
           created_at: string
           id: string
           jaar: number
+          netto_bedrag: number | null
           team_id: string
           updated_at: string
         }
         Insert: {
-          bedrag: number
+          bruto_bedrag: number
           created_at?: string
           id?: string
           jaar: number
+          netto_bedrag?: number | null
           team_id: string
           updated_at?: string
         }
         Update: {
-          bedrag?: number
+          bruto_bedrag?: number
           created_at?: string
           id?: string
           jaar?: number
+          netto_bedrag?: number | null
           team_id?: string
           updated_at?: string
         }
@@ -804,7 +807,12 @@ export type Database = {
       prijstype: "uren" | "vast_honorarium"
       specificatietaal: "nl" | "en"
       specificatietype: "simple" | "extended"
-      user_role: "medewerker" | "teamleider" | "finance" | "beheerder"
+      user_role:
+        | "medewerker"
+        | "teamleider"
+        | "finance"
+        | "beheerder"
+        | "directie"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -958,7 +966,13 @@ export const Constants = {
       prijstype: ["uren", "vast_honorarium"],
       specificatietaal: ["nl", "en"],
       specificatietype: ["simple", "extended"],
-      user_role: ["medewerker", "teamleider", "finance", "beheerder"],
+      user_role: [
+        "medewerker",
+        "teamleider",
+        "finance",
+        "beheerder",
+        "directie",
+      ],
     },
   },
 } as const

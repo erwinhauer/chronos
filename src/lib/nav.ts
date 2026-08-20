@@ -13,7 +13,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
-    roles: ["medewerker", "teamleider", "finance", "beheerder"],
+    roles: ["medewerker", "teamleider", "finance", "beheerder", "directie"],
   },
   {
     label: "Factuuritems",
@@ -45,4 +45,5 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   teamleider: "Teamleider",
   finance: "Finance",
   beheerder: "Beheerder",
+  directie: "Directie",
 };

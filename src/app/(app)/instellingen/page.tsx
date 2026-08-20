@@ -18,7 +18,7 @@ export default async function InstellingenPage() {
       supabase.from("teams").select("id, naam").order("naam"),
       supabase.from("team_members").select("team_id, profile_id"),
       supabase.from("productchangelog").select("*").order("releasedatum", { ascending: false }),
-      supabase.from("teamdoelen").select("team_id, bedrag").eq("jaar", jaar),
+      supabase.from("teamdoelen").select("team_id, bruto_bedrag, netto_bedrag").eq("jaar", jaar),
     ]);
 
   const teamIdsPerProfile: Record<string, string[]> = {};
@@ -27,9 +27,9 @@ export default async function InstellingenPage() {
     (teamIdsPerProfile[row.profile_id] ??= []).push(row.team_id);
     (ledenPerTeam[row.team_id] ??= []).push(row.profile_id);
   }
-  const doelPerTeam: Record<string, number> = {};
+  const doelPerTeam: Record<string, { bruto: number; netto: number | null }> = {};
   for (const row of teamdoelen ?? []) {
-    doelPerTeam[row.team_id] = row.bedrag;
+    doelPerTeam[row.team_id] = { bruto: row.bruto_bedrag, netto: row.netto_bedrag };
   }
 
   return (
