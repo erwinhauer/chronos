@@ -6,17 +6,14 @@ import { createClient } from "@supabase/supabase-js";
 
 // Vóór elke commit bijwerken met de wijzigingen van die release.
 const CHANGELOG_ENTRY = {
-  versienummer: "0.14.0",
+  versienummer: "0.14.1",
   releasedatum: "2026-08-21",
-  titel: "Bento-dashboard, vriendelijker facturen en tabellen, teamleider mag factureren",
-  nieuwe_functies: [
-    "Teamleider kan nu zelf factuuritems van zijn/haar team selecteren en factureren (was alleen finance/beheerder) — inclusief downloaden en opnieuw versturen van de PDF's",
-    "Dashboard in bento-stijl: 'Gefactureerd' is nu een uitgelichte tegel, en de team-/omzetkaarten staan naast elkaar in plaats van onder elkaar",
-    "Factuur- en specificatie-voorbeeld staan nu in een eigen, duidelijk afgebakende voorbeeldkaart",
-    "Tabellen (Gebruikers, Teams, Klanten, Factuuritems) tonen nu gekleurde tags per rol/team/taal/land, een statusdot voor Actief/Inactief, en avatar-initialen bij gebruikersnamen",
-  ],
+  titel: "Kapotte 'Download PDF'-knop verwijderd",
+  nieuwe_functies: [],
   wijzigingen: [],
-  bugfixes: [],
+  bugfixes: [
+    "De 'Download PDF'-knop op de factuurpagina drukte de hele webpagina af via de browser-printfunctie, wat de factuur in het verkeerde formaat (landscape i.p.v. portrait) zette en tekst in de specificatie liet wegvallen — deze knop is verwijderd; 'Download factuur (PDF)' en 'Download specificatie (PDF)' gebruikten altijd al de juiste, correct opgemaakte PDF's en zijn hierdoor niet geraakt",
+  ],
   bekende_beperkingen: [
     "Het daadwerkelijk versturen van de e-mail vraagt een Resend API-key en een geverifieerd verzenddomein — zonder die configuratie worden de PDF's wel gemaakt en opgeslagen, maar niet verstuurd",
     "Matter type wordt nog steeds afgeleid uit het dossiernummer; in de praktijk kan hetzelfde dossier bij verschillende werkzaamheden een andere matter type hebben — dat is nog niet per factuurregel instelbaar",

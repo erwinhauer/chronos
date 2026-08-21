@@ -171,7 +171,7 @@ export function NieuweFactuurForm({
         <CardHeader>
           <CardTitle className="text-base">Voorbeeldfactuur</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-6">
+        <CardContent className="flex flex-col gap-6 print:hidden">
           <FactuurVoorbeeldKaart>
             <FactuurCover
               klant={klant}

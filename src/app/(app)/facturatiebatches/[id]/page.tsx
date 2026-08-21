@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { SetBreadcrumb } from "@/lib/breadcrumb-context";
-import { PrintKnop } from "@/components/print-knop";
 import { FactuurCover } from "@/components/factuur-cover";
 import { FactuurSpecificatie } from "@/components/factuur-specificatie";
 import { FactuurVoorbeeldKaart } from "@/components/factuur-voorbeeld-kaart";
@@ -58,7 +57,6 @@ export default async function SpecificatiePagina({ params }: { params: Promise<{
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6 print:max-w-none">
-      <style>{"@media print { @page { size: A4 landscape; } }"}</style>
       <SetBreadcrumb
         segments={[
           { label: "Klanten", href: "/klanten" },
@@ -75,7 +73,6 @@ export default async function SpecificatiePagina({ params }: { params: Promise<{
               <DownloadFactuurKnop batchId={batch.id} soort="specificatie" label="Download specificatie (PDF)" />
             </>
           )}
-          <PrintKnop />
         </div>
       </div>
 
@@ -107,7 +104,12 @@ export default async function SpecificatiePagina({ params }: { params: Promise<{
         )
       )}
 
-      <div className="flex flex-col gap-6">
+      <p className="hidden text-sm text-muted-foreground print:block">
+        Gebruik de downloadknoppen boven deze pagina voor de factuur- en specificatie-PDF — deze voorbeeldweergave
+        is niet bedoeld om direct af te drukken.
+      </p>
+
+      <div className="flex flex-col gap-6 print:hidden">
         <FactuurVoorbeeldKaart>
           <FactuurCover
             klant={klant}
