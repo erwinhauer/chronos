@@ -4,6 +4,7 @@ import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { NewKlantDialog } from "@/components/new-klant-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { StatusDot } from "@/components/ui/status-dot";
 import {
   Table,
   TableBody,
@@ -12,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { tagKleurStijl } from "@/lib/tag-kleur";
 
 export default async function KlantenPage() {
   const supabase = await createClient();
@@ -64,12 +66,21 @@ export default async function KlantenPage() {
                       <div className="text-xs text-muted-foreground">{k.contact_email}</div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={k.status === "actief" ? "default" : "outline"} className="text-xs">
-                        {k.status === "actief" ? "Actief" : "Inactief"}
+                      <StatusDot
+                        label={k.status === "actief" ? "Actief" : "Inactief"}
+                        tint={k.status === "actief" ? "success" : "muted"}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="uppercase" style={tagKleurStijl(k.specificatietaal)}>
+                        {k.specificatietaal}
                       </Badge>
                     </TableCell>
-                    <TableCell className="uppercase text-muted-foreground">{k.specificatietaal}</TableCell>
-                    <TableCell className="capitalize">{k.specificatietype}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="capitalize" style={tagKleurStijl(k.specificatietype)}>
+                        {k.specificatietype}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="tabular-figures">
                       {k.kantoorkosten_actief ? `${k.kantoorkosten_percentage}%` : "—"}
                     </TableCell>

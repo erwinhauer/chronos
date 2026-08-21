@@ -5,10 +5,10 @@ import { SetBreadcrumb } from "@/lib/breadcrumb-context";
 import { PrintKnop } from "@/components/print-knop";
 import { FactuurCover } from "@/components/factuur-cover";
 import { FactuurSpecificatie } from "@/components/factuur-specificatie";
+import { FactuurVoorbeeldKaart } from "@/components/factuur-voorbeeld-kaart";
 import { DownloadFactuurKnop } from "@/components/download-factuur-knop";
 import { VerstuurOpnieuwKnop } from "@/components/verstuur-opnieuw-knop";
 import { haalLandenMap } from "@/lib/landen";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 export default async function SpecificatiePagina({ params }: { params: Promise<{ id: string }> }) {
@@ -39,8 +39,13 @@ export default async function SpecificatiePagina({ params }: { params: Promise<{
   ]);
 
   const titel = klant.specificatietaal === "nl" ? "Specificatie" : "Fee Note";
-  const magOpnieuwVersturen = profile?.role === "finance" || profile?.role === "beheerder";
-  const magDownloaden = profile?.role === "finance" || profile?.role === "beheerder" || profile?.role === "directie";
+  const magOpnieuwVersturen =
+    profile?.role === "finance" || profile?.role === "beheerder" || profile?.role === "teamleider";
+  const magDownloaden =
+    profile?.role === "finance" ||
+    profile?.role === "beheerder" ||
+    profile?.role === "directie" ||
+    profile?.role === "teamleider";
 
   const totalen = {
     totaal_honorarium: batch.totaal_honorarium,
@@ -102,8 +107,8 @@ export default async function SpecificatiePagina({ params }: { params: Promise<{
         )
       )}
 
-      <Card className="print:border-none print:shadow-none">
-        <CardContent className="flex flex-col gap-8 p-8">
+      <div className="flex flex-col gap-6">
+        <FactuurVoorbeeldKaart>
           <FactuurCover
             klant={klant}
             project={project}
@@ -117,6 +122,8 @@ export default async function SpecificatiePagina({ params }: { params: Promise<{
             factuurnummer={batch.accountview_factuurnummer}
             factuurdatum={batch.accountview_factuurdatum}
           />
+        </FactuurVoorbeeldKaart>
+        <FactuurVoorbeeldKaart>
           <FactuurSpecificatie
             klant={klant}
             periodeStart={batch.periode_start}
@@ -138,8 +145,8 @@ export default async function SpecificatiePagina({ params }: { params: Promise<{
             }))}
             totalen={totalen}
           />
-        </CardContent>
-      </Card>
+        </FactuurVoorbeeldKaart>
+      </div>
     </div>
   );
 }

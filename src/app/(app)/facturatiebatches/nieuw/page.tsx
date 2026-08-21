@@ -13,7 +13,7 @@ export default async function NieuweFactuurPagina({
 }) {
   const { klant_id, item_ids } = await searchParams;
   const profile = await getCurrentProfile();
-  if (profile?.role !== "finance" && profile?.role !== "beheerder") {
+  if (profile?.role !== "finance" && profile?.role !== "beheerder" && profile?.role !== "teamleider") {
     redirect("/factuuritems");
   }
 

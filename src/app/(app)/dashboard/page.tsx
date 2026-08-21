@@ -1,4 +1,4 @@
-import { Users, Receipt, PiggyBank, Plus } from "lucide-react";
+import { Users, Receipt, Plus, ArrowUpRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { euro, isGefactureerd, isNogTeFactureren, regelbedrag } from "@/lib/factuurbedragen";
@@ -261,34 +261,42 @@ export default async function DashboardPage({
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        <Card>
+        <div className="relative overflow-hidden rounded-2xl bg-primary p-6 text-primary-foreground">
+          <div
+            className="pointer-events-none absolute -right-14 -top-14 h-48 w-48 rounded-full opacity-20"
+            style={{ background: "radial-gradient(circle, var(--coral) 0%, transparent 70%)" }}
+          />
+          <div
+            className="pointer-events-none absolute -bottom-16 -left-10 h-40 w-40 rounded-full opacity-10"
+            style={{ background: "radial-gradient(circle, var(--coral) 0%, transparent 70%)" }}
+          />
+          <div className="relative z-10 flex items-start justify-between gap-4">
+            <p className="text-xs font-medium tracking-wide text-primary-foreground/60 uppercase">
+              Gefactureerd · {periodeLabel(periode)}
+            </p>
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-foreground/10">
+              <ArrowUpRight className="h-4 w-4" />
+            </span>
+          </div>
+          <div className="relative z-10 mt-5 text-3xl font-semibold tabular-figures">{euro(gefactureerd)}</div>
+        </div>
+        <Card className="rounded-2xl">
           <CardContent className="flex items-center gap-4">
-            <StatIcon icon={Users} tint="primary" />
+            <StatIcon icon={Users} tint="primary" className="h-11 w-11" />
             <div>
               <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Actieve klanten</p>
               <div className="text-2xl font-semibold tabular-figures">{klantenCount ?? 0}</div>
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="rounded-2xl">
           <CardContent className="flex items-center gap-4">
-            <StatIcon icon={Receipt} tint="warning" />
+            <StatIcon icon={Receipt} tint="warning" className="h-11 w-11" />
             <div>
               <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                 Nog te factureren · {periodeLabel(periode)}
               </p>
               <div className="text-2xl font-semibold tabular-figures text-warning">{euro(nogTeFactureren)}</div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-4">
-            <StatIcon icon={PiggyBank} tint="success" />
-            <div>
-              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                Gefactureerd · {periodeLabel(periode)}
-              </p>
-              <div className="text-2xl font-semibold tabular-figures text-success">{euro(gefactureerd)}</div>
             </div>
           </CardContent>
         </Card>
@@ -326,6 +334,7 @@ export default async function DashboardPage({
         <div className="flex flex-col gap-6">
           <h3 className="text-lg font-semibold tracking-tight">Teams</h3>
 
+          <div className="grid gap-6 lg:grid-cols-2">
           {teamKaarten.map((t) => (
             <Card key={t.teamId} className="rounded-2xl">
               <CardHeader>
@@ -422,9 +431,11 @@ export default async function DashboardPage({
               </CardContent>
             </Card>
           ))}
+          </div>
         </div>
       )}
 
+      <div className="grid gap-6 lg:grid-cols-2">
       <Card className="rounded-2xl">
         <CardHeader>
           <CardTitle className="text-base">Verkochte diensten · {periodeLabel(periode)}</CardTitle>
@@ -484,6 +495,7 @@ export default async function DashboardPage({
           )}
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

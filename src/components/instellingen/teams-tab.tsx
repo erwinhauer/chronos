@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SortableTh } from "@/components/sortable-th";
 import {
@@ -22,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { euro } from "@/lib/factuurbedragen";
 import { sortRows, type SortRichting } from "@/lib/table-utils";
+import { tagKleurStijl } from "@/lib/tag-kleur";
 
 type Profile = { id: string; full_name: string };
 type Team = { id: string; naam: string; email: string | null };
@@ -137,7 +139,11 @@ function TeamRij({
 }) {
   return (
     <TableRow>
-      <TableCell className="font-medium">{team.naam}</TableCell>
+      <TableCell className="font-medium">
+        <Badge variant="outline" style={tagKleurStijl(team.naam)}>
+          {team.naam}
+        </Badge>
+      </TableCell>
       <TableCell className="tabular-figures">{huidigeLeden.length}</TableCell>
       <TableCell className="tabular-figures">{huidigDoel ? euro(huidigDoel.bruto) : "—"}</TableCell>
       <TableCell className="text-right">

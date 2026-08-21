@@ -10,6 +10,7 @@ import {
   type FactuurSpecificatieItem,
   type FactuurSpecificatieKlant,
 } from "@/components/factuur-specificatie";
+import { FactuurVoorbeeldKaart } from "@/components/factuur-voorbeeld-kaart";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -170,27 +171,31 @@ export function NieuweFactuurForm({
         <CardHeader>
           <CardTitle className="text-base">Voorbeeldfactuur</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-8">
-          <FactuurCover
-            klant={klant}
-            project={project}
-            valuta={klant.valuta}
-            periodeStart={start}
-            periodeEind={eind}
-            totalen={totalen}
-            btwPercentage={klant.btw_percentage}
-            btwBedrag={btwBedrag}
-            btwVermelding={klant.btw_vermelding}
-          />
-          <FactuurSpecificatie
-            klant={klant}
-            valuta={klant.valuta}
-            periodeStart={start}
-            periodeEind={eind}
-            items={items}
-            totalen={totalen}
-            landen={landen}
-          />
+        <CardContent className="flex flex-col gap-6">
+          <FactuurVoorbeeldKaart>
+            <FactuurCover
+              klant={klant}
+              project={project}
+              valuta={klant.valuta}
+              periodeStart={start}
+              periodeEind={eind}
+              totalen={totalen}
+              btwPercentage={klant.btw_percentage}
+              btwBedrag={btwBedrag}
+              btwVermelding={klant.btw_vermelding}
+            />
+          </FactuurVoorbeeldKaart>
+          <FactuurVoorbeeldKaart>
+            <FactuurSpecificatie
+              klant={klant}
+              valuta={klant.valuta}
+              periodeStart={start}
+              periodeEind={eind}
+              items={items}
+              totalen={totalen}
+              landen={landen}
+            />
+          </FactuurVoorbeeldKaart>
         </CardContent>
         {state.error && (
           <CardContent className="pt-0">

@@ -14,8 +14,8 @@ export async function createFacturatiebatch(
   formData: FormData
 ): Promise<FactureerFormState> {
   const profile = await getCurrentProfile();
-  if (profile?.role !== "finance" && profile?.role !== "beheerder") {
-    return { error: "Alleen finance en beheerder kunnen factureren.", success: false };
+  if (profile?.role !== "finance" && profile?.role !== "beheerder" && profile?.role !== "teamleider") {
+    return { error: "Alleen finance, beheerder en teamleider kunnen factureren.", success: false };
   }
 
   const klant_id = String(formData.get("klant_id") ?? "");

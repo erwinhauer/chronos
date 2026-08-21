@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { FactuurItemStatus } from "@/lib/supabase/types";
+import { tagKleurStijl } from "@/lib/tag-kleur";
 
 type Project = { id: string; naam: string; po_nummer: string | null };
 
@@ -335,8 +336,21 @@ function FactuurItemsTabel({
                   </div>
                 )}
               </TableCell>
-              <TableCell className="whitespace-normal break-words text-sm text-muted-foreground">
-                {landen_op_regel.length > 0 ? landen_op_regel.map((l) => landNaamVoorIso(l, landen)).join(", ") : "—"}
+              <TableCell className="whitespace-normal break-words">
+                {landen_op_regel.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {landen_op_regel.map((l) => {
+                      const naam = landNaamVoorIso(l, landen);
+                      return (
+                        <Badge key={l} variant="outline" className="text-xs" style={tagKleurStijl(naam)}>
+                          {naam}
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <span className="text-sm text-muted-foreground">—</span>
+                )}
               </TableCell>
               {toonMedewerker && (
                 <TableCell>

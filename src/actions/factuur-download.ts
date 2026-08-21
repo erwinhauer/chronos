@@ -10,7 +10,12 @@ export async function haalFactuurDownloadUrl(
   soort: "factuur" | "specificatie"
 ): Promise<{ url: string | null; error: string | null }> {
   const profile = await getCurrentProfile();
-  if (profile?.role !== "finance" && profile?.role !== "beheerder" && profile?.role !== "directie") {
+  if (
+    profile?.role !== "finance" &&
+    profile?.role !== "beheerder" &&
+    profile?.role !== "directie" &&
+    profile?.role !== "teamleider"
+  ) {
     return { url: null, error: "Geen toegang tot facturen." };
   }
 

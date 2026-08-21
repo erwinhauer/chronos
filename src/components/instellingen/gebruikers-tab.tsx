@@ -9,8 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { AvatarInitials } from "@/components/ui/avatar-initials";
+import { StatusDot } from "@/components/ui/status-dot";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SortableTh } from "@/components/sortable-th";
+import { tagKleurStijl } from "@/lib/tag-kleur";
 import {
   Dialog,
   DialogContent,
@@ -150,13 +153,18 @@ function GebruikerRij({
   return (
     <TableRow>
       <TableCell>
-        <div className="font-medium">{profile.full_name}</div>
-        <div className="text-xs text-muted-foreground">{profile.email}</div>
+        <div className="flex items-center gap-3">
+          <AvatarInitials naam={profile.full_name} />
+          <div>
+            <div className="font-medium">{profile.full_name}</div>
+            <div className="text-xs text-muted-foreground">{profile.email}</div>
+          </div>
+        </div>
       </TableCell>
       <TableCell>
         <div className="flex flex-wrap gap-1">
           {huidigeRolIds.map((role) => (
-            <Badge key={role} variant={role === profile.role ? "default" : "outline"} className="text-xs">
+            <Badge key={role} variant="outline" className="text-xs" style={tagKleurStijl(ROLE_LABELS[role])}>
               {ROLE_LABELS[role]}
             </Badge>
           ))}
@@ -166,7 +174,7 @@ function GebruikerRij({
         {teamNamen.length > 0 ? (
           <div className="flex flex-wrap gap-1">
             {teamNamen.map((naam) => (
-              <Badge key={naam} variant="secondary" className="text-xs">
+              <Badge key={naam} variant="outline" className="text-xs" style={tagKleurStijl(naam)}>
                 {naam}
               </Badge>
             ))}
@@ -177,9 +185,7 @@ function GebruikerRij({
       </TableCell>
       <TableCell className="tabular-figures">{profile.initialen ?? suggestInitialen(profile.full_name)}</TableCell>
       <TableCell>
-        <Badge variant={profile.actief ? "success" : "outline"} className="text-xs">
-          {profile.actief ? "Actief" : "Inactief"}
-        </Badge>
+        <StatusDot label={profile.actief ? "Actief" : "Inactief"} tint={profile.actief ? "success" : "muted"} />
       </TableCell>
       <TableCell className="text-right">
         <GebruikerBewerkenDialog

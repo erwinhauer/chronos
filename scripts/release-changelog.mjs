@@ -6,12 +6,14 @@ import { createClient } from "@supabase/supabase-js";
 
 // Vóór elke commit bijwerken met de wijzigingen van die release.
 const CHANGELOG_ENTRY = {
-  versienummer: "0.13.2",
+  versienummer: "0.14.0",
   releasedatum: "2026-08-21",
-  titel: "Alles selecteren per project, en gekleurde PO-tags",
+  titel: "Bento-dashboard, vriendelijker facturen en tabellen, teamleider mag factureren",
   nieuwe_functies: [
-    "Factuuritems per klant: elk project heeft nu een eigen 'alles selecteren'-vakje boven zijn eigen regels — bij meerdere projecten selecteert dit alleen de regels van dat project, niet alle factuuritems van de klant",
-    "PO-nummer-tags krijgen elk een eigen kleur, zodat meteen duidelijk is dat het om verschillende projecten gaat",
+    "Teamleider kan nu zelf factuuritems van zijn/haar team selecteren en factureren (was alleen finance/beheerder) — inclusief downloaden en opnieuw versturen van de PDF's",
+    "Dashboard in bento-stijl: 'Gefactureerd' is nu een uitgelichte tegel, en de team-/omzetkaarten staan naast elkaar in plaats van onder elkaar",
+    "Factuur- en specificatie-voorbeeld staan nu in een eigen, duidelijk afgebakende voorbeeldkaart",
+    "Tabellen (Gebruikers, Teams, Klanten, Factuuritems) tonen nu gekleurde tags per rol/team/taal/land, een statusdot voor Actief/Inactief, en avatar-initialen bij gebruikersnamen",
   ],
   wijzigingen: [],
   bugfixes: [],

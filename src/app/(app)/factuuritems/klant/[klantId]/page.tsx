@@ -31,7 +31,8 @@ export default async function FactuuritemsPerKlantPagina({
   if (!klant) notFound();
 
   const toonMedewerker = profile?.role !== "medewerker";
-  const kanFactureren = profile?.role === "finance" || profile?.role === "beheerder";
+  const kanFactureren =
+    profile?.role === "finance" || profile?.role === "beheerder" || profile?.role === "teamleider";
 
   const genormaliseerd: FactuurGroepItem[] = (items ?? []).map((item) => {
     const project = item.projecten as unknown as { naam: string; po_nummer: string | null } | null;

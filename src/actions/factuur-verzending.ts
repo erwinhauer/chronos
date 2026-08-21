@@ -17,8 +17,8 @@ export type VerstuurFactuurResultaat = { success: boolean; error: string | null 
 // op de specificatiepagina, met een "opnieuw versturen"-knop.
 export async function verstuurFactuur(batchId: string): Promise<VerstuurFactuurResultaat> {
   const profile = await getCurrentProfile();
-  if (profile?.role !== "finance" && profile?.role !== "beheerder") {
-    return { success: false, error: "Alleen finance en beheerder kunnen facturen (opnieuw) versturen." };
+  if (profile?.role !== "finance" && profile?.role !== "beheerder" && profile?.role !== "teamleider") {
+    return { success: false, error: "Alleen finance, beheerder en teamleider kunnen facturen (opnieuw) versturen." };
   }
 
   const supabase = await createClient();
