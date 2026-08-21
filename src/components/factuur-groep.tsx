@@ -17,6 +17,14 @@ import type { FactuurItemStatus } from "@/lib/supabase/types";
 
 type Project = { id: string; naam: string; po_nummer: string | null };
 
+// Zelfde categorische kleurenreeks als omzet-grafiek.tsx, hier gebruikt zodat
+// PO-tags van verschillende projecten meteen visueel te onderscheiden zijn.
+const PROJECT_KLEUREN = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
+
+function projectKleur(index: number) {
+  return PROJECT_KLEUREN[index % PROJECT_KLEUREN.length];
+}
+
 export type FactuurGroepItem = {
   id: string;
   datum: string;
@@ -97,11 +105,12 @@ export function FactuurGroep({
         </div>
       </CardHeader>
       <CardContent className={toonProjectHeaders ? "flex flex-col gap-6 p-4" : "p-0"}>
-        {secties.map((sectie) => (
+        {secties.map((sectie, index) => (
           <ProjectSectieBlok
             key={sectie.sleutel}
             klantId={klantId}
             sectie={sectie}
+            kleurIndex={index}
             projecten={projecten}
             toonHeader={toonProjectHeaders}
             toonMedewerker={toonMedewerker}
@@ -118,6 +127,7 @@ export function FactuurGroep({
 function ProjectSectieBlok({
   klantId,
   sectie,
+  kleurIndex,
   projecten,
   toonHeader,
   toonMedewerker,
@@ -127,6 +137,7 @@ function ProjectSectieBlok({
 }: {
   klantId: string;
   sectie: ProjectSectie;
+  kleurIndex: number;
   projecten: Project[];
   toonHeader: boolean;
   toonMedewerker: boolean;
@@ -150,6 +161,17 @@ function ProjectSectieBlok({
       const next = new Set(prev);
       if (checked) next.add(id);
       else next.delete(id);
+      return next;
+    });
+  }
+
+  function toggleAlle(ids: string[], checked: boolean) {
+    setGeselecteerd((prev) => {
+      const next = new Set(prev);
+      for (const id of ids) {
+        if (checked) next.add(id);
+        else next.delete(id);
+      }
       return next;
     });
   }
@@ -186,7 +208,15 @@ function ProjectSectieBlok({
           <div className="flex items-center gap-2 text-sm font-medium">
             {sectie.projectNaam ?? "Geen project"}
             {sectie.projectPoNummer && (
-              <Badge variant="outline" className="text-xs">
+              <Badge
+                variant="outline"
+                className="text-xs"
+                style={{
+                  color: projectKleur(kleurIndex),
+                  borderColor: `color-mix(in oklch, ${projectKleur(kleurIndex)} 40%, transparent)`,
+                  backgroundColor: `color-mix(in oklch, ${projectKleur(kleurIndex)} 12%, transparent)`,
+                }}
+              >
                 PO: {sectie.projectPoNummer}
               </Badge>
             )}
@@ -204,6 +234,7 @@ function ProjectSectieBlok({
           huidigeGebruikerId={huidigeGebruikerId}
           geselecteerd={geselecteerd}
           onToggle={toggle}
+          onToggleAlle={toggleAlle}
           landen={landen}
         />
       </div>
@@ -218,6 +249,7 @@ function FactuurItemsTabel({
   huidigeGebruikerId,
   geselecteerd,
   onToggle,
+  onToggleAlle,
   landen,
 }: {
   items: FactuurGroepItem[];
@@ -226,13 +258,30 @@ function FactuurItemsTabel({
   huidigeGebruikerId?: string;
   geselecteerd: Set<string>;
   onToggle: (id: string, checked: boolean) => void;
+  onToggleAlle: (ids: string[], checked: boolean) => void;
   landen: LandenMap;
 }) {
+  const selecteerbareIds = items.filter((r) => r.status === "aangemaakt").map((r) => r.id);
+  const aantalGeselecteerd = selecteerbareIds.filter((id) => geselecteerd.has(id)).length;
+  const alleGeselecteerd = selecteerbareIds.length > 0 && aantalGeselecteerd === selecteerbareIds.length;
+  const gedeeltelijkGeselecteerd = aantalGeselecteerd > 0 && !alleGeselecteerd;
+
   return (
     <Table className="w-auto min-w-full table-fixed">
       <TableHeader>
         <TableRow>
-          {kanFactureren && <TableHead className="w-8" />}
+          {kanFactureren && (
+            <TableHead className="w-8">
+              {selecteerbareIds.length > 0 && (
+                <Checkbox
+                  checked={alleGeselecteerd}
+                  indeterminate={gedeeltelijkGeselecteerd}
+                  onCheckedChange={(checked) => onToggleAlle(selecteerbareIds, checked === true)}
+                  aria-label="Alles selecteren"
+                />
+              )}
+            </TableHead>
+          )}
           <TableHead className="w-24">Datum</TableHead>
           <TableHead className="w-56">Dossier</TableHead>
           <TableHead className="w-32">Land</TableHead>

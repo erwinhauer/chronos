@@ -6,16 +6,15 @@ import { createClient } from "@supabase/supabase-js";
 
 // Vóór elke commit bijwerken met de wijzigingen van die release.
 const CHANGELOG_ENTRY = {
-  versienummer: "0.13.1",
+  versienummer: "0.13.2",
   releasedatum: "2026-08-21",
-  titel: "Factuuritems-tabel gefixt, en factuuritems kunnen verwijderen",
+  titel: "Alles selecteren per project, en gekleurde PO-tags",
   nieuwe_functies: [
-    "Factuuritem verwijderen (met een 'Weet je het zeker?'-bevestiging) — zelfde zichtbaarheid als Bewerken: de eigen medewerker zolang het item nog 'aangemaakt' is, of finance/beheerder",
+    "Factuuritems per klant: elk project heeft nu een eigen 'alles selecteren'-vakje boven zijn eigen regels — bij meerdere projecten selecteert dit alleen de regels van dat project, niet alle factuuritems van de klant",
+    "PO-nummer-tags krijgen elk een eigen kleur, zodat meteen duidelijk is dat het om verschillende projecten gaat",
   ],
   wijzigingen: [],
-  bugfixes: [
-    "Factuuritems-tabel: bij een smaller scherm liep de tekst in de kolommen 'Medewerker' en 'Omschrijving' over elkaar heen (soms zelfs één letter per regel) — de tabel scrolt nu horizontaal als de kolommen niet allemaal passen, in plaats van de omschrijving-kolom tot bijna niets te persen",
-  ],
+  bugfixes: [],
   bekende_beperkingen: [
     "Het daadwerkelijk versturen van de e-mail vraagt een Resend API-key en een geverifieerd verzenddomein — zonder die configuratie worden de PDF's wel gemaakt en opgeslagen, maar niet verstuurd",
     "Matter type wordt nog steeds afgeleid uit het dossiernummer; in de praktijk kan hetzelfde dossier bij verschillende werkzaamheden een andere matter type hebben — dat is nog niet per factuurregel instelbaar",
