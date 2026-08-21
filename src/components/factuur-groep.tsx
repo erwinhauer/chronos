@@ -6,6 +6,7 @@ import { landNaamVoorIso } from "@/lib/dossiernummer";
 import { euro, regelbedrag } from "@/lib/factuurbedragen";
 import type { LandenMap } from "@/lib/landen";
 import { VerplaatsProjectDialog } from "@/components/verplaats-project-dialog";
+import { VerwijderFactuurItemDialog } from "@/components/verwijder-factuuritem-dialog";
 import { LinkButton } from "@/components/link-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -228,18 +229,18 @@ function FactuurItemsTabel({
   landen: LandenMap;
 }) {
   return (
-    <Table className="table-fixed">
+    <Table className="w-auto min-w-full table-fixed">
       <TableHeader>
         <TableRow>
           {kanFactureren && <TableHead className="w-8" />}
           <TableHead className="w-24">Datum</TableHead>
           <TableHead className="w-56">Dossier</TableHead>
           <TableHead className="w-32">Land</TableHead>
-          {toonMedewerker && <TableHead className="w-16">Medewerker</TableHead>}
-          <TableHead>Omschrijving</TableHead>
+          {toonMedewerker && <TableHead className="w-28">Medewerker</TableHead>}
+          <TableHead className="w-64">Omschrijving</TableHead>
           <TableHead className="w-24">Qty</TableHead>
           <TableHead className="w-28 text-right">Bedrag</TableHead>
-          <TableHead className="w-12 text-right">Acties</TableHead>
+          <TableHead className="w-20 text-right">Acties</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -279,9 +280,13 @@ function FactuurItemsTabel({
                     )}
                   </div>
                 )}
-                {eerste && <div className="text-xs text-muted-foreground">{eerste.matter_naam ?? "—"}</div>}
+                {eerste && (
+                  <div className="whitespace-normal break-words text-xs text-muted-foreground">
+                    {eerste.matter_naam ?? "—"}
+                  </div>
+                )}
               </TableCell>
-              <TableCell className="text-sm text-muted-foreground">
+              <TableCell className="whitespace-normal break-words text-sm text-muted-foreground">
                 {landen_op_regel.length > 0 ? landen_op_regel.map((l) => landNaamVoorIso(l, landen)).join(", ") : "—"}
               </TableCell>
               {toonMedewerker && (
@@ -303,14 +308,17 @@ function FactuurItemsTabel({
               <TableCell className="text-right tabular-figures">{euro(bedrag)}</TableCell>
               <TableCell className="text-right">
                 {bewerkbaar && (
-                  <LinkButton
-                    size="icon-sm"
-                    variant="outline"
-                    href={`/factuuritems/${r.id}`}
-                    aria-label="Bewerken"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </LinkButton>
+                  <div className="flex items-center justify-end gap-1.5">
+                    <LinkButton
+                      size="icon-sm"
+                      variant="outline"
+                      href={`/factuuritems/${r.id}`}
+                      aria-label="Bewerken"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </LinkButton>
+                    <VerwijderFactuurItemDialog itemId={r.id} />
+                  </div>
                 )}
               </TableCell>
             </TableRow>

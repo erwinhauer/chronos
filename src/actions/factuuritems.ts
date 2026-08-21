@@ -329,6 +329,22 @@ export async function updateFactuurItem(
   redirect("/factuuritems");
 }
 
+export async function deleteFactuurItem(id: string): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const { error, count } = await supabase.from("factuuritems").delete({ count: "exact" }).eq("id", id);
+
+  if (error) {
+    return { error: mapDbError(error) };
+  }
+  if (!count) {
+    return { error: "Dit factuuritem kan niet meer worden verwijderd (al definitief/gefactureerd)." };
+  }
+
+  revalidatePath("/factuuritems");
+  revalidatePath("/dashboard");
+  return { error: null };
+}
+
 export type VerplaatsFormState = { error: string | null; success: boolean };
 
 export async function moveFactuuritemsToProject(

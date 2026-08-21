@@ -6,27 +6,22 @@ import { createClient } from "@supabase/supabase-js";
 
 // Vóór elke commit bijwerken met de wijzigingen van die release.
 const CHANGELOG_ENTRY = {
-  versienummer: "0.13.0",
+  versienummer: "0.13.1",
   releasedatum: "2026-08-21",
-  titel: "Factuur en specificatie in Knijff-opmaak, BTW en klantadres/debiteurnummer",
+  titel: "Factuuritems-tabel gefixt, en factuuritems kunnen verwijderen",
   nieuwe_functies: [
-    "Bij het factureren worden nu twee losse PDF's gemaakt: een korte factuur (adres, factuur-/debiteurnummer, referentieregel, Sub Totaal/BTW/Totaal, IBAN en betaaltermijn) en een landscape specificatie met de itemized regels — beide ook los te downloaden op de factuurpagina",
-    "BTW: percentage en een vrij invoerbare wettelijke vermelding zijn nu instelbaar per klant (tijdelijk handmatig, bedoeld als plek totdat dit uit de Patricia-koppeling komt); wordt vastgelegd bij het factureren zodat een latere wijziging een al verstuurde factuur niet met terugwerkende kracht aanpast",
-    "Factuurnummer: Chronos genereert nu automatisch een oplopend nummer bij het aanmaken van een factuur (voorlopige reeks, wordt later vervangen na afstemming met de Controller)",
-    "Klantscherm: adres en debiteurnummer zijn nu bewerkbaar (stonden al in de database maar hadden nog geen invoerveld) — nodig voor het adresblok en debiteurnummer op de factuur",
+    "Factuuritem verwijderen (met een 'Weet je het zeker?'-bevestiging) — zelfde zichtbaarheid als Bewerken: de eigen medewerker zolang het item nog 'aangemaakt' is, of finance/beheerder",
   ],
-  wijzigingen: [
-    "De specificatie toont nu Knijff ref., Matter en Matter type als losse kolommen (was één samengevoegde 'Dossier'-kolom), met een totaalregel direct onder de kolomkoppen in plaats van onderaan",
-    "De specificatie print/exporteert nu in landscape A4",
+  wijzigingen: [],
+  bugfixes: [
+    "Factuuritems-tabel: bij een smaller scherm liep de tekst in de kolommen 'Medewerker' en 'Omschrijving' over elkaar heen (soms zelfs één letter per regel) — de tabel scrolt nu horizontaal als de kolommen niet allemaal passen, in plaats van de omschrijving-kolom tot bijna niets te persen",
   ],
-  bugfixes: [],
   bekende_beperkingen: [
     "Het daadwerkelijk versturen van de e-mail vraagt een Resend API-key en een geverifieerd verzenddomein — zonder die configuratie worden de PDF's wel gemaakt en opgeslagen, maar niet verstuurd",
     "Matter type wordt nog steeds afgeleid uit het dossiernummer; in de praktijk kan hetzelfde dossier bij verschillende werkzaamheden een andere matter type hebben — dat is nog niet per factuurregel instelbaar",
     "Het factuurnummer is een voorlopige, eigen Chronos-reeks — nog geen echte Accountview-koppeling",
   ],
-  gebruikersactie:
-    "Voor bestaande klanten: adres, debiteurnummer en BTW-percentage/vermelding invullen bij Klant bewerken, anders blijven deze velden leeg op de factuur.",
+  gebruikersactie: null,
 };
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
