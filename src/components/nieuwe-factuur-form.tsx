@@ -2,8 +2,9 @@
 
 import { useActionState, useMemo, useRef, useState } from "react";
 import { createFacturatiebatch, type FactureerFormState } from "@/actions/facturatie";
-import { round2 } from "@/lib/factuurbedragen";
+import { berekenBtw, round2 } from "@/lib/factuurbedragen";
 import type { LandenMap } from "@/lib/landen";
+import { FactuurCover } from "@/components/factuur-cover";
 import {
   FactuurSpecificatie,
   type FactuurSpecificatieItem,
@@ -26,7 +27,10 @@ type Klant = FactuurSpecificatieKlant & {
   id: string;
   valuta: string;
   contact_email: string | null;
+  accountview_debiteurnummer: string | null;
   verzending_toegestaan: boolean;
+  btw_percentage: number;
+  btw_vermelding: string | null;
 };
 type Project = { naam: string; po_nummer: string | null } | null;
 
@@ -81,6 +85,7 @@ export function NieuweFactuurForm({
   );
 
   const extraKortingTeHoog = extraKorting > basisTotalen.subtotaal_voor_extra_korting;
+  const btwBedrag = berekenBtw(totalen.totaal_bedrag, klant.btw_percentage);
 
   return (
     <form ref={formRef} action={formAction} className="flex flex-col gap-6">
@@ -165,10 +170,20 @@ export function NieuweFactuurForm({
         <CardHeader>
           <CardTitle className="text-base">Voorbeeldfactuur</CardTitle>
         </CardHeader>
-        <CardContent>
-          <FactuurSpecificatie
+        <CardContent className="flex flex-col gap-8">
+          <FactuurCover
             klant={klant}
             project={project}
+            valuta={klant.valuta}
+            periodeStart={start}
+            periodeEind={eind}
+            totalen={totalen}
+            btwPercentage={klant.btw_percentage}
+            btwBedrag={btwBedrag}
+            btwVermelding={klant.btw_vermelding}
+          />
+          <FactuurSpecificatie
+            klant={klant}
             valuta={klant.valuta}
             periodeStart={start}
             periodeEind={eind}

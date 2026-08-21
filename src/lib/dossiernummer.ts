@@ -102,6 +102,28 @@ const LANDNAMEN: Record<string, string> = {
   LK: "Sri Lanka",
 };
 
+// `type_dienst` wordt bij aanmaken vastgelegd als het Nederlandse label (zie
+// TYPE_PREFIXES) — deze vertaaltabel is puur voor weergave op een Engelstalige
+// specificatie, zonder de opgeslagen waarde zelf aan te passen.
+const TYPE_LABEL_EN: Record<string, string> = {
+  Cancellations: "Cancellations",
+  Merken: "Trademarks",
+  Modellen: "Designs",
+  Opposities: "Oppositions",
+  Inbreuken: "Infringements",
+  Overeenkomsten: "Agreements",
+  Domeinnamen: "Domain names",
+  Algemeen: "General",
+  Mutaties: "Recordals",
+  Bewaking: "Watch services",
+};
+
+export function typeDienstLabel(typeDienst: string | null, taal: "nl" | "en"): string {
+  if (!typeDienst) return "—";
+  if (taal === "en") return TYPE_LABEL_EN[typeDienst] ?? typeDienst;
+  return typeDienst;
+}
+
 function tryParsePrefix(code: string, rest: string): DossiernummerParseResult | null {
   const pattern = new RegExp(`^(\\d+)([A-Z]{2})(\\d*)$`);
   const match = pattern.exec(rest);

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
-import { berekenFactuurtotalen, round2 } from "@/lib/factuurbedragen";
+import { berekenBtw, berekenFactuurtotalen, round2 } from "@/lib/factuurbedragen";
 import { verstuurFactuur } from "@/actions/factuur-verzending";
 
 export type FactureerFormState = { error: string | null; success: boolean };
@@ -72,7 +72,7 @@ export async function createFacturatiebatch(
 
   const { data: klant, error: klantError } = await supabase
     .from("klanten")
-    .select("kantoorkosten_percentage")
+    .select("kantoorkosten_percentage, btw_percentage, btw_vermelding")
     .eq("id", klant_id)
     .single();
   if (klantError || !klant) {
@@ -86,6 +86,22 @@ export async function createFacturatiebatch(
     return { error: "Extra korting kan niet groter zijn dan het factuurbedrag.", success: false };
   }
   const totaalBedrag = round2(subtotaalVoorExtraKorting - extra_korting);
+  const btwBedrag = berekenBtw(totaalBedrag, klant.btw_percentage);
+
+  // Voorlopige, oplopende nummering — geen echte Accountview-koppeling.
+  // Simpel max+1 (geen sequence/retry): laag concurrentierisico bij dit
+  // kantoor, en de definitieve reeks/opmaak volgt later na afstemming met
+  // de Controller.
+  const { data: bestaandeNummers } = await supabase
+    .from("facturatiebatches")
+    .select("accountview_factuurnummer")
+    .not("accountview_factuurnummer", "is", null);
+  const hoogsteBestaand = Math.max(
+    999,
+    ...(bestaandeNummers ?? []).map((b) => parseInt(b.accountview_factuurnummer ?? "0", 10) || 0)
+  );
+  const accountview_factuurnummer = String(hoogsteBestaand + 1);
+  const accountview_factuurdatum = new Date().toISOString().slice(0, 10);
 
   const {
     data: { user },
@@ -105,6 +121,11 @@ export async function createFacturatiebatch(
       totaal_kantoorkosten: totaalKantoorkosten,
       extra_korting,
       totaal_bedrag: totaalBedrag,
+      btw_percentage: klant.btw_percentage,
+      btw_bedrag: btwBedrag,
+      btw_vermelding: klant.btw_vermelding,
+      accountview_factuurnummer,
+      accountview_factuurdatum,
       verzend_email: verzend_email || null,
       verzend_cc: verzend_cc.length > 0 ? verzend_cc : null,
       goedgekeurd_door: user?.id,

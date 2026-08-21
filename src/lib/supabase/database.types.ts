@@ -82,16 +82,20 @@ export type Database = {
         Row: {
           accountview_factuurdatum: string | null
           accountview_factuurnummer: string | null
+          btw_bedrag: number
+          btw_percentage: number | null
+          btw_vermelding: string | null
           created_at: string
           extra_korting: number
+          factuur_storage_path: string | null
           goedgekeurd_door: string | null
           goedgekeurd_op: string | null
           id: string
           klant_id: string
-          pdf_storage_path: string | null
           periode_eind: string
           periode_start: string
           project_id: string | null
+          specificatie_storage_path: string | null
           status: Database["public"]["Enums"]["batch_status"]
           totaal_bedrag: number
           totaal_externe_kosten: number
@@ -108,16 +112,20 @@ export type Database = {
         Insert: {
           accountview_factuurdatum?: string | null
           accountview_factuurnummer?: string | null
+          btw_bedrag?: number
+          btw_percentage?: number | null
+          btw_vermelding?: string | null
           created_at?: string
           extra_korting?: number
+          factuur_storage_path?: string | null
           goedgekeurd_door?: string | null
           goedgekeurd_op?: string | null
           id?: string
           klant_id: string
-          pdf_storage_path?: string | null
           periode_eind: string
           periode_start: string
           project_id?: string | null
+          specificatie_storage_path?: string | null
           status?: Database["public"]["Enums"]["batch_status"]
           totaal_bedrag?: number
           totaal_externe_kosten?: number
@@ -134,16 +142,20 @@ export type Database = {
         Update: {
           accountview_factuurdatum?: string | null
           accountview_factuurnummer?: string | null
+          btw_bedrag?: number
+          btw_percentage?: number | null
+          btw_vermelding?: string | null
           created_at?: string
           extra_korting?: number
+          factuur_storage_path?: string | null
           goedgekeurd_door?: string | null
           goedgekeurd_op?: string | null
           id?: string
           klant_id?: string
-          pdf_storage_path?: string | null
           periode_eind?: string
           periode_start?: string
           project_id?: string | null
+          specificatie_storage_path?: string | null
           status?: Database["public"]["Enums"]["batch_status"]
           totaal_bedrag?: number
           totaal_externe_kosten?: number
@@ -343,6 +355,8 @@ export type Database = {
         Row: {
           accountview_debiteurnummer: string | null
           adres: string | null
+          btw_percentage: number
+          btw_vermelding: string | null
           contact_email: string | null
           contactpersoon_naam: string | null
           created_at: string
@@ -373,6 +387,8 @@ export type Database = {
         Insert: {
           accountview_debiteurnummer?: string | null
           adres?: string | null
+          btw_percentage?: number
+          btw_vermelding?: string | null
           contact_email?: string | null
           contactpersoon_naam?: string | null
           created_at?: string
@@ -403,6 +419,8 @@ export type Database = {
         Update: {
           accountview_debiteurnummer?: string | null
           adres?: string | null
+          btw_percentage?: number
+          btw_vermelding?: string | null
           contact_email?: string | null
           contactpersoon_naam?: string | null
           created_at?: string

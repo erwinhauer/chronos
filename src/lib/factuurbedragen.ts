@@ -58,3 +58,7 @@ export function berekenFactuurtotalen(items: FactuurRegelVoorTotalen[], kantoork
   );
   return { totaalHonorarium, totaalExterneKosten, totaalKorting, totaalKantoorkosten, subtotaalVoorExtraKorting };
 }
+
+export function berekenBtw(totaalBedrag: number, btwPercentage: number) {
+  return round2(totaalBedrag * (btwPercentage / 100));
+}

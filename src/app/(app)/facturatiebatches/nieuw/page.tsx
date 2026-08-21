@@ -29,7 +29,7 @@ export default async function NieuweFactuurPagina({
     supabase
       .from("factuuritems")
       .select(
-        "id, datum, omschrijving_klant, eenheidstype, qty, tarief, honorarium, externe_kosten, korting, kantoorkosten_van_toepassing, project_id, profiles!factuuritems_medewerker_id_fkey(full_name), factuuritem_dossiers(dossiernummer, type_dienst, land, volgorde)"
+        "id, datum, omschrijving_klant, eenheidstype, qty, tarief, honorarium, externe_kosten, korting, kantoorkosten_van_toepassing, project_id, profiles!factuuritems_medewerker_id_fkey(full_name), factuuritem_dossiers(dossiernummer, type_dienst, land, matter_naam, volgorde)"
       )
       .eq("klant_id", klant_id)
       .eq("status", "aangemaakt")

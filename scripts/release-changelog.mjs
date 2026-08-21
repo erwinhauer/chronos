@@ -6,31 +6,27 @@ import { createClient } from "@supabase/supabase-js";
 
 // Vóór elke commit bijwerken met de wijzigingen van die release.
 const CHANGELOG_ENTRY = {
-  versienummer: "0.12.0",
-  releasedatum: "2026-08-20",
-  titel: "Factuuritems per klant, vrij dossiers intypen, landenlijst en UI-verbeteringen",
+  versienummer: "0.13.0",
+  releasedatum: "2026-08-21",
+  titel: "Factuur en specificatie in Knijff-opmaak, BTW en klantadres/debiteurnummer",
   nieuwe_functies: [
-    "Factuuritems-overzicht toont nu eerst een ingeklapte lijst per klant (naam + openstaand bedrag) met een zoekveld; een klik opent de volledige, vertrouwde tabel voor die klant",
-    "Bij een factuuritem kun je een dossiernummer nu ook direct intypen (in plaats van alleen aanklikken in de suggestielijst), en met komma's of puntkomma's meteen meerdere dossiers achter elkaar toevoegen of plakken",
-    "Instellingen → Landen (beheerder): volledige, bewerkbare landenlijst (NL/EN, ISO-code) — de landnamen op de specificatie en interne overzichten volgen deze lijst",
-    "Klantscherm: schakelaar 'Facturen per e-mail versturen' — uitzetten als de klant met een eigen billing-systeem werkt; er wordt dan alleen nog een PDF aangemaakt, niet verstuurd",
-    "Teams kunnen nu een team-e-mailadres krijgen bij Instellingen, dat automatisch in cc gaat bij het versturen van facturen van klanten die dat team bedient",
+    "Bij het factureren worden nu twee losse PDF's gemaakt: een korte factuur (adres, factuur-/debiteurnummer, referentieregel, Sub Totaal/BTW/Totaal, IBAN en betaaltermijn) en een landscape specificatie met de itemized regels — beide ook los te downloaden op de factuurpagina",
+    "BTW: percentage en een vrij invoerbare wettelijke vermelding zijn nu instelbaar per klant (tijdelijk handmatig, bedoeld als plek totdat dit uit de Patricia-koppeling komt); wordt vastgelegd bij het factureren zodat een latere wijziging een al verstuurde factuur niet met terugwerkende kracht aanpast",
+    "Factuurnummer: Chronos genereert nu automatisch een oplopend nummer bij het aanmaken van een factuur (voorlopige reeks, wordt later vervangen na afstemming met de Controller)",
+    "Klantscherm: adres en debiteurnummer zijn nu bewerkbaar (stonden al in de database maar hadden nog geen invoerveld) — nodig voor het adresblok en debiteurnummer op de factuur",
   ],
   wijzigingen: [
-    "Factuuritems-tabel: dossier-subtekst toont nu de merknaam in plaats van dienst/land, medewerker wordt getoond als initialen-tag, er is een nieuwe kolom 'Land', lange omschrijvingen breken nu netjes af, en 'Bewerken' is een icoon geworden",
-    "Factuuritem-formulier: dossiers en klantgegevens (incl. adres) staan naast elkaar, net als omschrijving en interne opmerking; bedragvelden tonen een €-teken en 'Aantal' toont altijd 1 decimaal",
-    "Alle invoervelden en knoppen hebben iets meer padding gekregen; modals hebben nu ruime padding rondom (2rem) in plaats van krap",
-    "De zijbalk (Profiel/Instellingen) blijft nu altijd in beeld, ook als de hoofdpagina lang is",
+    "De specificatie toont nu Knijff ref., Matter en Matter type als losse kolommen (was één samengevoegde 'Dossier'-kolom), met een totaalregel direct onder de kolomkoppen in plaats van onderaan",
+    "De specificatie print/exporteert nu in landscape A4",
   ],
-  bugfixes: [
-    "Landcode 'SV' werd onterecht als Sri Lanka getoond (moet El Salvador zijn, conform ISO 3166-1) — de volledige landenlijst is nagelopen en gecorrigeerd",
-    "Een factuuritem bewerken waarvan een dossier inmiddels inactief was gaf onterecht de foutmelding 'Voeg minimaal één dossier toe' bij opslaan, ook zonder wijzigingen — dossiers worden nu op dossiernummer herleid in plaats van op een lijst die alleen actieve dossiers bevat",
-  ],
+  bugfixes: [],
   bekende_beperkingen: [
-    "Het daadwerkelijk versturen van de e-mail vraagt een Resend API-key en een geverifieerd verzenddomein — zonder die configuratie wordt de PDF wel gemaakt en opgeslagen, maar niet verstuurd",
-    "Een kopie van de factuur in het Patricia-dossier hangen kan pas zodra de echte Patricia-koppeling er is (staat op de backlog)",
+    "Het daadwerkelijk versturen van de e-mail vraagt een Resend API-key en een geverifieerd verzenddomein — zonder die configuratie worden de PDF's wel gemaakt en opgeslagen, maar niet verstuurd",
+    "Matter type wordt nog steeds afgeleid uit het dossiernummer; in de praktijk kan hetzelfde dossier bij verschillende werkzaamheden een andere matter type hebben — dat is nog niet per factuurregel instelbaar",
+    "Het factuurnummer is een voorlopige, eigen Chronos-reeks — nog geen echte Accountview-koppeling",
   ],
-  gebruikersactie: null,
+  gebruikersactie:
+    "Voor bestaande klanten: adres, debiteurnummer en BTW-percentage/vermelding invullen bij Klant bewerken, anders blijven deze velden leeg op de factuur.",
 };
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;

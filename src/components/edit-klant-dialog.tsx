@@ -24,10 +24,14 @@ type Klant = {
   subtitel: string | null;
   contactpersoon_naam: string | null;
   contact_email: string | null;
+  adres: string | null;
+  accountview_debiteurnummer: string | null;
   specificatietaal: "nl" | "en";
   kantoorkosten_actief: boolean;
   kolom_externe_kosten_zichtbaar: boolean;
   verzending_toegestaan: boolean;
+  btw_percentage: number;
+  btw_vermelding: string | null;
   opmerkingen: string | null;
 };
 
@@ -90,6 +94,27 @@ export function EditKlantDialog({ klant }: { klant: Klant }) {
             </div>
           </div>
 
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="adres">Adres (voor op de factuur)</Label>
+              <Textarea
+                id="adres"
+                name="adres"
+                rows={3}
+                defaultValue={klant.adres ?? ""}
+                placeholder={"T.a.v. ...\nStraat en huisnummer\nPostcode en plaats"}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="accountview_debiteurnummer">Debiteurnummer</Label>
+              <Input
+                id="accountview_debiteurnummer"
+                name="accountview_debiteurnummer"
+                defaultValue={klant.accountview_debiteurnummer ?? ""}
+              />
+            </div>
+          </div>
+
           <div className="flex flex-col gap-2">
             <Label htmlFor="specificatietaal">Taal factuur/specificatie</Label>
             <div className="relative">
@@ -132,6 +157,31 @@ export function EditKlantDialog({ klant }: { klant: Klant }) {
             <input type="hidden" name="verzending_toegestaan" value={verzendingToegestaan ? "on" : ""} />
             Facturen per e-mail versturen (uitzetten als de klant een eigen billing-systeem heeft)
           </label>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="btw_percentage">BTW-percentage</Label>
+              <Input
+                id="btw_percentage"
+                name="btw_percentage"
+                type="number"
+                step="0.01"
+                min="0"
+                defaultValue={klant.btw_percentage}
+                required
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="btw_vermelding">Wettelijke vermelding bij afwijkend regime (optioneel)</Label>
+              <Textarea
+                id="btw_vermelding"
+                name="btw_vermelding"
+                rows={2}
+                defaultValue={klant.btw_vermelding ?? ""}
+                placeholder="Bv. bij 0% verlegd of export — zelf/met de Controller te bepalen tekst."
+              />
+            </div>
+          </div>
 
           <div className="flex flex-col gap-2">
             <Label htmlFor="opmerkingen">Opmerkingen (optioneel, intern)</Label>
