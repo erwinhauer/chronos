@@ -6,20 +6,22 @@ import { createClient } from "@supabase/supabase-js";
 
 // Vóór elke commit bijwerken met de wijzigingen van die release.
 const CHANGELOG_ENTRY = {
-  versienummer: "0.14.1",
-  releasedatum: "2026-08-21",
-  titel: "Kapotte 'Download PDF'-knop verwijderd",
-  nieuwe_functies: [],
-  wijzigingen: [],
-  bugfixes: [
-    "De 'Download PDF'-knop op de factuurpagina drukte de hele webpagina af via de browser-printfunctie, wat de factuur in het verkeerde formaat (landscape i.p.v. portrait) zette en tekst in de specificatie liet wegvallen — deze knop is verwijderd; 'Download factuur (PDF)' en 'Download specificatie (PDF)' gebruikten altijd al de juiste, correct opgemaakte PDF's en zijn hierdoor niet geraakt",
+  versienummer: "0.15.0",
+  releasedatum: "2026-08-22",
+  titel: "Klanten uit HubSpot importeren (tijdelijk, tot Patricia werkt)",
+  nieuwe_functies: [
+    "Instellingen → HubSpot (beheerder): zoek een bedrijf op naam in HubSpot en importeer het één voor één als klant — bestaande klanten worden nooit overschreven (alleen een leeg adresveld wordt aangevuld). Vereist de omgevingsvariabele HUBSPOT_ACCESS_TOKEN (een HubSpot Private App-token met scope crm.objects.companies.read).",
   ],
+  wijzigingen: [],
+  bugfixes: [],
   bekende_beperkingen: [
     "Het daadwerkelijk versturen van de e-mail vraagt een Resend API-key en een geverifieerd verzenddomein — zonder die configuratie worden de PDF's wel gemaakt en opgeslagen, maar niet verstuurd",
     "Matter type wordt nog steeds afgeleid uit het dossiernummer; in de praktijk kan hetzelfde dossier bij verschillende werkzaamheden een andere matter type hebben — dat is nog niet per factuurregel instelbaar",
     "Het factuurnummer is een voorlopige, eigen Chronos-reeks — nog geen echte Accountview-koppeling",
+    "HubSpot-import haalt alleen naam en adres op (Companies hebben geen contactpersoon-veld) — contactpersoon en e-mailadres vul je na import zelf in bij Klant bewerken",
   ],
-  gebruikersactie: null,
+  gebruikersactie:
+    "Voor de HubSpot-import: zelf een HubSpot Private App-token aanmaken en instellen als HUBSPOT_ACCESS_TOKEN (lokaal en/of in Vercel).",
 };
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;

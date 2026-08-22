@@ -6,6 +6,7 @@ import { GebruikersTab } from "@/components/instellingen/gebruikers-tab";
 import { TeamsTab } from "@/components/instellingen/teams-tab";
 import { ChangelogTab } from "@/components/instellingen/changelog-tab";
 import { LandenTab } from "@/components/instellingen/landen-tab";
+import { HubspotTab } from "@/components/instellingen/hubspot-tab";
 import type { UserRole } from "@/lib/supabase/types";
 
 export default async function InstellingenPage() {
@@ -58,6 +59,7 @@ export default async function InstellingenPage() {
           <TabsTrigger value="gebruikers">Gebruikers</TabsTrigger>
           <TabsTrigger value="teams">Teams</TabsTrigger>
           <TabsTrigger value="landen">Landen</TabsTrigger>
+          <TabsTrigger value="hubspot">HubSpot</TabsTrigger>
           <TabsTrigger value="changelog">Changelog</TabsTrigger>
         </TabsList>
         <TabsContent value="gebruikers">
@@ -79,6 +81,9 @@ export default async function InstellingenPage() {
         </TabsContent>
         <TabsContent value="landen">
           <LandenTab landen={landen ?? []} />
+        </TabsContent>
+        <TabsContent value="hubspot">
+          <HubspotTab />
         </TabsContent>
         <TabsContent value="changelog">
           <ChangelogTab entries={changelog ?? []} />
