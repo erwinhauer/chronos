@@ -1,7 +1,7 @@
 import { Plus, Receipt } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { euro, isNogTeFactureren, regelbedrag } from "@/lib/factuurbedragen";
-import { FactuurGroepenLijst, type FactuurGroepSamenvatting } from "@/components/factuur-groepen-lijst";
+import { FactuurGroepenTabel, type FactuurGroepSamenvatting } from "@/components/factuur-groepen-tabel";
 import { LinkButton } from "@/components/link-button";
 import { StatIcon } from "@/components/stat-icon";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,7 +11,7 @@ export default async function FactuuritemsPage() {
 
   const { data: items } = await supabase
     .from("factuuritems")
-    .select("id, klant_id, honorarium, externe_kosten, korting, status, declarabel, klanten(naam)")
+    .select("id, klant_id, datum, honorarium, externe_kosten, korting, status, declarabel, klanten(naam)")
     .eq("status", "aangemaakt")
     .order("datum", { ascending: false });
 
@@ -22,10 +22,12 @@ export default async function FactuuritemsPage() {
       klantId: item.klant_id,
       klantNaam,
       aantalItems: 0,
+      oudsteDatum: item.datum,
       bedrag: 0,
     };
     bestaand.aantalItems += 1;
     bestaand.bedrag += regelbedrag(item);
+    if (item.datum < bestaand.oudsteDatum) bestaand.oudsteDatum = item.datum;
     groepenMap.set(item.klant_id, bestaand);
   }
   const groepen = Array.from(groepenMap.values()).sort((a, b) => a.klantNaam.localeCompare(b.klantNaam));
@@ -59,7 +61,7 @@ export default async function FactuuritemsPage() {
         </CardContent>
       </Card>
 
-      <FactuurGroepenLijst groepen={groepen} />
+      <FactuurGroepenTabel groepen={groepen} />
     </div>
   );
 }

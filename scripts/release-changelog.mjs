@@ -6,13 +6,13 @@ import { createClient } from "@supabase/supabase-js";
 
 // Vóór elke commit bijwerken met de wijzigingen van die release.
 const CHANGELOG_ENTRY = {
-  versienummer: "0.15.0",
+  versienummer: "0.15.1",
   releasedatum: "2026-08-22",
-  titel: "Klanten uit HubSpot importeren (tijdelijk, tot Patricia werkt)",
-  nieuwe_functies: [
-    "Instellingen → HubSpot (beheerder): zoek een bedrijf op naam in HubSpot en importeer het één voor één als klant — bestaande klanten worden nooit overschreven (alleen een leeg adresveld wordt aangevuld). Vereist de omgevingsvariabele HUBSPOT_ACCESS_TOKEN (een HubSpot Private App-token met scope crm.objects.companies.read).",
+  titel: "Factuuritems-overzicht als sorteerbare tabel",
+  nieuwe_functies: [],
+  wijzigingen: [
+    "Het factuuritems-overzicht (per klant) is nu een gewone tabel met kolommen Klant, Aantal factuuritems, Oudste item en Bedrag — elke kolom is sorteerbaar, en blijft doorzoekbaar op klantnaam zoals voorheen",
   ],
-  wijzigingen: [],
   bugfixes: [],
   bekende_beperkingen: [
     "Het daadwerkelijk versturen van de e-mail vraagt een Resend API-key en een geverifieerd verzenddomein — zonder die configuratie worden de PDF's wel gemaakt en opgeslagen, maar niet verstuurd",
@@ -20,8 +20,7 @@ const CHANGELOG_ENTRY = {
     "Het factuurnummer is een voorlopige, eigen Chronos-reeks — nog geen echte Accountview-koppeling",
     "HubSpot-import haalt alleen naam en adres op (Companies hebben geen contactpersoon-veld) — contactpersoon en e-mailadres vul je na import zelf in bij Klant bewerken",
   ],
-  gebruikersactie:
-    "Voor de HubSpot-import: zelf een HubSpot Private App-token aanmaken en instellen als HUBSPOT_ACCESS_TOKEN (lokaal en/of in Vercel).",
+  gebruikersactie: null,
 };
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
