@@ -62,3 +62,9 @@ export function berekenFactuurtotalen(items: FactuurRegelVoorTotalen[], kantoork
 export function berekenBtw(totaalBedrag: number, btwPercentage: number) {
   return round2(totaalBedrag * (btwPercentage / 100));
 }
+
+// Tijdelijke placeholder tot Finance een echte netto-omzet per regel kan afleiden in Chronos.
+export const NETTO_OMZET_PLACEHOLDER_RATIO = 0.67;
+export function nettoOmzetPlaceholder(bruto: number) {
+  return round2(bruto * NETTO_OMZET_PLACEHOLDER_RATIO);
+}

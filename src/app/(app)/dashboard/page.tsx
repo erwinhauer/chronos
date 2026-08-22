@@ -1,15 +1,17 @@
-import { Users, Receipt, Plus, ArrowUpRight } from "lucide-react";
+import { Users, Receipt, Plus, ArrowUpRight, TrendingUp, TrendingDown } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
-import { euro, isGefactureerd, isNogTeFactureren, regelbedrag } from "@/lib/factuurbedragen";
+import { euro, isGefactureerd, isNogTeFactureren, regelbedrag, nettoOmzetPlaceholder } from "@/lib/factuurbedragen";
 import { parsePeriodeKey, periodeLabel, inPeriode } from "@/lib/omzet-periode";
 import { OmzetGrafiek, type OmzetRij } from "@/components/omzet-grafiek";
 import { PeriodeSelect } from "@/components/periode-select";
 import { JaarSelect } from "@/components/jaar-select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import { SegmentedProgress } from "@/components/segmented-progress";
 import { StatIcon } from "@/components/stat-icon";
 import { LinkButton } from "@/components/link-button";
+import { AvatarInitials } from "@/components/ui/avatar-initials";
+import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const MAANDEN = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
@@ -239,6 +241,65 @@ export default async function DashboardPage({
     .filter((r) => r.bedrag > 0)
     .sort((a, b) => b.bedrag - a.bedrag);
 
+  // Omzet vs. target, bedrijfsbreed — alleen zinvol voor rollen die alle teams zien.
+  // "ditJaar" is hier precies de juiste bron: bedrijfsbreed, gefactureerd, en al op het
+  // volledige kalenderjaar gefilterd (los van de periode-select hierboven).
+  const jaarBrutoOmzet = ditJaar.reduce((sum, r) => sum + regelbedrag(r), 0);
+  const jaarNettoOmzet = nettoOmzetPlaceholder(jaarBrutoOmzet);
+
+  const alleTeamdoelen = teamdoelen ?? [];
+  const targetBrutoJaar = alleTeamdoelen.reduce((sum, d) => sum + d.bruto_bedrag, 0);
+  const teamsMetNettoDoel = alleTeamdoelen.filter((d) => d.netto_bedrag !== null);
+  const targetNettoJaar = teamsMetNettoDoel.reduce((sum, d) => sum + (d.netto_bedrag ?? 0), 0);
+  const ontbrekendeNettoDoelen = alleTeamdoelen.length - teamsMetNettoDoel.length;
+  const maandTargetBruto = targetBrutoJaar / 12;
+  const maandTargetNetto = targetNettoJaar / 12;
+
+  const deltaBrutoJaar = jaarBrutoOmzet - targetBrutoJaar;
+  const deltaBrutoJaarPct = targetBrutoJaar > 0 ? (deltaBrutoJaar / targetBrutoJaar) * 100 : 0;
+
+  function verschilEnProcent(omzet: number, target: number) {
+    const verschil = omzet - target;
+    const procent = target > 0 ? (verschil / target) * 100 : 0;
+    return { verschil, procent };
+  }
+
+  function procentLabel(p: number) {
+    return `${p > 0 ? "+" : ""}${p.toFixed(1)}%`;
+  }
+
+  const omzetPerMaandTabel = Array.from({ length: 12 }, (_, maand) => {
+    const brutoMaand = ditJaar
+      .filter((r) => new Date(r.datum).getMonth() === maand)
+      .reduce((sum, r) => sum + regelbedrag(r), 0);
+    const nettoMaand = nettoOmzetPlaceholder(brutoMaand);
+    return {
+      label: periodeLabel({ type: "maand", maand }),
+      bruto: brutoMaand,
+      netto: nettoMaand,
+      ...{ brutoVs: verschilEnProcent(brutoMaand, maandTargetBruto) },
+      ...{ nettoVs: verschilEnProcent(nettoMaand, maandTargetNetto) },
+    };
+  });
+
+  const omzetTotaalRij = {
+    bruto: jaarBrutoOmzet,
+    netto: jaarNettoOmzet,
+    brutoVs: verschilEnProcent(jaarBrutoOmzet, targetBrutoJaar),
+    nettoVs: verschilEnProcent(jaarNettoOmzet, targetNettoJaar),
+  };
+
+  const isLopendJaar = gekozenJaar === echtHuidigJaar;
+  const maandenVerstreken = new Date().getMonth() + 1;
+  const extrapolatieBruto = isLopendJaar ? (jaarBrutoOmzet / maandenVerstreken) * 12 : 0;
+  const extrapolatieNetto = nettoOmzetPlaceholder(extrapolatieBruto);
+  const omzetExtrapolatieRij = {
+    bruto: extrapolatieBruto,
+    netto: extrapolatieNetto,
+    brutoVs: verschilEnProcent(extrapolatieBruto, targetBrutoJaar),
+    nettoVs: verschilEnProcent(extrapolatieNetto, targetNettoJaar),
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -302,6 +363,145 @@ export default async function DashboardPage({
         </Card>
       </div>
 
+      {zietAlleTeams && (
+        <div className="flex flex-col gap-6">
+          <h3 className="text-lg font-semibold tracking-tight">Omzet vs. target · {gekozenJaar}</h3>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className="relative overflow-hidden rounded-2xl bg-primary p-6 text-primary-foreground">
+              <div
+                className="pointer-events-none absolute -right-14 -top-14 h-48 w-48 rounded-full opacity-20"
+                style={{ background: "radial-gradient(circle, var(--coral) 0%, transparent 70%)" }}
+              />
+              <div
+                className="pointer-events-none absolute -bottom-16 -left-10 h-40 w-40 rounded-full opacity-10"
+                style={{ background: "radial-gradient(circle, var(--coral) 0%, transparent 70%)" }}
+              />
+              <div className="relative z-10 flex items-start justify-between gap-4">
+                <p className="text-xs font-medium tracking-wide text-primary-foreground/60 uppercase">
+                  Gerealiseerde omzet · {gekozenJaar}
+                </p>
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-foreground/10">
+                  <ArrowUpRight className="h-4 w-4" />
+                </span>
+              </div>
+              <div className="relative z-10 mt-5 text-3xl font-semibold tabular-figures">{euro(jaarBrutoOmzet)}</div>
+              <p className="relative z-10 mt-1 text-sm text-primary-foreground/60 tabular-figures">
+                Netto (placeholder 67%): {euro(jaarNettoOmzet)}
+              </p>
+              <div
+                className={`relative z-10 mt-4 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium ${
+                  deltaBrutoJaar >= 0 ? "bg-success/15 text-success" : "bg-warning/15 text-warning"
+                }`}
+              >
+                {deltaBrutoJaar >= 0 ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+                {euro(deltaBrutoJaar)} ({procentLabel(deltaBrutoJaarPct)}) t.o.v. target
+              </div>
+            </div>
+
+            <Card className="rounded-2xl">
+              <CardHeader>
+                <CardTitle className="text-base">Target · {gekozenJaar}</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium">Brutotarget</span>
+                  <span className="tabular-figures text-muted-foreground">{euro(targetBrutoJaar)}</span>
+                </div>
+                <SegmentedProgress value={targetBrutoJaar > 0 ? (jaarBrutoOmzet / targetBrutoJaar) * 100 : 0} />
+                <p className="text-xs text-muted-foreground">Per maand: {euro(maandTargetBruto)}</p>
+
+                <div className="border-t border-border pt-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">Nettotarget</span>
+                    <span className="tabular-figures text-muted-foreground">{euro(targetNettoJaar)}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Per maand: {euro(maandTargetNetto)}
+                    {ontbrekendeNettoDoelen > 0 &&
+                      ` — nettotarget van ${ontbrekendeNettoDoelen} van ${alleTeamdoelen.length} team(s) nog niet ingesteld`}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="rounded-2xl">
+            <CardHeader>
+              <CardTitle className="text-base">Omzet per maand · {gekozenJaar}</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Maand</TableHead>
+                    <TableHead className="text-right">Bruto-omzet</TableHead>
+                    <TableHead className="text-right">Verschil</TableHead>
+                    <TableHead className="text-right">%</TableHead>
+                    <TableHead className="text-right">Netto-omzet</TableHead>
+                    <TableHead className="text-right">Verschil</TableHead>
+                    <TableHead className="text-right">%</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {omzetPerMaandTabel.map((m) => (
+                    <TableRow key={m.label}>
+                      <TableCell>{m.label}</TableCell>
+                      <TableCell className="text-right tabular-figures">{euro(m.bruto)}</TableCell>
+                      <TableCell className="text-right tabular-figures text-muted-foreground">
+                        {euro(m.brutoVs.verschil)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-figures text-muted-foreground">
+                        {procentLabel(m.brutoVs.procent)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-figures">{euro(m.netto)}</TableCell>
+                      <TableCell className="text-right tabular-figures text-muted-foreground">
+                        {euro(m.nettoVs.verschil)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-figures text-muted-foreground">
+                        {procentLabel(m.nettoVs.procent)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow className="font-semibold">
+                    <TableCell>Totaal</TableCell>
+                    <TableCell className="text-right tabular-figures">{euro(omzetTotaalRij.bruto)}</TableCell>
+                    <TableCell className="text-right tabular-figures">{euro(omzetTotaalRij.brutoVs.verschil)}</TableCell>
+                    <TableCell className="text-right tabular-figures">
+                      {procentLabel(omzetTotaalRij.brutoVs.procent)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-figures">{euro(omzetTotaalRij.netto)}</TableCell>
+                    <TableCell className="text-right tabular-figures">{euro(omzetTotaalRij.nettoVs.verschil)}</TableCell>
+                    <TableCell className="text-right tabular-figures">
+                      {procentLabel(omzetTotaalRij.nettoVs.procent)}
+                    </TableCell>
+                  </TableRow>
+                  {isLopendJaar && (
+                    <TableRow className="italic text-success">
+                      <TableCell>Extrapolatie (heel jaar)</TableCell>
+                      <TableCell className="text-right tabular-figures">{euro(omzetExtrapolatieRij.bruto)}</TableCell>
+                      <TableCell className="text-right tabular-figures">
+                        {euro(omzetExtrapolatieRij.brutoVs.verschil)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-figures">
+                        {procentLabel(omzetExtrapolatieRij.brutoVs.procent)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-figures">{euro(omzetExtrapolatieRij.netto)}</TableCell>
+                      <TableCell className="text-right tabular-figures">
+                        {euro(omzetExtrapolatieRij.nettoVs.verschil)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-figures">
+                        {procentLabel(omzetExtrapolatieRij.nettoVs.procent)}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {zietAlleTeams && omzetPerMedewerker.length > 0 && (
         <Card className="rounded-2xl">
           <CardHeader>
@@ -348,7 +548,7 @@ export default async function DashboardPage({
                       {euro(t.gefactureerdDitJaar)} / {euro(t.brutoDoel)}
                     </span>
                   </div>
-                  <Progress value={t.brutoDoel > 0 ? (t.gefactureerdDitJaar / t.brutoDoel) * 100 : 0} />
+                  <SegmentedProgress value={t.brutoDoel > 0 ? (t.gefactureerdDitJaar / t.brutoDoel) * 100 : 0} />
                 </div>
                 <p className="text-sm text-muted-foreground">
                   Nettotarget {gekozenJaar}: {t.nettoDoel !== null ? euro(t.nettoDoel) : "nog niet ingesteld"}
@@ -369,47 +569,30 @@ export default async function DashboardPage({
                   </div>
                 </div>
 
-                <div className="overflow-hidden rounded-lg border border-border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Teamlid</TableHead>
-                        <TableHead className="text-right">Bruto-omzet</TableHead>
-                        <TableHead className="text-right">Uren-omzet</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {t.teamlidRijen.map((lid) => (
-                        <TableRow key={lid.naam}>
-                          <TableCell>{lid.naam}</TableCell>
-                          <TableCell className="text-right tabular-figures">{euro(lid.bruto)}</TableCell>
-                          <TableCell className="text-right tabular-figures">{euro(lid.uren)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                <div className="flex flex-col gap-1 rounded-lg border border-border p-2">
+                  {t.teamlidRijen.map((lid) => (
+                    <div key={lid.naam} className="flex items-center gap-3 rounded-md p-2">
+                      <AvatarInitials naam={lid.naam} />
+                      <span className="flex-1 text-sm font-medium">{lid.naam}</span>
+                      <div className="text-right">
+                        <p className="text-sm font-medium tabular-figures">{euro(lid.bruto)}</p>
+                        <p className="text-xs text-muted-foreground tabular-figures">{euro(lid.uren)} uren</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
 
                 <div className="border-t border-border pt-4">
                   <p className="mb-2 text-sm text-muted-foreground">Top 3 klanten · {periodeLabel(periode)}</p>
                   {t.top3Klanten.length > 0 ? (
-                    <div className="overflow-hidden rounded-lg border border-border">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Klant</TableHead>
-                            <TableHead className="text-right">Omzet</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {t.top3Klanten.map((k) => (
-                            <TableRow key={k.naam}>
-                              <TableCell>{k.naam}</TableCell>
-                              <TableCell className="text-right tabular-figures">{euro(k.omzet)}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                    <div className="flex flex-col gap-1 rounded-lg border border-border p-2">
+                      {t.top3Klanten.map((k) => (
+                        <div key={k.naam} className="flex items-center gap-3 rounded-md p-2">
+                          <AvatarInitials naam={k.naam} />
+                          <span className="flex-1 text-sm font-medium">{k.naam}</span>
+                          <span className="text-sm font-medium tabular-figures">{euro(k.omzet)}</span>
+                        </div>
+                      ))}
                     </div>
                   ) : (
                     <p className="text-sm text-muted-foreground">Geen omzet in deze periode.</p>
@@ -440,30 +623,23 @@ export default async function DashboardPage({
         <CardHeader>
           <CardTitle className="text-base">Verkochte diensten · {periodeLabel(periode)}</CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="flex flex-col gap-1">
           {dienstenTabel.length === 0 ? (
-            <p className="p-6 text-center text-sm text-muted-foreground">Nog geen omzet in deze periode.</p>
+            <p className="py-6 text-center text-sm text-muted-foreground">Nog geen omzet in deze periode.</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Dienst</TableHead>
-                  <TableHead className="text-right">Aantal</TableHead>
-                  <TableHead className="text-right">Bruto-omzet</TableHead>
-                  <TableHead className="text-right">Uren-omzet</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {dienstenTabel.map((d) => (
-                  <TableRow key={d.dienst}>
-                    <TableCell>{d.dienst}</TableCell>
-                    <TableCell className="text-right tabular-figures">{d.aantal}</TableCell>
-                    <TableCell className="text-right tabular-figures">{euro(d.omzet)}</TableCell>
-                    <TableCell className="text-right tabular-figures">{euro(d.uren)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            dienstenTabel.map((d) => (
+              <div key={d.dienst} className="flex items-center gap-3 rounded-md p-2">
+                <AvatarInitials naam={d.dienst} />
+                <div className="flex-1">
+                  <p className="text-sm font-medium">{d.dienst}</p>
+                  <p className="text-xs text-muted-foreground">{d.aantal} factuuritems</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-medium tabular-figures">{euro(d.omzet)}</p>
+                  <p className="text-xs text-muted-foreground tabular-figures">{euro(d.uren)} uren</p>
+                </div>
+              </div>
+            ))
           )}
         </CardContent>
       </Card>
@@ -472,26 +648,18 @@ export default async function DashboardPage({
         <CardHeader>
           <CardTitle className="text-base">Nog te factureren per klant · {periodeLabel(periode)}</CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="flex flex-col gap-1">
           {nogTeFacturenTabel.length === 0 ? (
-            <p className="p-6 text-center text-sm text-muted-foreground">Niets nog te factureren.</p>
+            <p className="py-6 text-center text-sm text-muted-foreground">Niets nog te factureren.</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Klant</TableHead>
-                  <TableHead className="text-right">Nog te factureren</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {nogTeFacturenTabel.map((r) => (
-                  <TableRow key={r.naam}>
-                    <TableCell>{r.naam}</TableCell>
-                    <TableCell className="text-right tabular-figures text-warning">{euro(r.bedrag)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            nogTeFacturenTabel.map((r) => (
+              <div key={r.naam} className="flex items-center gap-3 rounded-md p-2">
+                <AvatarInitials naam={r.naam} />
+                <span className="flex-1 text-sm font-medium">{r.naam}</span>
+                <span className="text-sm font-medium tabular-figures text-warning">{euro(r.bedrag)}</span>
+                <Badge variant="warning">Openstaand</Badge>
+              </div>
+            ))
           )}
         </CardContent>
       </Card>

@@ -6,15 +6,18 @@ import { createClient } from "@supabase/supabase-js";
 
 // Vóór elke commit bijwerken met de wijzigingen van die release.
 const CHANGELOG_ENTRY = {
-  versienummer: "0.15.1",
+  versienummer: "0.16.0",
   releasedatum: "2026-08-22",
-  titel: "Factuuritems-overzicht als sorteerbare tabel",
-  nieuwe_functies: [],
+  titel: "Omzet vs. target op het dashboard, en een frissere dashboard-stijl",
+  nieuwe_functies: [
+    "Nieuwe dashboardsectie 'Omzet vs. target' (voor finance/beheerder/directie): gerealiseerde bruto- en netto-omzet dit jaar, het bedrijfsbrede target (optelsom van de teamtargets) met voortgangsbalk, en een maandtabel met verschil/percentage t.o.v. het maandtarget, een totaalrij en — voor het lopende jaar — een extrapolatie naar het hele jaar",
+  ],
   wijzigingen: [
-    "Het factuuritems-overzicht (per klant) is nu een gewone tabel met kolommen Klant, Aantal factuuritems, Oudste item en Bedrag — elke kolom is sorteerbaar, en blijft doorzoekbaar op klantnaam zoals voorheen",
+    "Dashboard-restyle: teamleden en top-3-klanten in de teamkaarten, de verkochte diensten en de nog-te-factureren-lijst tonen nu gekleurde avatar-initialen in plaats van kale tabellen, en de brutotarget-voortgangsbalk is een getikte balk geworden",
   ],
   bugfixes: [],
   bekende_beperkingen: [
+    "Netto-omzet is nog een tijdelijke placeholder (67% van de bruto-omzet) — de echte netto-omzet per regel kan nog niet uit Chronos worden afgeleid, dat rekent Finance vooralsnog zelf maandelijks uit",
     "Het daadwerkelijk versturen van de e-mail vraagt een Resend API-key en een geverifieerd verzenddomein — zonder die configuratie worden de PDF's wel gemaakt en opgeslagen, maar niet verstuurd",
     "Matter type wordt nog steeds afgeleid uit het dossiernummer; in de praktijk kan hetzelfde dossier bij verschillende werkzaamheden een andere matter type hebben — dat is nog niet per factuurregel instelbaar",
     "Het factuurnummer is een voorlopige, eigen Chronos-reeks — nog geen echte Accountview-koppeling",
