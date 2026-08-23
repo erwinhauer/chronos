@@ -8,6 +8,7 @@ import { STATUS_LABEL, euro, isGefactureerd, isNogTeFactureren, regelbedrag } fr
 import { EditKlantDialog } from "@/components/edit-klant-dialog";
 import { ProjectenKaart } from "@/components/projecten-kaart";
 import { StatIcon } from "@/components/stat-icon";
+import { HeroTile } from "@/components/hero-tile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -86,15 +87,7 @@ export default async function KlantDetailPage({ params }: { params: Promise<{ id
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="flex items-center gap-4">
-            <StatIcon icon={PiggyBank} tint="success" />
-            <div>
-              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Gefactureerd</p>
-              <div className="text-2xl font-semibold tabular-figures text-success">{euro(gefactureerd)}</div>
-            </div>
-          </CardContent>
-        </Card>
+        <HeroTile label="Gefactureerd" value={euro(gefactureerd)} icon={PiggyBank} />
       </div>
 
       <Card>

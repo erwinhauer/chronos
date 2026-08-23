@@ -7,6 +7,7 @@ import { euro } from "@/lib/factuurbedragen";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { AvatarInitials } from "@/components/ui/avatar-initials";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { SortableTh } from "@/components/sortable-th";
 import { sortRows, type SortRichting } from "@/lib/table-utils";
@@ -92,9 +93,12 @@ export function FactuurGroepenTabel({ groepen }: { groepen: FactuurGroepSamenvat
                 zichtbaar.map((g) => (
                   <TableRow key={g.klantId}>
                     <TableCell className="font-medium">
-                      <Link href={`/factuuritems/klant/${g.klantId}`} className="hover:underline">
-                        {g.klantNaam}
-                      </Link>
+                      <div className="flex items-center gap-3">
+                        <AvatarInitials naam={g.klantNaam} />
+                        <Link href={`/factuuritems/klant/${g.klantId}`} className="hover:underline">
+                          {g.klantNaam}
+                        </Link>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant="secondary">{g.aantalItems}</Badge>

@@ -13,6 +13,7 @@
   --color-brand-foreground: var(--brand-foreground);
   --color-coral: var(--coral);
   --color-coral-foreground: var(--coral-foreground);
+  --color-cool: var(--cool);
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -79,6 +80,7 @@
   --brand-foreground: oklch(0.98 0.004 260);
   --coral: #ff6368;
   --coral-foreground: #0f053a;
+  --cool: #2a78d6;
   /* Categorische grafiekreeks, dataviz-skill-gevalideerd (adjacent CVD/contrast) tegen kaartoppervlak #ffffff */
   --chart-1: #2a78d6;
   --chart-2: #eb6834;
@@ -121,6 +123,7 @@
   --brand-foreground: oklch(0.17 0.022 265);
   --coral: #ff6368;
   --coral-foreground: #0f053a;
+  --cool: #3987e5;
   /* Zelfde categorische reeks, dark-gestapte varianten, gevalideerd tegen kaartoppervlak #131823 */
   --chart-1: #3987e5;
   --chart-2: #d95926;

@@ -5,6 +5,7 @@ import { NewKlantDialog } from "@/components/new-klant-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StatusDot } from "@/components/ui/status-dot";
+import { AvatarInitials } from "@/components/ui/avatar-initials";
 import {
   Table,
   TableBody,
@@ -56,10 +57,15 @@ export default async function KlantenPage() {
                 klanten.map((k) => (
                   <TableRow key={k.id}>
                     <TableCell className="font-medium">
-                      <Link href={`/klanten/${k.id}`} className="hover:underline">
-                        {k.naam}
-                      </Link>
-                      {k.subtitel && <div className="text-xs font-normal text-muted-foreground">{k.subtitel}</div>}
+                      <div className="flex items-center gap-3">
+                        <AvatarInitials naam={k.naam} />
+                        <div>
+                          <Link href={`/klanten/${k.id}`} className="hover:underline">
+                            {k.naam}
+                          </Link>
+                          {k.subtitel && <div className="text-xs font-normal text-muted-foreground">{k.subtitel}</div>}
+                        </div>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div>{k.contactpersoon_naam ?? "—"}</div>

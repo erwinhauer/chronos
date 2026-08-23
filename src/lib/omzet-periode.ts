@@ -4,6 +4,7 @@
 
 export type Periode =
   | { type: "ytd" }
+  | { type: "mtd" }
   | { type: "jaar" }
   | { type: "maand"; maand: number } // 0-11
   | { type: "kwartaal"; kwartaal: number } // 1-4
@@ -11,6 +12,7 @@ export type Periode =
 
 const PERIODE_LABELS: Record<string, string> = {
   ytd: "Dit jaar (YTD)",
+  mtd: "Deze maand (MTD)",
   jaar: "Heel jaar",
   "maand-0": "Januari",
   "maand-1": "Februari",
@@ -34,6 +36,7 @@ const PERIODE_LABELS: Record<string, string> = {
 
 export function periodeKey(periode: Periode): string {
   if (periode.type === "ytd") return "ytd";
+  if (periode.type === "mtd") return "mtd";
   if (periode.type === "jaar") return "jaar";
   if (periode.type === "maand") return `maand-${periode.maand}`;
   if (periode.type === "kwartaal") return `kwartaal-${periode.kwartaal}`;
@@ -44,15 +47,17 @@ export function periodeLabel(periode: Periode): string {
   return PERIODE_LABELS[periodeKey(periode)] ?? "Dit jaar (YTD)";
 }
 
-export function parsePeriodeKey(key: string | undefined): Periode {
-  if (!key || key === "ytd") return { type: "ytd" };
+export function parsePeriodeKey(key: string | undefined, standaard: Periode = { type: "ytd" }): Periode {
+  if (!key) return standaard;
+  if (key === "ytd") return { type: "ytd" };
+  if (key === "mtd") return { type: "mtd" };
   if (key === "jaar") return { type: "jaar" };
   const [type, waarde] = key.split("-");
   const nummer = Number(waarde);
   if (type === "maand" && nummer >= 0 && nummer <= 11) return { type: "maand", maand: nummer };
   if (type === "kwartaal" && nummer >= 1 && nummer <= 4) return { type: "kwartaal", kwartaal: nummer };
   if (type === "halfjaar" && (nummer === 1 || nummer === 2)) return { type: "halfjaar", helft: nummer };
-  return { type: "ytd" };
+  return standaard;
 }
 
 export const ALLE_PERIODES: Periode[] = [
@@ -64,11 +69,22 @@ export const ALLE_PERIODES: Periode[] = [
   { type: "halfjaar", helft: 2 },
 ];
 
+// Beperkte periode-set voor de "omzet per medewerker"-filter — geen jaar/halfjaar nodig.
+export const MEDEWERKER_PERIODES: Periode[] = [
+  { type: "mtd" },
+  { type: "ytd" },
+  ...[1, 2, 3, 4].map((kwartaal): Periode => ({ type: "kwartaal", kwartaal })),
+  ...[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((maand): Periode => ({ type: "maand", maand })),
+];
+
 // Datumgrens (exclusief eind) voor een periode binnen een specifiek jaar. "ytd"
 // loopt tot en met vandaag; de overige periodes zijn een vaste kalendergrens.
 function periodeRange(periode: Periode, jaar: number): { start: Date; eind: Date } {
   if (periode.type === "ytd") {
     return { start: new Date(jaar, 0, 1), eind: new Date() };
+  }
+  if (periode.type === "mtd") {
+    return { start: new Date(jaar, new Date().getMonth(), 1), eind: new Date() };
   }
   if (periode.type === "jaar") {
     return { start: new Date(jaar, 0, 1), eind: new Date(jaar + 1, 0, 1) };

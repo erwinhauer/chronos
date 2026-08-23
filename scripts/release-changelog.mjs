@@ -6,18 +6,21 @@ import { createClient } from "@supabase/supabase-js";
 
 // Vóór elke commit bijwerken met de wijzigingen van die release.
 const CHANGELOG_ENTRY = {
-  versienummer: "0.16.0",
-  releasedatum: "2026-08-22",
-  titel: "Omzet vs. target op het dashboard, en een frissere dashboard-stijl",
+  versienummer: "0.17.0",
+  releasedatum: "2026-08-23",
+  titel: "Navy & Coral huisstijl, en dashboard-verfijningen",
   nieuwe_functies: [
-    "Nieuwe dashboardsectie 'Omzet vs. target' (voor finance/beheerder/directie): gerealiseerde bruto- en netto-omzet dit jaar, het bedrijfsbrede target (optelsom van de teamtargets) met voortgangsbalk, en een maandtabel met verschil/percentage t.o.v. het maandtarget, een totaalrij en — voor het lopende jaar — een extrapolatie naar het hele jaar",
+    "Dashboard: nieuwe tegel 'Diensten per land/regio' met de top 5 landen op basis van gefactureerde omzet",
+    "Dashboard: 'Omzet per medewerker · alle teams' heeft nu een eigen maand/kwartaal/YTD/MTD-filter (standaard 'Deze maand'), los van de periodeselector die de rest van de pagina stuurt",
   ],
   wijzigingen: [
-    "Dashboard-restyle: teamleden en top-3-klanten in de teamkaarten, de verkochte diensten en de nog-te-factureren-lijst tonen nu gekleurde avatar-initialen in plaats van kale tabellen, en de brutotarget-voortgangsbalk is een getikte balk geworden",
+    "Navy & Coral-huisstijl doorgevoerd: rondere kaarten in de hele app, een donkere hero-tegel voor het belangrijkste cijfer op de klantdetailpagina, en gekleurde avatar-initialen bij klantnamen in de klanten- en factuuritems-tabellen. Het Chronos-icoon zelf is ongewijzigd",
+    "Dashboard: de tegel 'Actieve klanten' is verwijderd",
   ],
   bugfixes: [],
   bekende_beperkingen: [
     "Netto-omzet is nog een tijdelijke placeholder (67% van de bruto-omzet) — de echte netto-omzet per regel kan nog niet uit Chronos worden afgeleid, dat rekent Finance vooralsnog zelf maandelijks uit",
+    "'Diensten per land/regio' is afgeleid van de landcode in het dossiernummer; factuuritems zonder (herkenbare) landcode in het dossiernummer tellen niet mee in die tegel",
     "Het daadwerkelijk versturen van de e-mail vraagt een Resend API-key en een geverifieerd verzenddomein — zonder die configuratie worden de PDF's wel gemaakt en opgeslagen, maar niet verstuurd",
     "Matter type wordt nog steeds afgeleid uit het dossiernummer; in de praktijk kan hetzelfde dossier bij verschillende werkzaamheden een andere matter type hebben — dat is nog niet per factuurregel instelbaar",
     "Het factuurnummer is een voorlopige, eigen Chronos-reeks — nog geen echte Accountview-koppeling",
