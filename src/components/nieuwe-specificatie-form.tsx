@@ -58,8 +58,6 @@ export function NieuweSpecificatieForm({
   const formRef = useRef<HTMLFormElement>(null);
   const [state, formAction, pending] = useActionState(genereerSpecificatie, initialState);
   const [toonBevestiging, setToonBevestiging] = useState(false);
-  const [start, setStart] = useState(periodeStart);
-  const [eind, setEind] = useState(periodeEind);
   const [extraKorting, setExtraKorting] = useState(0);
 
   const totalen = useMemo(
@@ -82,6 +80,8 @@ export function NieuweSpecificatieForm({
       {itemIds.map((id) => (
         <input key={id} type="hidden" name="item_ids" value={id} />
       ))}
+      <input type="hidden" name="periode_start" value={periodeStart} />
+      <input type="hidden" name="periode_eind" value={periodeEind} />
       <input type="hidden" name="extra_korting" value={extraKorting} />
 
       <Card>
@@ -89,44 +89,36 @@ export function NieuweSpecificatieForm({
           <CardTitle className="text-base">Specificatiegegevens</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-1">
+            <Label>Klant</Label>
+            <p className="text-sm font-medium">{klant.naam}</p>
+            {klant.adres && <p className="text-xs whitespace-pre-line text-muted-foreground">{klant.adres}</p>}
+          </div>
           {project && (
-            <p className="text-sm text-muted-foreground sm:col-span-2">
-              Project: {project.naam}
-              {project.po_nummer ? ` (PO ${project.po_nummer})` : ""}
-            </p>
+            <div className="flex flex-col gap-1">
+              <Label>Project</Label>
+              <p className="text-sm font-medium">
+                {project.naam}
+                {project.po_nummer ? ` (PO ${project.po_nummer})` : ""}
+              </p>
+            </div>
           )}
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="periode_start">Periode start</Label>
-            <Input
-              id="periode_start"
-              name="periode_start"
-              type="date"
-              value={start}
-              onChange={(e) => setStart(e.target.value)}
-              required
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="periode_eind">Periode eind</Label>
-            <Input
-              id="periode_eind"
-              name="periode_eind"
-              type="date"
-              value={eind}
-              onChange={(e) => setEind(e.target.value)}
-              required
-            />
-          </div>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 sm:col-span-2">
             <Label htmlFor="extra_korting_input">Extra korting op deze specificatie (optioneel)</Label>
-            <Input
-              id="extra_korting_input"
-              type="number"
-              step="0.01"
-              min="0"
-              value={extraKorting}
-              onChange={(e) => setExtraKorting(Number(e.target.value))}
-            />
+            <div className="relative sm:w-64">
+              <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                €
+              </span>
+              <Input
+                id="extra_korting_input"
+                type="number"
+                step="0.01"
+                min="0"
+                className="pl-6"
+                value={extraKorting}
+                onChange={(e) => setExtraKorting(Number(e.target.value))}
+              />
+            </div>
             {extraKortingTeHoog && (
               <p className="text-xs font-medium text-destructive">
                 Extra korting kan niet groter zijn dan het bedrag van de specificatie.
@@ -145,8 +137,8 @@ export function NieuweSpecificatieForm({
             <FactuurSpecificatie
               klant={klant}
               valuta={klant.valuta}
-              periodeStart={start}
-              periodeEind={eind}
+              periodeStart={periodeStart}
+              periodeEind={periodeEind}
               items={items}
               totalen={totalen}
               landen={landen}

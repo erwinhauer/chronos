@@ -6,15 +6,20 @@ import { createClient } from "@supabase/supabase-js";
 
 // Vóór elke commit bijwerken met de wijzigingen van die release.
 const CHANGELOG_ENTRY = {
-  versienummer: "0.18.0",
-  releasedatum: "2026-08-23",
-  titel: "Facturatie terug naar de backlog — alleen nog specificaties",
+  versienummer: "0.19.0",
+  releasedatum: "2026-08-24",
+  titel: "Factuuritems per klant verfijnd, bureaukosten op de specificatie, landnamen compleet",
   nieuwe_functies: [
-    "Nieuw factuuritem: dossiernummer(s) typ je nu vrij in, en de klant kies je zelf via een zoekveld — inclusief direct een nieuwe klant aanmaken als die er nog niet is",
+    "Bij de factuuritems van een klant staat nu een knop 'Nieuw factuuritem' om er direct voor die klant een aan te maken",
+    "Een teamleider (of beheerder) kan bij het bewerken van een factuuritem nu ook de medewerker wijzigen die het heeft aangemaakt",
   ],
   wijzigingen: [
-    "Het daadwerkelijk aanmaken en versturen van een factuur is verwijderd — Chronos genereert vanaf nu alleen nog de specificatie (html + pdf) van de geselecteerde factuuritems; het factureren zelf gebeurt daarna handmatig, buiten Chronos om. De knop 'Factureren' is 'Specificatie maken' geworden en leeft nu onder /specificaties",
-    "Klant aanmaken staat niet langer alleen open voor beheerders — iedereen die factuuritems mag invoeren kan er nu ook een nieuwe klant bij aanmaken",
+    "Na het opslaan of sluiten van een factuuritem kom je weer terug op de factuuritems van die klant, niet meer op de klantenlijst",
+    "Alle 248 ISO-landcodes leveren nu de juiste landnaam op in het dossiernummer-veld (bijv. OM → Oman) — voorheen kende de live-preview er maar 65",
+    "Geen avatar meer per klant in het factuuritems-overzicht",
+    "De specificatie toont nu ook de bureaukosten in het totalenblok, naast honorarium, korting en de eindsom",
+    "Nieuwe specificatie: periode start/eind zijn vervangen door de klantgegevens en het projectnummer; 'extra korting' is een numeriek veld met een €-teken; de titel is 'Specificatie factuur' (was 'Specificatie maandfactuur'); de tabel past nu zonder scrollbalk, ook met alle kolommen aan",
+    "Dashboard: de omzet-per-maand-tabel kleurt rood/groen op teken t.o.v. het target, en de teamkaarten tonen icoon-tegels net als de rest van het dashboard",
   ],
   bugfixes: [],
   bekende_beperkingen: [

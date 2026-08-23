@@ -1,4 +1,4 @@
-import { Receipt, Plus, ArrowUpRight, TrendingUp, TrendingDown } from "lucide-react";
+import { Receipt, Plus, ArrowUpRight, TrendingUp, TrendingDown, Clock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { euro, isGefactureerd, isNogTeFactureren, regelbedrag, nettoOmzetPlaceholder } from "@/lib/factuurbedragen";
@@ -435,17 +435,25 @@ export default async function DashboardPage({
                     <TableRow key={m.label}>
                       <TableCell>{m.label}</TableCell>
                       <TableCell className="text-right tabular-figures">{euro(m.bruto)}</TableCell>
-                      <TableCell className="text-right tabular-figures text-muted-foreground">
+                      <TableCell
+                        className={`text-right tabular-figures ${m.brutoVs.verschil >= 0 ? "text-success" : "text-warning"}`}
+                      >
                         {euro(m.brutoVs.verschil)}
                       </TableCell>
-                      <TableCell className="text-right tabular-figures text-muted-foreground">
+                      <TableCell
+                        className={`text-right tabular-figures ${m.brutoVs.verschil >= 0 ? "text-success" : "text-warning"}`}
+                      >
                         {procentLabel(m.brutoVs.procent)}
                       </TableCell>
                       <TableCell className="text-right tabular-figures">{euro(m.netto)}</TableCell>
-                      <TableCell className="text-right tabular-figures text-muted-foreground">
+                      <TableCell
+                        className={`text-right tabular-figures ${m.nettoVs.verschil >= 0 ? "text-success" : "text-warning"}`}
+                      >
                         {euro(m.nettoVs.verschil)}
                       </TableCell>
-                      <TableCell className="text-right tabular-figures text-muted-foreground">
+                      <TableCell
+                        className={`text-right tabular-figures ${m.nettoVs.verschil >= 0 ? "text-success" : "text-warning"}`}
+                      >
                         {procentLabel(m.nettoVs.procent)}
                       </TableCell>
                     </TableRow>
@@ -551,17 +559,23 @@ export default async function DashboardPage({
                 </p>
 
                 <div className="grid gap-4 border-t border-border pt-4 sm:grid-cols-2">
-                  <div>
-                    <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                      Bruto-omzet team · {periodeLabel(periode)}
-                    </p>
-                    <p className="text-xl font-semibold tabular-figures">{euro(t.brutoOmzetTeam)}</p>
+                  <div className="flex items-center gap-3">
+                    <StatIcon icon={TrendingUp} tint="primary" />
+                    <div>
+                      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                        Bruto-omzet team · {periodeLabel(periode)}
+                      </p>
+                      <p className="text-xl font-semibold tabular-figures">{euro(t.brutoOmzetTeam)}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                      Uren-omzet team · {periodeLabel(periode)}
-                    </p>
-                    <p className="text-xl font-semibold tabular-figures">{euro(t.urenOmzetTeam)}</p>
+                  <div className="flex items-center gap-3">
+                    <StatIcon icon={Clock} tint="success" />
+                    <div>
+                      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                        Uren-omzet team · {periodeLabel(periode)}
+                      </p>
+                      <p className="text-xl font-semibold tabular-figures">{euro(t.urenOmzetTeam)}</p>
+                    </div>
                   </div>
                 </div>
 

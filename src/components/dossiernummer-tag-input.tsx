@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Plus, X } from "lucide-react";
-import { parseDossiernummer, DOSSIERNUMMER_VOORBEELD } from "@/lib/dossiernummer";
+import { parseDossiernummer, landNaamVoorIso, DOSSIERNUMMER_VOORBEELD } from "@/lib/dossiernummer";
+import type { LandenMap } from "@/lib/landen";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,9 +11,11 @@ import { Label } from "@/components/ui/label";
 export function DossiernummerTagInput({
   value,
   onChange,
+  landen,
 }: {
   value: string[];
   onChange: (value: string[]) => void;
+  landen?: LandenMap;
 }) {
   const [invoer, setInvoer] = useState("");
 
@@ -54,7 +57,7 @@ export function DossiernummerTagInput({
       </div>
       {invoer && (
         <p className="text-xs text-muted-foreground">
-          {preview ? `${preview.typeLabel} · ${preview.landNaam}` : "Onbekend dossiernummerformaat"}
+          {preview ? `${preview.typeLabel} · ${landNaamVoorIso(preview.landIso, landen)}` : "Onbekend dossiernummerformaat"}
         </p>
       )}
       {value.length > 0 && (

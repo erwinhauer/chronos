@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
+import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { haalLandenMap } from "@/lib/landen";
 import { FactuurGroep, type FactuurGroepItem } from "@/components/factuur-groep";
+import { LinkButton } from "@/components/link-button";
 import { SetBreadcrumb } from "@/lib/breadcrumb-context";
 
 export default async function FactuuritemsPerKlantPagina({
@@ -13,6 +15,11 @@ export default async function FactuuritemsPerKlantPagina({
   const { klantId } = await params;
   const supabase = await createClient();
   const profile = await getCurrentProfile();
+
+  const magAllesBewerken =
+    profile?.role === "beheerder" ||
+    (profile?.role === "teamleider" &&
+      (await supabase.rpc("team_services_klant", { target_klant_id: klantId })).data === true);
 
   const [{ data: klant }, { data: items }, { data: projecten }, landen] = await Promise.all([
     supabase.from("klanten").select("naam").eq("id", klantId).single(),
@@ -65,9 +72,15 @@ export default async function FactuuritemsPerKlantPagina({
   return (
     <div className="flex flex-col gap-6">
       <SetBreadcrumb segments={[{ label: "Factuuritems", href: "/factuuritems" }, { label: klant.naam }]} />
-      <div>
-        <h2 className="text-2xl font-semibold tracking-tight">{klant.naam}</h2>
-        <p className="text-sm text-muted-foreground">Openstaande factuuritems voor deze klant.</p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight">{klant.naam}</h2>
+          <p className="text-sm text-muted-foreground">Openstaande factuuritems voor deze klant.</p>
+        </div>
+        <LinkButton href={`/factuuritems/nieuw?klant_id=${klantId}`}>
+          <Plus className="h-4 w-4" />
+          Nieuw factuuritem
+        </LinkButton>
       </div>
 
       {genormaliseerd.length === 0 ? (
@@ -80,6 +93,7 @@ export default async function FactuuritemsPerKlantPagina({
           projecten={projecten ?? []}
           toonMedewerker={toonMedewerker}
           kanFactureren={kanFactureren}
+          magAllesBewerken={magAllesBewerken}
           huidigeGebruikerId={profile?.id}
           landen={landen}
         />

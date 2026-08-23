@@ -1,8 +1,10 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { updateFactuurItem } from "@/actions/factuuritems";
 import { FactuurItemForm } from "@/components/factuuritem-form";
 import { SetBreadcrumb } from "@/lib/breadcrumb-context";
+import { haalLandenMap } from "@/lib/landen";
 
 export default async function FactuurItemBewerkenPage({
   params,
@@ -11,9 +13,12 @@ export default async function FactuurItemBewerkenPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [
+    {
+      data: { user },
+    },
+    profile,
+  ] = await Promise.all([supabase.auth.getUser(), getCurrentProfile()]);
   if (!user) redirect("/login");
 
   const { data: item } = await supabase
@@ -28,18 +33,27 @@ export default async function FactuurItemBewerkenPage({
   const laatstBewerktDoor = (item.laatst_bewerkt_door_profiel as unknown as { full_name: string } | null)?.full_name;
   const dossiersOpItem = (item.factuuritem_dossiers ?? []).slice().sort((a, b) => a.volgorde - b.volgorde);
 
-  const bewerkbaar = item.medewerker_id === user.id && item.status === "aangemaakt";
+  const magAllesBewerken =
+    profile?.role === "beheerder" ||
+    (profile?.role === "teamleider" &&
+      (await supabase.rpc("team_services_klant", { target_klant_id: item.klant_id })).data === true);
+
+  const bewerkbaar = (item.medewerker_id === user.id || magAllesBewerken) && item.status === "aangemaakt";
   if (!bewerkbaar) {
     redirect("/factuuritems");
   }
 
-  const [{ data: actieveKlanten }, { data: projecten }] = await Promise.all([
+  const [{ data: actieveKlanten }, { data: projecten }, { data: medewerkers }, landen] = await Promise.all([
     supabase
       .from("klanten")
       .select("id, naam, adres, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal")
       .eq("status", "actief")
       .order("naam"),
     supabase.from("projecten").select("id, klant_id, naam, po_nummer").eq("actief", true).order("naam"),
+    magAllesBewerken
+      ? supabase.from("profiles").select("id, full_name").eq("actief", true).order("full_name")
+      : Promise.resolve({ data: null }),
+    haalLandenMap(supabase),
   ]);
 
   // De klant van dit item blijft altijd herleidbaar/selecteerbaar, ook als hij
@@ -70,10 +84,15 @@ export default async function FactuurItemBewerkenPage({
         projectenPerKlant={projectenPerKlant}
         action={updateFactuurItem.bind(null, item.id)}
         medewerkerId={user.id}
+        terugUrl={`/factuuritems/klant/${item.klant_id}`}
+        landen={landen}
+        medewerkers={medewerkers ?? undefined}
+        magMedewerkerWijzigen={magAllesBewerken}
         initial={{
           id: item.id,
           dossiernummers: dossiersOpItem.map((d) => d.dossiernummer),
           klant_id: item.klant_id,
+          medewerker_id: item.medewerker_id,
           project_id: item.project_id,
           datum: item.datum,
           omschrijving_klant: item.omschrijving_klant,

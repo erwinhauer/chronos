@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 const LABELS = {
   nl: {
-    titel: "Specificatie maandfactuur",
+    titel: "Specificatie factuur",
     periode: "Periode",
     datum: "Datum",
     knijffRef: "Knijff ref.",
@@ -17,9 +17,14 @@ const LABELS = {
     kostenVanDerden: "Kosten van derden",
     korting: "Korting",
     totaalExBtw: "Totaal (ex BTW)",
+    honorarium: "Honorarium",
+    kantoorkosten: "Kantoorkosten",
+    extraKorting: "Extra korting",
+    subtotaal: "Subtotaal",
+    totaal: "Totaal",
   },
   en: {
-    titel: "Specification monthly invoice",
+    titel: "Specification invoice",
     periode: "Period",
     datum: "Date",
     knijffRef: "Knijff ref.",
@@ -32,6 +37,11 @@ const LABELS = {
     kostenVanDerden: "External Fee",
     korting: "Discount",
     totaalExBtw: "Total (ex VAT)",
+    honorarium: "Fee",
+    kantoorkosten: "Office costs",
+    extraKorting: "Additional discount",
+    subtotaal: "Subtotal",
+    totaal: "Total",
   },
 };
 
@@ -119,37 +129,26 @@ export function FactuurSpecificatie({
       </div>
       <p className="text-sm font-semibold">{formatMaandJaar(periodeStart, periodeEind, taal)}</p>
 
-      <Table>
+      <Table className="[&_td]:px-1.5 [&_th]:px-1.5 [&_td]:text-xs [&_th]:text-xs">
         <TableHeader>
           <TableRow>
-            <TableHead>{t.datum}</TableHead>
-            <TableHead>{t.knijffRef}</TableHead>
-            <TableHead>{t.matter}</TableHead>
+            <TableHead className="whitespace-normal">{t.datum}</TableHead>
+            <TableHead className="whitespace-normal">{t.knijffRef}</TableHead>
+            <TableHead className="whitespace-normal">{t.matter}</TableHead>
             {klant.kolom_matter_type_land_zichtbaar && (
               <>
-                <TableHead>{t.matterType}</TableHead>
-                <TableHead>{t.land}</TableHead>
+                <TableHead className="whitespace-normal">{t.matterType}</TableHead>
+                <TableHead className="whitespace-normal">{t.land}</TableHead>
               </>
             )}
-            <TableHead>{t.omschrijving}</TableHead>
-            {klant.kolom_uren_zichtbaar && <TableHead className="text-right">{t.aantal}</TableHead>}
-            {klant.kolom_tarief_zichtbaar && <TableHead className="text-right">{t.tarief}</TableHead>}
-            {klant.kolom_externe_kosten_zichtbaar && <TableHead className="text-right">{t.kostenVanDerden}</TableHead>}
-            {klant.kolom_korting_zichtbaar && <TableHead className="text-right">{t.korting}</TableHead>}
-            <TableHead className="text-right">{t.totaalExBtw}</TableHead>
-          </TableRow>
-          <TableRow>
-            <TableCell colSpan={klant.kolom_matter_type_land_zichtbaar ? 5 : 3} />
-            <TableCell />
-            {klant.kolom_uren_zichtbaar && <TableCell />}
-            {klant.kolom_tarief_zichtbaar && <TableCell />}
-            {klant.kolom_externe_kosten_zichtbaar && <TableCell />}
-            {klant.kolom_korting_zichtbaar && (
-              <TableCell className="text-right text-sm font-semibold italic tabular-figures">
-                {euro(totalen.totaal_korting)}
-              </TableCell>
+            <TableHead className="whitespace-normal">{t.omschrijving}</TableHead>
+            {klant.kolom_uren_zichtbaar && <TableHead className="whitespace-normal text-right">{t.aantal}</TableHead>}
+            {klant.kolom_tarief_zichtbaar && <TableHead className="whitespace-normal text-right">{t.tarief}</TableHead>}
+            {klant.kolom_externe_kosten_zichtbaar && (
+              <TableHead className="whitespace-normal text-right">{t.kostenVanDerden}</TableHead>
             )}
-            <TableCell className="text-right text-sm font-semibold italic tabular-figures">{euro(totaalExBtw)}</TableCell>
+            {klant.kolom_korting_zichtbaar && <TableHead className="whitespace-normal text-right">{t.korting}</TableHead>}
+            <TableHead className="whitespace-normal text-right">{t.totaalExBtw}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -160,12 +159,12 @@ export function FactuurSpecificatie({
             return (
               <TableRow key={item.id}>
                 <TableCell className="whitespace-nowrap">{formatDatum(item.datum, taal)}</TableCell>
-                <TableCell className="whitespace-nowrap">{dossiers.map((d) => d.dossiernummer).join("; ")}</TableCell>
-                <TableCell>{matterNamen.join(", ")}</TableCell>
+                <TableCell className="whitespace-normal">{dossiers.map((d) => d.dossiernummer).join("; ")}</TableCell>
+                <TableCell className="whitespace-normal break-words">{matterNamen.join(", ")}</TableCell>
                 {klant.kolom_matter_type_land_zichtbaar && (
                   <>
-                    <TableCell>{typeDienstLabel(eerste?.type_dienst ?? null, taal)}</TableCell>
-                    <TableCell>{landNaamVoorIso(eerste?.land ?? null, landen)}</TableCell>
+                    <TableCell className="whitespace-normal">{typeDienstLabel(eerste?.type_dienst ?? null, taal)}</TableCell>
+                    <TableCell className="whitespace-normal">{landNaamVoorIso(eerste?.land ?? null, landen)}</TableCell>
                   </>
                 )}
                 <TableCell className="whitespace-normal break-words">{item.omschrijving_klant}</TableCell>
@@ -189,6 +188,30 @@ export function FactuurSpecificatie({
           })}
         </TableBody>
       </Table>
+
+      <div className="flex flex-col gap-1 self-end text-sm sm:w-72">
+        {klant.kolom_korting_zichtbaar && totalen.totaal_korting > 0 && (
+          <TotalenRij label={t.korting} value={`- ${euro(totalen.totaal_korting)}`} />
+        )}
+        <TotalenRij label={t.subtotaal} value={euro(totaalExBtw)} />
+        {totalen.totaal_kantoorkosten > 0 && (
+          <TotalenRij label={t.kantoorkosten} value={euro(totalen.totaal_kantoorkosten)} />
+        )}
+        {totalen.extra_korting > 0 && (
+          <TotalenRij label={t.extraKorting} value={`- ${euro(totalen.extra_korting)}`} />
+        )}
+        <div className="my-1 border-t border-border" />
+        <TotalenRij label={t.totaal} value={euro(totalen.totaal_bedrag)} bold />
+      </div>
+    </div>
+  );
+}
+
+function TotalenRij({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+  return (
+    <div className={`flex items-center justify-between ${bold ? "font-semibold" : "text-muted-foreground"}`}>
+      <span>{label}</span>
+      <span className="tabular-figures">{value}</span>
     </div>
   );
 }

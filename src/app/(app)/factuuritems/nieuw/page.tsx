@@ -3,21 +3,28 @@ import { createClient } from "@/lib/supabase/server";
 import { createFactuurItem } from "@/actions/factuuritems";
 import { FactuurItemForm } from "@/components/factuuritem-form";
 import { SetBreadcrumb } from "@/lib/breadcrumb-context";
+import { haalLandenMap } from "@/lib/landen";
 
-export default async function NieuwFactuurItemPage() {
+export default async function NieuwFactuurItemPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ klant_id?: string }>;
+}) {
+  const { klant_id } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [{ data: klanten }, { data: projecten }] = await Promise.all([
+  const [{ data: klanten }, { data: projecten }, landen] = await Promise.all([
     supabase
       .from("klanten")
       .select("id, naam, adres, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal")
       .eq("status", "actief")
       .order("naam"),
     supabase.from("projecten").select("id, klant_id, naam, po_nummer").eq("actief", true).order("naam"),
+    haalLandenMap(supabase),
   ]);
 
   const projectenPerKlant: Record<string, { id: string; naam: string; po_nummer: string | null }[]> = {};
@@ -37,6 +44,8 @@ export default async function NieuwFactuurItemPage() {
         projectenPerKlant={projectenPerKlant}
         action={createFactuurItem}
         medewerkerId={user.id}
+        voorgeselecteerdeKlantId={klant_id}
+        landen={landen}
       />
     </div>
   );

@@ -60,6 +60,7 @@ export function FactuurGroep({
   projecten,
   toonMedewerker,
   kanFactureren,
+  magAllesBewerken = false,
   huidigeGebruikerId,
   landen,
 }: {
@@ -69,6 +70,7 @@ export function FactuurGroep({
   projecten: Project[];
   toonMedewerker: boolean;
   kanFactureren: boolean;
+  magAllesBewerken?: boolean;
   huidigeGebruikerId?: string;
   landen: LandenMap;
 }) {
@@ -116,6 +118,7 @@ export function FactuurGroep({
             toonHeader={toonProjectHeaders}
             toonMedewerker={toonMedewerker}
             kanFactureren={kanFactureren}
+            magAllesBewerken={magAllesBewerken}
             huidigeGebruikerId={huidigeGebruikerId}
             landen={landen}
           />
@@ -133,6 +136,7 @@ function ProjectSectieBlok({
   toonHeader,
   toonMedewerker,
   kanFactureren,
+  magAllesBewerken,
   huidigeGebruikerId,
   landen,
 }: {
@@ -143,6 +147,7 @@ function ProjectSectieBlok({
   toonHeader: boolean;
   toonMedewerker: boolean;
   kanFactureren: boolean;
+  magAllesBewerken: boolean;
   huidigeGebruikerId?: string;
   landen: LandenMap;
 }) {
@@ -232,6 +237,7 @@ function ProjectSectieBlok({
           items={sectie.items}
           toonMedewerker={toonMedewerker}
           kanFactureren={kanFactureren}
+          magAllesBewerken={magAllesBewerken}
           huidigeGebruikerId={huidigeGebruikerId}
           geselecteerd={geselecteerd}
           onToggle={toggle}
@@ -247,6 +253,7 @@ function FactuurItemsTabel({
   items,
   toonMedewerker,
   kanFactureren,
+  magAllesBewerken,
   huidigeGebruikerId,
   geselecteerd,
   onToggle,
@@ -256,6 +263,7 @@ function FactuurItemsTabel({
   items: FactuurGroepItem[];
   toonMedewerker: boolean;
   kanFactureren: boolean;
+  magAllesBewerken: boolean;
   huidigeGebruikerId?: string;
   geselecteerd: Set<string>;
   onToggle: (id: string, checked: boolean) => void;
@@ -295,7 +303,7 @@ function FactuurItemsTabel({
       </TableHeader>
       <TableBody>
         {items.map((r) => {
-          const bewerkbaar = r.medewerkerId === huidigeGebruikerId && r.status === "aangemaakt";
+          const bewerkbaar = (r.medewerkerId === huidigeGebruikerId || magAllesBewerken) && r.status === "aangemaakt";
           const bedrag = regelbedrag(r);
           const [eerste, ...rest] = r.dossiers;
           const landen_op_regel = Array.from(new Set(r.dossiers.map((d) => d.land).filter(Boolean))) as string[];

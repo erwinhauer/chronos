@@ -8,6 +8,7 @@ import { wisselKlantTaal } from "@/actions/klanten";
 import { createClient } from "@/lib/supabase/client";
 import { DossiernummerTagInput } from "@/components/dossiernummer-tag-input";
 import { KlantCombobox } from "@/components/klant-combobox";
+import type { LandenMap } from "@/lib/landen";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,10 +36,13 @@ type Klant = {
 };
 type Project = { id: string; naam: string; po_nummer: string | null };
 
+type Medewerker = { id: string; full_name: string };
+
 type Initial = {
   id: string;
   dossiernummers: string[];
   klant_id: string;
+  medewerker_id: string;
   project_id: string | null;
   datum: string;
   omschrijving_klant: string;
@@ -69,12 +73,22 @@ export function FactuurItemForm({
   action,
   initial,
   medewerkerId,
+  voorgeselecteerdeKlantId,
+  terugUrl = "/factuuritems",
+  landen,
+  medewerkers,
+  magMedewerkerWijzigen = false,
 }: {
   klanten: Klant[];
   projectenPerKlant: Record<string, Project[]>;
   action: (prevState: FactuurItemFormState, formData: FormData) => Promise<FactuurItemFormState>;
   initial?: Initial;
   medewerkerId: string;
+  voorgeselecteerdeKlantId?: string;
+  terugUrl?: string;
+  landen?: LandenMap;
+  medewerkers?: Medewerker[];
+  magMedewerkerWijzigen?: boolean;
 }) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(action, initialState);
@@ -95,7 +109,8 @@ export function FactuurItemForm({
 
   const [projectId, setProjectId] = useState(initial?.project_id ?? "");
   const [dossierSelectie, setDossierSelectie] = useState<string[]>(initial?.dossiernummers ?? []);
-  const [klantId, setKlantId] = useState(initial?.klant_id ?? "");
+  const [klantId, setKlantId] = useState(initial?.klant_id ?? voorgeselecteerdeKlantId ?? "");
+  const [medewerkerIdVeld, setMedewerkerIdVeld] = useState(initial?.medewerker_id ?? medewerkerId);
   const [datum, setDatum] = useState(initial?.datum ?? new Date().toISOString().slice(0, 10));
   const [omschrijvingKlant, setOmschrijvingKlant] = useState(initial?.omschrijving_klant ?? "");
   const [interneOpmerking, setInterneOpmerking] = useState(initial?.interne_opmerking ?? "");
@@ -190,7 +205,7 @@ export function FactuurItemForm({
     if (isFormGewijzigd) {
       setToonSluitenBevestiging(true);
     } else {
-      router.push("/factuuritems");
+      router.push(terugUrl);
     }
   }
 
@@ -200,6 +215,7 @@ export function FactuurItemForm({
         <input key={d} type="hidden" name="dossiernummers" value={d} />
       ))}
       <input type="hidden" name="klant_id" value={klantId} />
+      <input type="hidden" name="medewerker_id" value={medewerkerIdVeld} />
       <input type="hidden" name="project_id" value={projectId} />
       <input type="hidden" name="datum" value={datum} />
       <input type="hidden" name="qty" value={qty} />
@@ -223,7 +239,7 @@ export function FactuurItemForm({
             </CardHeader>
             <CardContent className="flex flex-col gap-5">
               <div className="grid gap-6 sm:grid-cols-2">
-                <DossiernummerTagInput value={dossierSelectie} onChange={setDossierSelectie} />
+                <DossiernummerTagInput value={dossierSelectie} onChange={setDossierSelectie} landen={landen} />
                 <div className="flex flex-col gap-2">
                   <Label>Klant</Label>
                   <KlantCombobox
@@ -240,6 +256,23 @@ export function FactuurItemForm({
 
               <div className="grid gap-4 sm:grid-cols-2">
                 {klant && <TaalVeld klant={klant} />}
+                {initial && magMedewerkerWijzigen && medewerkers && (
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="medewerker">Medewerker</Label>
+                    <NativeSelect
+                      key={`medewerker-${selectResetKey}`}
+                      id="medewerker"
+                      value={medewerkerIdVeld}
+                      onChange={setMedewerkerIdVeld}
+                    >
+                      {medewerkers.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.full_name}
+                        </option>
+                      ))}
+                    </NativeSelect>
+                  </div>
+                )}
                 {projectenVoorKlant.length > 0 && (
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="project">Project (optioneel)</Label>
@@ -527,7 +560,7 @@ export function FactuurItemForm({
             <Button type="button" variant="outline" onClick={() => setToonSluitenBevestiging(false)}>
               Terug naar het formulier
             </Button>
-            <Button type="button" variant="destructive" onClick={() => router.push("/factuuritems")}>
+            <Button type="button" variant="destructive" onClick={() => router.push(terugUrl)}>
               Sluiten zonder opslaan
             </Button>
           </DialogFooter>

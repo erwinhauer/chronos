@@ -59,7 +59,7 @@ export default async function NieuweSpecificatiePagina({
   const totalen = berekenFactuurtotalen(items, klant.kantoorkosten_percentage);
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-6">
+    <div className="mx-auto flex max-w-7xl flex-col gap-6">
       <SetBreadcrumb segments={[{ label: "Factuuritems", href: "/factuuritems" }, { label: "Nieuwe specificatie" }]} />
       <div>
         <h2 className="text-2xl font-semibold tracking-tight">Nieuwe specificatie — {klant.naam}</h2>

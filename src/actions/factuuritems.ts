@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { parseDossiernummer } from "@/lib/dossiernummer";
 import type { PrijsType, KortingType } from "@/lib/supabase/types";
 
@@ -18,6 +19,7 @@ function round2(n: number) {
 
 function parseInput(formData: FormData) {
   const klant_id = String(formData.get("klant_id") ?? "").trim();
+  const medewerker_id = String(formData.get("medewerker_id") ?? "").trim();
   const project_id = String(formData.get("project_id") ?? "").trim() || null;
   const dossiernummers = Array.from(
     new Set(formData.getAll("dossiernummers").map((v) => String(v).trim().toUpperCase()).filter(Boolean))
@@ -40,6 +42,7 @@ function parseInput(formData: FormData) {
 
   return {
     klant_id,
+    medewerker_id,
     project_id,
     dossiernummers,
     datum,
@@ -111,6 +114,15 @@ function resolveDossiers(dossiernummers: string[]): DossierResolutie {
 async function klantBestaat(supabase: Awaited<ReturnType<typeof createClient>>, klant_id: string): Promise<boolean> {
   if (!klant_id) return false;
   const { data } = await supabase.from("klanten").select("id").eq("id", klant_id).single();
+  return Boolean(data);
+}
+
+async function medewerkerBestaat(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  medewerker_id: string
+): Promise<boolean> {
+  if (!medewerker_id) return false;
+  const { data } = await supabase.from("profiles").select("id").eq("id", medewerker_id).eq("actief", true).single();
   return Boolean(data);
 }
 
@@ -225,7 +237,7 @@ export async function createFactuurItem(
 
   revalidatePath("/factuuritems");
   revalidatePath("/dashboard");
-  redirect("/factuuritems");
+  redirect(`/factuuritems/klant/${input.klant_id}`);
 }
 
 export async function updateFactuurItem(
@@ -257,9 +269,12 @@ export async function updateFactuurItem(
     return { error: "De gekozen klant bestaat niet (meer).", success: false };
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [
+    {
+      data: { user },
+    },
+    profile,
+  ] = await Promise.all([supabase.auth.getUser(), getCurrentProfile()]);
   if (!user) {
     return { error: "Je sessie is verlopen. Log opnieuw in.", success: false };
   }
@@ -282,6 +297,18 @@ export async function updateFactuurItem(
 
   const afwijkend = input.prijstype === "uren" && tariefWijktAf(voorgesteldTarief, input.tarief);
 
+  // Alleen teamleider/beheerder mogen wie het item heeft aangemaakt wijzigen —
+  // nooit de client vertrouwen, dus de rol hier opnieuw (server-side) checken.
+  // Bij elke andere rol blijft medewerker_id gewoon ongewijzigd.
+  const magMedewerkerWijzigen = profile?.role === "teamleider" || profile?.role === "beheerder";
+  let medewerkerUpdate: { medewerker_id?: string } = {};
+  if (magMedewerkerWijzigen && input.medewerker_id) {
+    if (!(await medewerkerBestaat(supabase, input.medewerker_id))) {
+      return { error: "De gekozen medewerker bestaat niet (meer).", success: false };
+    }
+    medewerkerUpdate = { medewerker_id: input.medewerker_id };
+  }
+
   const { error } = await supabase
     .from("factuuritems")
     .update({
@@ -302,6 +329,7 @@ export async function updateFactuurItem(
       korting_percentage: input.korting_type === "percentage" ? input.korting_percentage : null,
       kantoorkosten_van_toepassing: input.kantoorkosten_van_toepassing,
       declarabel: input.declarabel,
+      ...medewerkerUpdate,
     })
     .eq("id", id);
 
@@ -322,7 +350,7 @@ export async function updateFactuurItem(
 
   revalidatePath("/factuuritems");
   revalidatePath("/dashboard");
-  redirect("/factuuritems");
+  redirect(`/factuuritems/klant/${input.klant_id}`);
 }
 
 export async function deleteFactuurItem(id: string): Promise<{ error: string | null }> {
