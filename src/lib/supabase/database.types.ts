@@ -80,14 +80,8 @@ export type Database = {
       }
       facturatiebatches: {
         Row: {
-          accountview_factuurdatum: string | null
-          accountview_factuurnummer: string | null
-          btw_bedrag: number
-          btw_percentage: number | null
-          btw_vermelding: string | null
           created_at: string
           extra_korting: number
-          factuur_storage_path: string | null
           goedgekeurd_door: string | null
           goedgekeurd_op: string | null
           id: string
@@ -95,7 +89,6 @@ export type Database = {
           periode_eind: string
           periode_start: string
           project_id: string | null
-          specificatie_storage_path: string | null
           status: Database["public"]["Enums"]["batch_status"]
           totaal_bedrag: number
           totaal_externe_kosten: number
@@ -104,20 +97,10 @@ export type Database = {
           totaal_korting: number
           updated_at: string
           valuta: string
-          verzend_cc: string[] | null
-          verzend_email: string | null
-          verzend_fout: string | null
-          verzonden_op: string | null
         }
         Insert: {
-          accountview_factuurdatum?: string | null
-          accountview_factuurnummer?: string | null
-          btw_bedrag?: number
-          btw_percentage?: number | null
-          btw_vermelding?: string | null
           created_at?: string
           extra_korting?: number
-          factuur_storage_path?: string | null
           goedgekeurd_door?: string | null
           goedgekeurd_op?: string | null
           id?: string
@@ -125,7 +108,6 @@ export type Database = {
           periode_eind: string
           periode_start: string
           project_id?: string | null
-          specificatie_storage_path?: string | null
           status?: Database["public"]["Enums"]["batch_status"]
           totaal_bedrag?: number
           totaal_externe_kosten?: number
@@ -134,20 +116,10 @@ export type Database = {
           totaal_korting?: number
           updated_at?: string
           valuta?: string
-          verzend_cc?: string[] | null
-          verzend_email?: string | null
-          verzend_fout?: string | null
-          verzonden_op?: string | null
         }
         Update: {
-          accountview_factuurdatum?: string | null
-          accountview_factuurnummer?: string | null
-          btw_bedrag?: number
-          btw_percentage?: number | null
-          btw_vermelding?: string | null
           created_at?: string
           extra_korting?: number
-          factuur_storage_path?: string | null
           goedgekeurd_door?: string | null
           goedgekeurd_op?: string | null
           id?: string
@@ -155,7 +127,6 @@ export type Database = {
           periode_eind?: string
           periode_start?: string
           project_id?: string | null
-          specificatie_storage_path?: string | null
           status?: Database["public"]["Enums"]["batch_status"]
           totaal_bedrag?: number
           totaal_externe_kosten?: number
@@ -164,10 +135,6 @@ export type Database = {
           totaal_korting?: number
           updated_at?: string
           valuta?: string
-          verzend_cc?: string[] | null
-          verzend_email?: string | null
-          verzend_fout?: string | null
-          verzonden_op?: string | null
         }
         Relationships: [
           {
@@ -382,7 +349,6 @@ export type Database = {
           subtitel: string | null
           updated_at: string
           valuta: string
-          verzending_toegestaan: boolean
         }
         Insert: {
           accountview_debiteurnummer?: string | null
@@ -414,7 +380,6 @@ export type Database = {
           subtitel?: string | null
           updated_at?: string
           valuta?: string
-          verzending_toegestaan?: boolean
         }
         Update: {
           accountview_debiteurnummer?: string | null
@@ -446,7 +411,6 @@ export type Database = {
           subtitel?: string | null
           updated_at?: string
           valuta?: string
-          verzending_toegestaan?: boolean
         }
         Relationships: [
           {
@@ -475,41 +439,6 @@ export type Database = {
           naam_nl?: string
         }
         Relationships: []
-      }
-      patricia_dossiers: {
-        Row: {
-          actief: boolean
-          created_at: string
-          dossiernummer: string
-          id: string
-          klant_id: string
-          matter_naam: string
-        }
-        Insert: {
-          actief?: boolean
-          created_at?: string
-          dossiernummer: string
-          id?: string
-          klant_id: string
-          matter_naam: string
-        }
-        Update: {
-          actief?: boolean
-          created_at?: string
-          dossiernummer?: string
-          id?: string
-          klant_id?: string
-          matter_naam?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "patricia_dossiers_klant_id_fkey"
-            columns: ["klant_id"]
-            isOneToOne: false
-            referencedRelation: "klanten"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       productchangelog: {
         Row: {

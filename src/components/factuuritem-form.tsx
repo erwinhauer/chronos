@@ -6,7 +6,8 @@ import { ChevronDown, EyeOff } from "lucide-react";
 import type { FactuurItemFormState } from "@/actions/factuuritems";
 import { wisselKlantTaal } from "@/actions/klanten";
 import { createClient } from "@/lib/supabase/client";
-import { DossierSelect, type PatriciaDossierOptie } from "@/components/dossier-select";
+import { DossiernummerTagInput } from "@/components/dossiernummer-tag-input";
+import { KlantCombobox } from "@/components/klant-combobox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,10 +38,7 @@ type Project = { id: string; naam: string; po_nummer: string | null };
 type Initial = {
   id: string;
   dossiernummers: string[];
-  // Alleen als weergave-terugval als geen van de dossiers op dit item (meer)
-  // in de dummy-lijst voorkomt — submission herleidt de klant altijd opnieuw
-  // server-side uit de daadwerkelijk geselecteerde dossiers.
-  klant_id_fallback?: string;
+  klant_id: string;
   project_id: string | null;
   datum: string;
   omschrijving_klant: string;
@@ -66,15 +64,13 @@ function euro(n: number) {
 }
 
 export function FactuurItemForm({
-  klanten,
-  dossiers,
+  klanten: klantenProp,
   projectenPerKlant,
   action,
   initial,
   medewerkerId,
 }: {
   klanten: Klant[];
-  dossiers: PatriciaDossierOptie[];
   projectenPerKlant: Record<string, Project[]>;
   action: (prevState: FactuurItemFormState, formData: FormData) => Promise<FactuurItemFormState>;
   initial?: Initial;
@@ -94,8 +90,12 @@ export function FactuurItemForm({
     setSelectResetKey((k) => k + 1);
   }
 
+  const [extraKlanten, setExtraKlanten] = useState<Klant[]>([]);
+  const klanten = useMemo(() => [...klantenProp, ...extraKlanten], [klantenProp, extraKlanten]);
+
   const [projectId, setProjectId] = useState(initial?.project_id ?? "");
   const [dossierSelectie, setDossierSelectie] = useState<string[]>(initial?.dossiernummers ?? []);
+  const [klantId, setKlantId] = useState(initial?.klant_id ?? "");
   const [datum, setDatum] = useState(initial?.datum ?? new Date().toISOString().slice(0, 10));
   const [omschrijvingKlant, setOmschrijvingKlant] = useState(initial?.omschrijving_klant ?? "");
   const [interneOpmerking, setInterneOpmerking] = useState(initial?.interne_opmerking ?? "");
@@ -126,20 +126,14 @@ export function FactuurItemForm({
     externeKosten: initial?.externe_kosten ?? 0,
     kortingBedrag: initial?.korting ?? 0,
     kortingPercentage: initial?.korting_percentage ?? 0,
+    klantId: initial?.klant_id ?? "",
   }));
 
-  // Klant is niet langer een handmatige keuze — hij volgt uit het/de gekozen
-  // dossier(s) (allemaal van dezelfde klant, zie DossierSelect's klant-lock).
-  const klantId = useMemo(() => {
-    const eerste = dossiers.find((d) => dossierSelectie.includes(d.dossiernummer));
-    return eerste?.klant_id ?? initial?.klant_id_fallback ?? "";
-  }, [dossiers, dossierSelectie, initial?.klant_id_fallback]);
   const klant = klanten.find((k) => k.id === klantId);
-
   const projectenVoorKlant = useMemo(() => projectenPerKlant[klantId] ?? [], [projectenPerKlant, klantId]);
 
-  // Wanneer de (afgeleide) klant wijzigt: kantoorkosten-standaard overnemen, de
-  // oude tariefsuggestie laten vervallen en het projectveld resetten (projecten
+  // Wanneer de klant wijzigt: kantoorkosten-standaard overnemen, de oude
+  // tariefsuggestie laten vervallen en het projectveld resetten (projecten
   // horen bij een klant). Render-fase aanpassing (React-patroon), geen effect:
   // voorkomt een extra commit/re-render t.o.v. useEffect.
   const [klantIdVoorReset, setKlantIdVoorReset] = useState(klantId);
@@ -148,14 +142,6 @@ export function FactuurItemForm({
     setKantoorkostenActief(klant?.kantoorkosten_actief ?? true);
     setVoorgesteldTarief(null);
     setProjectId("");
-  }
-
-  function handleDossierChange(nieuweSelectie: string[]) {
-    if (omschrijvingKlant === "" && dossierSelectie.length === 0 && nieuweSelectie.length > 0) {
-      const eerste = dossiers.find((d) => d.dossiernummer === nieuweSelectie[0]);
-      if (eerste?.matter_naam) setOmschrijvingKlant(eerste.matter_naam);
-    }
-    setDossierSelectie(nieuweSelectie);
   }
 
   useEffect(() => {
@@ -189,6 +175,7 @@ export function FactuurItemForm({
   const isFormGewijzigd =
     dossierSelectie.length !== startSnapshot.dossierSelectie.length ||
     dossierSelectie.some((id) => !startSnapshot.dossierSelectie.includes(id)) ||
+    klantId !== startSnapshot.klantId ||
     projectId !== startSnapshot.projectId ||
     omschrijvingKlant !== startSnapshot.omschrijvingKlant ||
     interneOpmerking !== startSnapshot.interneOpmerking ||
@@ -212,6 +199,7 @@ export function FactuurItemForm({
       {dossierSelectie.map((d) => (
         <input key={d} type="hidden" name="dossiernummers" value={d} />
       ))}
+      <input type="hidden" name="klant_id" value={klantId} />
       <input type="hidden" name="project_id" value={projectId} />
       <input type="hidden" name="datum" value={datum} />
       <input type="hidden" name="qty" value={qty} />
@@ -235,12 +223,15 @@ export function FactuurItemForm({
             </CardHeader>
             <CardContent className="flex flex-col gap-5">
               <div className="grid gap-6 sm:grid-cols-2">
-                <DossierSelect dossiers={dossiers} value={dossierSelectie} onChange={handleDossierChange} />
+                <DossiernummerTagInput value={dossierSelectie} onChange={setDossierSelectie} />
                 <div className="flex flex-col gap-2">
                   <Label>Klant</Label>
-                  <p className="flex h-9 items-center text-sm font-medium">
-                    {klant?.naam ?? <span className="text-muted-foreground">Kies eerst een dossier</span>}
-                  </p>
+                  <KlantCombobox
+                    klanten={klanten}
+                    value={klantId}
+                    onChange={setKlantId}
+                    onKlantAangemaakt={(nieuw) => setExtraKlanten((prev) => [...prev, nieuw])}
+                  />
                   {klant?.adres && (
                     <p className="text-xs whitespace-pre-line text-muted-foreground">{klant.adres}</p>
                   )}
@@ -516,7 +507,7 @@ export function FactuurItemForm({
               <Button type="button" variant="outline" className="flex-1" onClick={handleSluiten}>
                 Sluiten
               </Button>
-              <Button type="submit" disabled={pending} className="flex-1">
+              <Button type="submit" disabled={pending || !klantId || dossierSelectie.length === 0} className="flex-1">
                 {pending ? "Bezig…" : initial ? "Wijzigingen opslaan" : "Factuuritem aanmaken"}
               </Button>
             </CardFooter>

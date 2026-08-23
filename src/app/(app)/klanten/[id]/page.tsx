@@ -126,7 +126,7 @@ export default async function KlantDetailPage({ params }: { params: Promise<{ id
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Facturen</CardTitle>
+          <CardTitle className="text-base">Specificaties</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
@@ -147,7 +147,7 @@ export default async function KlantDetailPage({ params }: { params: Promise<{ id
                     </TableCell>
                     <TableCell className="text-right tabular-figures">{euro(f.totaal_bedrag)}</TableCell>
                     <TableCell className="text-right">
-                      <Link href={`/facturatiebatches/${f.id}`} className="text-sm text-primary hover:underline">
+                      <Link href={`/specificaties/${f.id}`} className="text-sm text-primary hover:underline">
                         Bekijken
                       </Link>
                     </TableCell>
@@ -156,7 +156,7 @@ export default async function KlantDetailPage({ params }: { params: Promise<{ id
               ) : (
                 <TableRow>
                   <TableCell colSpan={3} className="py-10 text-center text-sm text-muted-foreground">
-                    Nog geen facturen voor deze klant.
+                    Nog geen specificaties voor deze klant.
                   </TableCell>
                 </TableRow>
               )}
@@ -191,10 +191,6 @@ export default async function KlantDetailPage({ params }: { params: Promise<{ id
           <div>
             <span className="text-muted-foreground">Kosten van derden: </span>
             {klant.kolom_externe_kosten_zichtbaar ? "Apart getoond op de specificatie" : "Meegenomen in het honorarium"}
-          </div>
-          <div>
-            <span className="text-muted-foreground">Facturen versturen: </span>
-            {klant.verzending_toegestaan ? "Per e-mail" : "Alleen PDF (eigen billing-systeem)"}
           </div>
           {klant.opmerkingen && (
             <div className="sm:col-span-2">

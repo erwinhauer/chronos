@@ -3,7 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
-export type KlantFormState = { error: string | null; success: boolean };
+export type NieuweKlant = {
+  id: string;
+  naam: string;
+  adres: string | null;
+  kantoorkosten_actief: boolean;
+  kantoorkosten_percentage: number;
+  specificatietaal: "nl" | "en";
+};
+
+export type KlantFormState = { error: string | null; success: boolean; klant?: NieuweKlant };
 
 export async function createKlant(_prevState: KlantFormState, formData: FormData): Promise<KlantFormState> {
   const naam = String(formData.get("naam") ?? "").trim();
@@ -15,7 +24,6 @@ export async function createKlant(_prevState: KlantFormState, formData: FormData
   const specificatietaal = String(formData.get("specificatietaal") ?? "nl").trim();
   const kantoorkosten_actief = formData.get("kantoorkosten_actief") === "on";
   const kolom_externe_kosten_zichtbaar = formData.get("kolom_externe_kosten_zichtbaar") === "on";
-  const verzending_toegestaan = formData.get("verzending_toegestaan") === "on";
   const btw_percentage = Number(formData.get("btw_percentage") ?? 21);
   const btw_vermelding = String(formData.get("btw_vermelding") ?? "").trim();
   const opmerkingen = String(formData.get("opmerkingen") ?? "").trim();
@@ -31,33 +39,36 @@ export async function createKlant(_prevState: KlantFormState, formData: FormData
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.from("klanten").insert({
-    naam,
-    subtitel: subtitel || null,
-    contactpersoon_naam,
-    contact_email,
-    adres: adres || null,
-    accountview_debiteurnummer: accountview_debiteurnummer || null,
-    specificatietaal: specificatietaal as "nl" | "en",
-    kantoorkosten_actief,
-    kolom_externe_kosten_zichtbaar,
-    verzending_toegestaan,
-    btw_percentage,
-    btw_vermelding: btw_vermelding || null,
-    opmerkingen: opmerkingen || null,
-    status: "actief",
-  });
+  const { data: klant, error } = await supabase
+    .from("klanten")
+    .insert({
+      naam,
+      subtitel: subtitel || null,
+      contactpersoon_naam,
+      contact_email,
+      adres: adres || null,
+      accountview_debiteurnummer: accountview_debiteurnummer || null,
+      specificatietaal: specificatietaal as "nl" | "en",
+      kantoorkosten_actief,
+      kolom_externe_kosten_zichtbaar,
+      btw_percentage,
+      btw_vermelding: btw_vermelding || null,
+      opmerkingen: opmerkingen || null,
+      status: "actief",
+    })
+    .select("id, naam, adres, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal")
+    .single();
 
-  if (error) {
+  if (error || !klant) {
     const message =
-      error.code === "42501"
-        ? "Alleen beheerders kunnen klanten aanmaken."
+      error?.code === "42501"
+        ? "Je hebt geen rechten om klanten aan te maken."
         : "Aanmaken van de klant is mislukt. Probeer het opnieuw.";
     return { error: message, success: false };
   }
 
   revalidatePath("/klanten");
-  return { error: null, success: true };
+  return { error: null, success: true, klant };
 }
 
 export async function updateKlant(
@@ -74,7 +85,6 @@ export async function updateKlant(
   const specificatietaal = String(formData.get("specificatietaal") ?? "nl").trim();
   const kantoorkosten_actief = formData.get("kantoorkosten_actief") === "on";
   const kolom_externe_kosten_zichtbaar = formData.get("kolom_externe_kosten_zichtbaar") === "on";
-  const verzending_toegestaan = formData.get("verzending_toegestaan") === "on";
   const btw_percentage = Number(formData.get("btw_percentage") ?? 21);
   const btw_vermelding = String(formData.get("btw_vermelding") ?? "").trim();
   const opmerkingen = String(formData.get("opmerkingen") ?? "").trim();
@@ -102,7 +112,6 @@ export async function updateKlant(
       specificatietaal: specificatietaal as "nl" | "en",
       kantoorkosten_actief,
       kolom_externe_kosten_zichtbaar,
-      verzending_toegestaan,
       btw_percentage,
       btw_vermelding: btw_vermelding || null,
       opmerkingen: opmerkingen || null,

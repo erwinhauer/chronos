@@ -17,6 +17,7 @@ function round2(n: number) {
 }
 
 function parseInput(formData: FormData) {
+  const klant_id = String(formData.get("klant_id") ?? "").trim();
   const project_id = String(formData.get("project_id") ?? "").trim() || null;
   const dossiernummers = Array.from(
     new Set(formData.getAll("dossiernummers").map((v) => String(v).trim().toUpperCase()).filter(Boolean))
@@ -38,6 +39,7 @@ function parseInput(formData: FormData) {
   const declarabel = formData.get("declarabel") === "on";
 
   return {
+    klant_id,
     project_id,
     dossiernummers,
     datum,
@@ -75,42 +77,16 @@ type DossierResolutie =
   | { ok: false; error: string }
   | {
       ok: true;
-      klant_id: string;
       rijen: { dossiernummer: string; type_dienst: string; land: string; matter_naam: string | null; volgorde: number }[];
     };
 
-// Klant en dossierinfo komen altijd van de server af — de client typt/kiest
-// alleen dossiernummers, nooit de klant zelf. Herleiding gaat op dossiernummer
-// (niet op patricia_dossiers.id) en filtert niet op `actief` — een dossier dat
-// ooit gekoppeld is/was blijft herleidbaar, ook als het inmiddels inactief is.
-// Dit is de tijdelijke stand-in voor de nog te bouwen Patricia-koppeling (zie
-// supabase/migrations/20260820063624_patricia_dossiers_dummy.sql).
-async function resolveDossiers(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  dossiernummers: string[]
-): Promise<DossierResolutie> {
+// Zolang er geen Patricia-koppeling is, typt de gebruiker het dossiernummer
+// vrij in — alleen het format wordt (opnieuw, server-side) gevalideerd via
+// parseDossiernummer(). matter_naam is nog niet af te leiden en blijft null
+// tot die koppeling er is.
+function resolveDossiers(dossiernummers: string[]): DossierResolutie {
   if (dossiernummers.length === 0) {
     return { ok: false, error: "Voeg minimaal één dossier toe." };
-  }
-
-  const { data: rows, error } = await supabase
-    .from("patricia_dossiers")
-    .select("klant_id, dossiernummer, matter_naam")
-    .in("dossiernummer", dossiernummers);
-
-  if (error) {
-    return { ok: false, error: "Ophalen van de dossiergegevens is mislukt." };
-  }
-
-  const perNummer = new Map((rows ?? []).map((r) => [r.dossiernummer, r]));
-  const nietGevonden = dossiernummers.filter((d) => !perNummer.has(d));
-  if (nietGevonden.length > 0) {
-    return { ok: false, error: `Dossier(s) niet gevonden: ${nietGevonden.join(", ")}` };
-  }
-
-  const klantIds = new Set(dossiernummers.map((d) => perNummer.get(d)!.klant_id));
-  if (klantIds.size > 1) {
-    return { ok: false, error: "Alle geselecteerde dossiers moeten bij dezelfde klant horen." };
   }
 
   const rijen: { dossiernummer: string; type_dienst: string; land: string; matter_naam: string | null; volgorde: number }[] =
@@ -124,12 +100,18 @@ async function resolveDossiers(
       dossiernummer,
       type_dienst: parsed.typeLabel,
       land: parsed.landIso,
-      matter_naam: perNummer.get(dossiernummer)!.matter_naam,
+      matter_naam: null,
       volgorde: index,
     });
   }
 
-  return { ok: true, klant_id: [...klantIds][0], rijen };
+  return { ok: true, rijen };
+}
+
+async function klantBestaat(supabase: Awaited<ReturnType<typeof createClient>>, klant_id: string): Promise<boolean> {
+  if (!klant_id) return false;
+  const { data } = await supabase.from("klanten").select("id").eq("id", klant_id).single();
+  return Boolean(data);
 }
 
 function valideerGedeeld(input: ReturnType<typeof parseInput>): string | null {
@@ -165,10 +147,17 @@ export async function createFactuurItem(
     return { error: "Kies of dit uren of een vast honorarium (fixed fee) is.", success: false };
   }
 
+  if (!input.klant_id) {
+    return { error: "Kies een klant.", success: false };
+  }
+
   const supabase = await createClient();
-  const dossiers = await resolveDossiers(supabase, input.dossiernummers);
+  const dossiers = resolveDossiers(input.dossiernummers);
   if (!dossiers.ok) {
     return { error: dossiers.error, success: false };
+  }
+  if (!(await klantBestaat(supabase, input.klant_id))) {
+    return { error: "De gekozen klant bestaat niet (meer).", success: false };
   }
 
   const {
@@ -179,7 +168,7 @@ export async function createFactuurItem(
   }
 
   const { data: voorgesteldTarief } = await supabase.rpc("resolve_tarief", {
-    p_klant_id: dossiers.klant_id,
+    p_klant_id: input.klant_id,
     p_medewerker_id: user.id,
     p_datum: input.datum,
   });
@@ -199,7 +188,7 @@ export async function createFactuurItem(
   const { data: item, error } = await supabase
     .from("factuuritems")
     .insert({
-      klant_id: dossiers.klant_id,
+      klant_id: input.klant_id,
       project_id: input.project_id,
       medewerker_id: user.id,
       datum: input.datum,
@@ -255,10 +244,17 @@ export async function updateFactuurItem(
     return { error: "Kies of dit uren of een vast honorarium (fixed fee) is.", success: false };
   }
 
+  if (!input.klant_id) {
+    return { error: "Kies een klant.", success: false };
+  }
+
   const supabase = await createClient();
-  const dossiers = await resolveDossiers(supabase, input.dossiernummers);
+  const dossiers = resolveDossiers(input.dossiernummers);
   if (!dossiers.ok) {
     return { error: dossiers.error, success: false };
+  }
+  if (!(await klantBestaat(supabase, input.klant_id))) {
+    return { error: "De gekozen klant bestaat niet (meer).", success: false };
   }
 
   const {
@@ -269,7 +265,7 @@ export async function updateFactuurItem(
   }
 
   const { data: voorgesteldTarief } = await supabase.rpc("resolve_tarief", {
-    p_klant_id: dossiers.klant_id,
+    p_klant_id: input.klant_id,
     p_medewerker_id: user.id,
     p_datum: input.datum,
   });
@@ -289,7 +285,7 @@ export async function updateFactuurItem(
   const { error } = await supabase
     .from("factuuritems")
     .update({
-      klant_id: dossiers.klant_id,
+      klant_id: input.klant_id,
       project_id: input.project_id,
       datum: input.datum,
       omschrijving_klant: input.omschrijving_klant,

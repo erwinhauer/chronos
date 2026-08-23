@@ -10,7 +10,6 @@ export type Klant = Database["public"]["Tables"]["klanten"]["Row"];
 export type FactuurItem = Database["public"]["Tables"]["factuuritems"]["Row"];
 export type Team = Database["public"]["Tables"]["teams"]["Row"];
 export type TeamMember = Database["public"]["Tables"]["team_members"]["Row"];
-export type PatriciaDossier = Database["public"]["Tables"]["patricia_dossiers"]["Row"];
 export type ProfileRole = Database["public"]["Tables"]["profile_roles"]["Row"];
 
 export type { Database };

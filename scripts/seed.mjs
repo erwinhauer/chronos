@@ -173,10 +173,11 @@ async function main() {
   const lipton = klantRows.find((k) => k.naam === "Lipton Teas & Infusions");
   const kantoorkostenPercentagePerKlant = new Map(klantRows.map((k) => [k.id, k.kantoorkosten_percentage]));
 
-  // Tijdelijke dummy-"Patricia"-dossiers: staan in voor de nog te bouwen koppeling met
-  // het externe zaaksysteem. Hergebruikt zoveel mogelijk dossiernummers die ook in de
-  // factuuritems-seed hieronder voorkomen, zodat de demo herkenbaar samenhangt.
-  const patriciaDossiersGewenst = [
+  // Matter-namen per dossiernummer, puur voor realistische demodata — er is geen
+  // Patricia-koppeling (nog te bouwen), dus in de echte app blijft matter_naam
+  // null tot die er is. Hergebruikt dezelfde dossiernummers als de
+  // factuuritems-seed hieronder, zodat de demo herkenbaar samenhangt.
+  const matterNamenGewenst = [
     { klant_id: arcadis.id, dossiernummer: "TM93905GB00", matter_naam: "GENX-merkfamilie (VK)" },
     { klant_id: arcadis.id, dossiernummer: "O26921PL00", matter_naam: "Oppositie ARCADIS ./. ARKADIS (PL)" },
     { klant_id: arcadis.id, dossiernummer: "O26922PL00", matter_naam: "Oppositie ARCADIS ./. ARKADIS (PL) — dossier 2" },
@@ -194,22 +195,6 @@ async function main() {
     { klant_id: lipton.id, dossiernummer: "O26950NL00", matter_naam: "Oppositie SIR-thee (NL)" },
     { klant_id: lipton.id, dossiernummer: "CA12000EU00", matter_naam: "Cancellation action — LEMON BREEZE (EU)" },
   ];
-  const { data: bestaandeDossiers, error: dossiersLeesError } = await admin
-    .from("patricia_dossiers")
-    .select("klant_id, dossiernummer");
-  if (dossiersLeesError) throw dossiersLeesError;
-  const bestaandeDossierSleutels = new Set(bestaandeDossiers.map((d) => `${d.klant_id}|${d.dossiernummer}`));
-  const nieuweDossiers = patriciaDossiersGewenst.filter(
-    (d) => !bestaandeDossierSleutels.has(`${d.klant_id}|${d.dossiernummer}`)
-  );
-  if (nieuweDossiers.length > 0) {
-    const { error: dossiersError } = await admin.from("patricia_dossiers").insert(nieuweDossiers);
-    if (dossiersError) throw dossiersError;
-    console.log(`✓ patricia_dossiers: ${nieuweDossiers.length} toegevoegd`);
-  } else {
-    console.log("↺ patricia_dossiers bestaan al");
-  }
-
   const teamdoelen = [
     { team_id: benelux.id, jaar: 2026, bruto_bedrag: 250000, netto_bedrag: 200000 },
     { team_id: international.id, jaar: 2026, bruto_bedrag: 150000, netto_bedrag: 120000 },
@@ -502,7 +487,7 @@ async function main() {
     if (itemsError) throw itemsError;
 
     const idPerSleutel = new Map(ingevoegd.map((i) => [`${i.omschrijving_klant}|${i.medewerker_id}`, i.id]));
-    const matterNaamPerDossiernummer = new Map(patriciaDossiersGewenst.map((d) => [d.dossiernummer, d.matter_naam]));
+    const matterNaamPerDossiernummer = new Map(matterNamenGewenst.map((d) => [d.dossiernummer, d.matter_naam]));
     const dossierRijen = nieuweItems.flatMap((i) => {
       const factuuritemId = idPerSleutel.get(`${i.omschrijving_klant}|${i.medewerker_id}`);
       return i._dossiers.map((d, index) => ({

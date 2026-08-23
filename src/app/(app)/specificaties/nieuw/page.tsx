@@ -4,9 +4,9 @@ import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { berekenFactuurtotalen } from "@/lib/factuurbedragen";
 import { haalLandenMap } from "@/lib/landen";
 import { SetBreadcrumb } from "@/lib/breadcrumb-context";
-import { NieuweFactuurForm } from "@/components/nieuwe-factuur-form";
+import { NieuweSpecificatieForm } from "@/components/nieuwe-specificatie-form";
 
-export default async function NieuweFactuurPagina({
+export default async function NieuweSpecificatiePagina({
   searchParams,
 }: {
   searchParams: Promise<{ klant_id?: string; item_ids?: string }>;
@@ -60,15 +60,13 @@ export default async function NieuweFactuurPagina({
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
-      <SetBreadcrumb segments={[{ label: "Factuuritems", href: "/factuuritems" }, { label: "Nieuwe factuur" }]} />
+      <SetBreadcrumb segments={[{ label: "Factuuritems", href: "/factuuritems" }, { label: "Nieuwe specificatie" }]} />
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Nieuwe factuur — {klant.naam}</h2>
-        <p className="text-sm text-muted-foreground">
-          Controleer de voorbeeldfactuur en de specificatie voordat je bevestigt.
-        </p>
+        <h2 className="text-2xl font-semibold tracking-tight">Nieuwe specificatie — {klant.naam}</h2>
+        <p className="text-sm text-muted-foreground">Controleer de specificatie voordat je bevestigt.</p>
       </div>
 
-      <NieuweFactuurForm
+      <NieuweSpecificatieForm
         klant={klant}
         project={project}
         itemIds={items.map((i) => i.id)}

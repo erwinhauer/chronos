@@ -1,10 +1,9 @@
 "use client";
 
 import { useActionState, useMemo, useRef, useState } from "react";
-import { createFacturatiebatch, type FactureerFormState } from "@/actions/facturatie";
-import { berekenBtw, round2 } from "@/lib/factuurbedragen";
+import { genereerSpecificatie, type SpecificatieFormState } from "@/actions/specificaties";
+import { round2 } from "@/lib/factuurbedragen";
 import type { LandenMap } from "@/lib/landen";
-import { FactuurCover } from "@/components/factuur-cover";
 import {
   FactuurSpecificatie,
   type FactuurSpecificatieItem,
@@ -24,15 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-type Klant = FactuurSpecificatieKlant & {
-  id: string;
-  valuta: string;
-  contact_email: string | null;
-  accountview_debiteurnummer: string | null;
-  verzending_toegestaan: boolean;
-  btw_percentage: number;
-  btw_vermelding: string | null;
-};
+type Klant = FactuurSpecificatieKlant & { id: string; valuta: string };
 type Project = { naam: string; po_nummer: string | null } | null;
 
 type BasisTotalen = {
@@ -43,9 +34,9 @@ type BasisTotalen = {
   subtotaal_voor_extra_korting: number;
 };
 
-const initialState: FactureerFormState = { error: null, success: false };
+const initialState: SpecificatieFormState = { error: null, success: false };
 
-export function NieuweFactuurForm({
+export function NieuweSpecificatieForm({
   klant,
   project,
   itemIds,
@@ -65,13 +56,11 @@ export function NieuweFactuurForm({
   landen: LandenMap;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
-  const [state, formAction, pending] = useActionState(createFacturatiebatch, initialState);
+  const [state, formAction, pending] = useActionState(genereerSpecificatie, initialState);
   const [toonBevestiging, setToonBevestiging] = useState(false);
   const [start, setStart] = useState(periodeStart);
   const [eind, setEind] = useState(periodeEind);
   const [extraKorting, setExtraKorting] = useState(0);
-  const [email, setEmail] = useState(klant.contact_email ?? "");
-  const [cc, setCc] = useState("");
 
   const totalen = useMemo(
     () => ({
@@ -86,7 +75,6 @@ export function NieuweFactuurForm({
   );
 
   const extraKortingTeHoog = extraKorting > basisTotalen.subtotaal_voor_extra_korting;
-  const btwBedrag = berekenBtw(totalen.totaal_bedrag, klant.btw_percentage);
 
   return (
     <form ref={formRef} action={formAction} className="flex flex-col gap-6">
@@ -95,14 +83,18 @@ export function NieuweFactuurForm({
         <input key={id} type="hidden" name="item_ids" value={id} />
       ))}
       <input type="hidden" name="extra_korting" value={extraKorting} />
-      <input type="hidden" name="verzend_email" value={email} />
-      <input type="hidden" name="verzend_cc" value={cc} />
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Factuurgegevens</CardTitle>
+          <CardTitle className="text-base">Specificatiegegevens</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
+          {project && (
+            <p className="text-sm text-muted-foreground sm:col-span-2">
+              Project: {project.naam}
+              {project.po_nummer ? ` (PO ${project.po_nummer})` : ""}
+            </p>
+          )}
           <div className="flex flex-col gap-2">
             <Label htmlFor="periode_start">Periode start</Label>
             <Input
@@ -126,7 +118,7 @@ export function NieuweFactuurForm({
             />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="extra_korting_input">Extra korting op deze factuur (optioneel)</Label>
+            <Label htmlFor="extra_korting_input">Extra korting op deze specificatie (optioneel)</Label>
             <Input
               id="extra_korting_input"
               type="number"
@@ -137,54 +129,18 @@ export function NieuweFactuurForm({
             />
             {extraKortingTeHoog && (
               <p className="text-xs font-medium text-destructive">
-                Extra korting kan niet groter zijn dan het factuurbedrag.
+                Extra korting kan niet groter zijn dan het bedrag van de specificatie.
               </p>
             )}
           </div>
-          {klant.verzending_toegestaan ? (
-            <>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="email_input">E-mailadres debiteur</Label>
-                <Input
-                  id="email_input"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="flex flex-col gap-2 sm:col-span-2">
-                <Label htmlFor="cc_input">Cc (optioneel, gescheiden door komma&apos;s)</Label>
-                <Input id="cc_input" value={cc} onChange={(e) => setCc(e.target.value)} placeholder="naam@knijff.com" />
-              </div>
-            </>
-          ) : (
-            <p className="text-sm text-muted-foreground sm:col-span-2">
-              Deze klant werkt met een eigen billing-systeem — er wordt alleen een PDF aangemaakt, geen e-mail
-              verstuurd.
-            </p>
-          )}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Voorbeeldfactuur</CardTitle>
+          <CardTitle className="text-base">Specificatie</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-6 print:hidden">
-          <FactuurVoorbeeldKaart>
-            <FactuurCover
-              klant={klant}
-              project={project}
-              valuta={klant.valuta}
-              periodeStart={start}
-              periodeEind={eind}
-              totalen={totalen}
-              btwPercentage={klant.btw_percentage}
-              btwBedrag={btwBedrag}
-              btwVermelding={klant.btw_vermelding}
-            />
-          </FactuurVoorbeeldKaart>
           <FactuurVoorbeeldKaart>
             <FactuurSpecificatie
               klant={klant}
@@ -205,12 +161,8 @@ export function NieuweFactuurForm({
           </CardContent>
         )}
         <CardFooter className="justify-end">
-          <Button
-            type="button"
-            disabled={pending || extraKortingTeHoog}
-            onClick={() => setToonBevestiging(true)}
-          >
-            {pending ? "Bezig…" : klant.verzending_toegestaan ? "Bevestigen en factuur aanmaken" : "Bevestigen en PDF aanmaken"}
+          <Button type="button" disabled={pending || extraKortingTeHoog} onClick={() => setToonBevestiging(true)}>
+            {pending ? "Bezig…" : "Bevestigen en specificatie maken"}
           </Button>
         </CardFooter>
       </Card>
@@ -220,14 +172,13 @@ export function NieuweFactuurForm({
           <DialogHeader>
             <DialogTitle>Weet je het zeker?</DialogTitle>
             <DialogDescription>
-              Na bevestigen wordt de factuur definitief en kunnen de geselecteerde factuuritems niet meer
-              aangepast worden.
-              {!klant.verzending_toegestaan && " Er wordt alleen een PDF aangemaakt, geen e-mail verstuurd."}
+              Na bevestigen wordt de specificatie vastgelegd en kunnen de geselecteerde factuuritems niet meer
+              aangepast worden. Het daadwerkelijke factureren gebeurt daarna handmatig, buiten Chronos om.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setToonBevestiging(false)}>
-              Terug naar het voorbeeld
+              Terug naar de specificatie
             </Button>
             <Button
               type="button"
@@ -237,7 +188,7 @@ export function NieuweFactuurForm({
                 formRef.current?.requestSubmit();
               }}
             >
-              {pending ? "Bezig…" : "Ja, factuur aanmaken"}
+              {pending ? "Bezig…" : "Ja, specificatie maken"}
             </Button>
           </DialogFooter>
         </DialogContent>

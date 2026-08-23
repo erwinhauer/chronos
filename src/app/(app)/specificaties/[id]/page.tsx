@@ -2,29 +2,21 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { SetBreadcrumb } from "@/lib/breadcrumb-context";
-import { FactuurCover } from "@/components/factuur-cover";
 import { FactuurSpecificatie } from "@/components/factuur-specificatie";
 import { FactuurVoorbeeldKaart } from "@/components/factuur-voorbeeld-kaart";
-import { DownloadFactuurKnop } from "@/components/download-factuur-knop";
-import { VerstuurOpnieuwKnop } from "@/components/verstuur-opnieuw-knop";
+import { DownloadSpecificatieKnop } from "@/components/download-specificatie-knop";
 import { haalLandenMap } from "@/lib/landen";
-import { Badge } from "@/components/ui/badge";
 
 export default async function SpecificatiePagina({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
   const profile = await getCurrentProfile();
 
-  const { data: batch } = await supabase
-    .from("facturatiebatches")
-    .select("*, klanten(*), projecten(naam, po_nummer)")
-    .eq("id", id)
-    .single();
+  const { data: batch } = await supabase.from("facturatiebatches").select("*, klanten(*)").eq("id", id).single();
   if (!batch) notFound();
 
   const klant = batch.klanten;
   if (!klant) notFound();
-  const project = batch.projecten as unknown as { naam: string; po_nummer: string | null } | null;
 
   const [{ data: items }, landen] = await Promise.all([
     supabase
@@ -38,8 +30,6 @@ export default async function SpecificatiePagina({ params }: { params: Promise<{
   ]);
 
   const titel = klant.specificatietaal === "nl" ? "Specificatie" : "Fee Note";
-  const magOpnieuwVersturen =
-    profile?.role === "finance" || profile?.role === "beheerder" || profile?.role === "teamleider";
   const magDownloaden =
     profile?.role === "finance" ||
     profile?.role === "beheerder" ||
@@ -66,65 +56,15 @@ export default async function SpecificatiePagina({ params }: { params: Promise<{
       />
       <div className="flex items-center justify-between print:hidden">
         <h2 className="text-2xl font-semibold tracking-tight">{titel}</h2>
-        <div className="flex items-center gap-2">
-          {magDownloaden && (
-            <>
-              <DownloadFactuurKnop batchId={batch.id} soort="factuur" label="Download factuur (PDF)" />
-              <DownloadFactuurKnop batchId={batch.id} soort="specificatie" label="Download specificatie (PDF)" />
-            </>
-          )}
-        </div>
+        {magDownloaden && <DownloadSpecificatieKnop specificatieId={batch.id} />}
       </div>
 
-      {!klant.verzending_toegestaan ? (
-        <div className="flex items-center gap-2 rounded-lg border border-border p-3 text-sm print:hidden">
-          <Badge variant="secondary">Alleen PDF</Badge>
-          <span className="text-muted-foreground">
-            Deze klant werkt met een eigen billing-systeem — er is geen e-mail verstuurd.
-          </span>
-        </div>
-      ) : (
-        (batch.verzonden_op || batch.verzend_fout) && (
-          <div className="flex items-center justify-between gap-4 rounded-lg border border-border p-3 print:hidden">
-            {batch.verzonden_op ? (
-              <div className="flex items-center gap-2 text-sm">
-                <Badge variant="success">Verstuurd</Badge>
-                <span className="text-muted-foreground">
-                  Verstuurd op {new Date(batch.verzonden_op).toLocaleString("nl-NL")} naar {batch.verzend_email}
-                </span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 text-sm">
-                <Badge variant="warning">Niet verstuurd</Badge>
-                <span className="text-muted-foreground">{batch.verzend_fout}</span>
-              </div>
-            )}
-            {magOpnieuwVersturen && <VerstuurOpnieuwKnop batchId={batch.id} />}
-          </div>
-        )
-      )}
-
       <p className="hidden text-sm text-muted-foreground print:block">
-        Gebruik de downloadknoppen boven deze pagina voor de factuur- en specificatie-PDF — deze voorbeeldweergave
-        is niet bedoeld om direct af te drukken.
+        Gebruik de downloadknop boven deze pagina voor de specificatie-PDF — deze voorbeeldweergave is niet
+        bedoeld om direct af te drukken.
       </p>
 
       <div className="flex flex-col gap-6 print:hidden">
-        <FactuurVoorbeeldKaart>
-          <FactuurCover
-            klant={klant}
-            project={project}
-            valuta={batch.valuta}
-            periodeStart={batch.periode_start}
-            periodeEind={batch.periode_eind}
-            totalen={totalen}
-            btwPercentage={batch.btw_percentage ?? 0}
-            btwBedrag={batch.btw_bedrag}
-            btwVermelding={batch.btw_vermelding}
-            factuurnummer={batch.accountview_factuurnummer}
-            factuurdatum={batch.accountview_factuurdatum}
-          />
-        </FactuurVoorbeeldKaart>
         <FactuurVoorbeeldKaart>
           <FactuurSpecificatie
             klant={klant}

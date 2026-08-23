@@ -188,15 +188,15 @@ function ProjectSectieBlok({
       {selectie.length === 0 ? (
         <Button size="sm" disabled>
           <Receipt className="h-4 w-4" />
-          Factureren (0)
+          Specificatie maken (0)
         </Button>
       ) : (
         <LinkButton
           size="sm"
-          href={`/facturatiebatches/nieuw?klant_id=${klantId}&item_ids=${selectie.map((s) => s.id).join(",")}`}
+          href={`/specificaties/nieuw?klant_id=${klantId}&item_ids=${selectie.map((s) => s.id).join(",")}`}
         >
           <Receipt className="h-4 w-4" />
-          Factureren ({selectie.length})
+          Specificatie maken ({selectie.length})
         </LinkButton>
       )}
     </div>

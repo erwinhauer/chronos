@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { Plus, ChevronDown } from "lucide-react";
-import { createKlant, type KlantFormState } from "@/actions/klanten";
+import { createKlant, type KlantFormState, type NieuweKlant } from "@/actions/klanten";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,22 +20,36 @@ import {
 
 const initialState: KlantFormState = { error: null, success: false };
 
-export function NewKlantDialog() {
+export function NewKlantDialog({
+  initialNaam,
+  onCreated,
+  trigger,
+}: {
+  initialNaam?: string;
+  onCreated?: (klant: NieuweKlant) => void;
+  trigger?: React.ReactNode;
+} = {}) {
   const [open, setOpen] = useState(false);
   const [kantoorkostenActief, setKantoorkostenActief] = useState(true);
   const [kostenDerdenApart, setKostenDerdenApart] = useState(false);
-  const [verzendingToegestaan, setVerzendingToegestaan] = useState(true);
   const [state, formAction, pending] = useActionState(async (prev: KlantFormState, formData: FormData) => {
     const result = await createKlant(prev, formData);
-    if (result.success) setOpen(false);
+    if (result.success) {
+      setOpen(false);
+      if (result.klant) onCreated?.(result.klant);
+    }
     return result;
   }, initialState);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button />}>
-        <Plus className="h-4 w-4" />
-        Nieuwe klant
+        {trigger ?? (
+          <>
+            <Plus className="h-4 w-4" />
+            Nieuwe klant
+          </>
+        )}
       </DialogTrigger>
       <DialogContent>
         <form action={formAction} className="flex flex-col gap-5">
@@ -47,7 +61,7 @@ export function NewKlantDialog() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
               <Label htmlFor="naam">Klantnaam</Label>
-              <Input id="naam" name="naam" placeholder="Bijv. Arcadis" required />
+              <Input id="naam" name="naam" defaultValue={initialNaam} placeholder="Bijv. Arcadis" required />
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="subtitel">Subtitel (optioneel)</Label>
@@ -114,15 +128,6 @@ export function NewKlantDialog() {
             />
             <input type="hidden" name="kolom_externe_kosten_zichtbaar" value={kostenDerdenApart ? "on" : ""} />
             Kosten van derden apart tonen op de specificatie
-          </label>
-
-          <label className="flex items-center gap-2 text-sm">
-            <Checkbox
-              checked={verzendingToegestaan}
-              onCheckedChange={(checked) => setVerzendingToegestaan(checked === true)}
-            />
-            <input type="hidden" name="verzending_toegestaan" value={verzendingToegestaan ? "on" : ""} />
-            Facturen per e-mail versturen (uitzetten als de klant een eigen billing-systeem heeft)
           </label>
 
           <div className="grid gap-4 sm:grid-cols-2">
