@@ -69,17 +69,6 @@ export function NewKlantDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="contactpersoon_naam">Contactpersoon</Label>
-              <Input id="contactpersoon_naam" name="contactpersoon_naam" placeholder="Naam" required />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="contact_email">E-mailadres</Label>
-              <Input id="contact_email" name="contact_email" type="email" placeholder="naam@klant.nl" required />
-            </div>
-          </div>
-
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
               <Label htmlFor="adres">Adres (voor op de factuur)</Label>

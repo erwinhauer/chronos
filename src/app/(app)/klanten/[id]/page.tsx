@@ -34,7 +34,7 @@ export default async function KlantDetailPage({ params }: { params: Promise<{ id
       .select("id, periode_start, periode_eind, totaal_bedrag, valuta, created_at")
       .eq("klant_id", id)
       .order("periode_start", { ascending: false }),
-    supabase.from("projecten").select("id, naam, po_nummer, actief").eq("klant_id", id).order("naam"),
+    supabase.from("projecten").select("id, naam, po_nummer, omschrijving, actief").eq("klant_id", id).order("naam"),
   ]);
 
   if (!klant) notFound();
@@ -65,9 +65,6 @@ export default async function KlantDetailPage({ params }: { params: Promise<{ id
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">{klant.naam}</h2>
           {klant.subtitel && <p className="text-sm text-muted-foreground">{klant.subtitel}</p>}
-          <p className="text-sm text-muted-foreground">
-            {klant.contactpersoon_naam} &middot; {klant.contact_email}
-          </p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant={klant.status === "actief" ? "default" : "outline"}>

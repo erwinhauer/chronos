@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { NewKlantDialog } from "@/components/new-klant-dialog";
+import { HubspotImportDialog } from "@/components/hubspot-import-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StatusDot } from "@/components/ui/status-dot";
@@ -22,7 +23,7 @@ export default async function KlantenPage() {
   const { data: klanten } = await supabase
     .from("klanten")
     .select(
-      "id, naam, subtitel, status, contactpersoon_naam, contact_email, specificatietaal, specificatietype, kantoorkosten_actief, kantoorkosten_percentage, valuta"
+      "id, naam, subtitel, status, specificatietaal, specificatietype, kantoorkosten_actief, kantoorkosten_percentage, valuta"
     )
     .order("naam");
 
@@ -35,7 +36,12 @@ export default async function KlantenPage() {
             Klantgegevens en specificatie-instellingen. Klik op een klant voor de factuurbedragen.
           </p>
         </div>
-        {profile?.role === "beheerder" && <NewKlantDialog />}
+        {profile?.role === "beheerder" && (
+          <div className="flex items-center gap-2">
+            <HubspotImportDialog />
+            <NewKlantDialog />
+          </div>
+        )}
       </div>
 
       <Card>
@@ -44,7 +50,6 @@ export default async function KlantenPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Klant</TableHead>
-                <TableHead>Contactpersoon</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Taal</TableHead>
                 <TableHead>Specificatietype</TableHead>
@@ -66,10 +71,6 @@ export default async function KlantenPage() {
                           {k.subtitel && <div className="text-xs font-normal text-muted-foreground">{k.subtitel}</div>}
                         </div>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>{k.contactpersoon_naam ?? "—"}</div>
-                      <div className="text-xs text-muted-foreground">{k.contact_email}</div>
                     </TableCell>
                     <TableCell>
                       <StatusDot
@@ -95,7 +96,7 @@ export default async function KlantenPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
                     Nog geen klanten aangemaakt.
                   </TableCell>
                 </TableRow>

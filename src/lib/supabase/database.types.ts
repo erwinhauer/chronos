@@ -324,8 +324,6 @@ export type Database = {
           adres: string | null
           btw_percentage: number
           btw_vermelding: string | null
-          contact_email: string | null
-          contactpersoon_naam: string | null
           created_at: string
           hubspot_id: string | null
           id: string
@@ -355,8 +353,6 @@ export type Database = {
           adres?: string | null
           btw_percentage?: number
           btw_vermelding?: string | null
-          contact_email?: string | null
-          contactpersoon_naam?: string | null
           created_at?: string
           hubspot_id?: string | null
           id?: string
@@ -386,8 +382,6 @@ export type Database = {
           adres?: string | null
           btw_percentage?: number
           btw_vermelding?: string | null
-          contact_email?: string | null
-          contactpersoon_naam?: string | null
           created_at?: string
           hubspot_id?: string | null
           id?: string
@@ -557,6 +551,7 @@ export type Database = {
           id: string
           klant_id: string
           naam: string
+          omschrijving: string | null
           po_nummer: string | null
           updated_at: string
         }
@@ -566,6 +561,7 @@ export type Database = {
           id?: string
           klant_id: string
           naam: string
+          omschrijving?: string | null
           po_nummer?: string | null
           updated_at?: string
         }
@@ -575,6 +571,7 @@ export type Database = {
           id?: string
           klant_id?: string
           naam?: string
+          omschrijving?: string | null
           po_nummer?: string | null
           updated_at?: string
         }

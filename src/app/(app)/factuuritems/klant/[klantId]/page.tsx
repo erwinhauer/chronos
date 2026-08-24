@@ -26,7 +26,7 @@ export default async function FactuuritemsPerKlantPagina({
     supabase
       .from("factuuritems")
       .select(
-        "id, datum, omschrijving_klant, eenheidstype, qty, honorarium, externe_kosten, korting, status, declarabel, medewerker_id, klant_id, project_id, projecten(naam, po_nummer), profiles!factuuritems_medewerker_id_fkey(full_name, initialen), laatst_bewerkt_door_profiel:profiles!factuuritems_laatst_bewerkt_door_fkey(full_name), factuuritem_dossiers(dossiernummer, type_dienst, land, matter_naam, volgorde)"
+        "id, datum, omschrijving_klant, eenheidstype, qty, honorarium, externe_kosten, korting, status, declarabel, medewerker_id, klant_id, project_id, projecten(naam, po_nummer, omschrijving), profiles!factuuritems_medewerker_id_fkey(full_name, initialen), laatst_bewerkt_door_profiel:profiles!factuuritems_laatst_bewerkt_door_fkey(full_name), factuuritem_dossiers(dossiernummer, type_dienst, land, matter_naam, volgorde)"
       )
       .eq("klant_id", klantId)
       .eq("status", "aangemaakt")
@@ -42,7 +42,11 @@ export default async function FactuuritemsPerKlantPagina({
     profile?.role === "finance" || profile?.role === "beheerder" || profile?.role === "teamleider";
 
   const genormaliseerd: FactuurGroepItem[] = (items ?? []).map((item) => {
-    const project = item.projecten as unknown as { naam: string; po_nummer: string | null } | null;
+    const project = item.projecten as unknown as {
+      naam: string;
+      po_nummer: string | null;
+      omschrijving: string | null;
+    } | null;
     const medewerker = item.profiles as unknown as { full_name: string; initialen: string | null } | null;
     const laatstBewerktDoor =
       (item.laatst_bewerkt_door_profiel as unknown as { full_name: string } | null)?.full_name ?? null;
@@ -66,6 +70,7 @@ export default async function FactuuritemsPerKlantPagina({
       projectId: item.project_id,
       projectNaam: project?.naam ?? null,
       projectPoNummer: project?.po_nummer ?? null,
+      projectOmschrijving: project?.omschrijving ?? null,
     };
   });
 

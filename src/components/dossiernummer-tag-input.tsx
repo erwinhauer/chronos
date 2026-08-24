@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Plus, X } from "lucide-react";
-import { parseDossiernummer, landNaamVoorIso, DOSSIERNUMMER_VOORBEELD } from "@/lib/dossiernummer";
+import { parseDossiernummer, landNaamVoorIso } from "@/lib/dossiernummer";
 import type { LandenMap } from "@/lib/landen";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,7 +49,7 @@ export function DossiernummerTagInput({
               toevoegen();
             }
           }}
-          placeholder={DOSSIERNUMMER_VOORBEELD}
+          placeholder="Typ het dossiernummer en klik op Enter, of klik op het plusje"
         />
         <Button type="button" variant="outline" size="icon" onClick={toevoegen} aria-label="Dossier toevoegen">
           <Plus className="h-4 w-4" />

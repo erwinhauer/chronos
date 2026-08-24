@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-export function HubspotTab() {
+export function HubspotTab({ showHeading = true }: { showHeading?: boolean } = {}) {
   const [zoekterm, setZoekterm] = useState("");
   const [resultaten, setResultaten] = useState<HubspotZoekresultaat[] | null>(null);
   const [zoekFout, setZoekFout] = useState<string | null>(null);
@@ -40,14 +40,16 @@ export function HubspotTab() {
   return (
     <Card>
       <CardContent className="flex flex-col gap-4">
-        <div>
-          <h3 className="text-sm font-medium">Klant importeren uit HubSpot</h3>
-          <p className="text-sm text-muted-foreground">
-            Tijdelijke oplossing tot de koppeling met Patricia er is. Zoek een bedrijf op naam en importeer het
-            één voor één — bestaande klanten worden nooit overschreven (alleen een leeg adresveld wordt
-            aangevuld). Vereist de omgevingsvariabele HUBSPOT_ACCESS_TOKEN.
-          </p>
-        </div>
+        {showHeading && (
+          <div>
+            <h3 className="text-sm font-medium">Klant importeren uit HubSpot</h3>
+            <p className="text-sm text-muted-foreground">
+              Tijdelijke oplossing tot de koppeling met Patricia er is. Zoek een bedrijf op naam en importeer het
+              één voor één — bestaande klanten worden nooit overschreven (alleen een leeg adresveld wordt
+              aangevuld). Vereist de omgevingsvariabele HUBSPOT_ACCESS_TOKEN.
+            </p>
+          </div>
+        )}
 
         <div className="flex gap-2">
           <div className="relative w-full max-w-sm">

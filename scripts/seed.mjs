@@ -127,8 +127,6 @@ async function main() {
       juridische_naam: "Arcadis N.V.",
       hubspot_id: "hs-arcadis-001",
       accountview_debiteurnummer: "10023",
-      contactpersoon_naam: "Ellen de Groot",
-      contact_email: "ellen.degroot@arcadis.com",
       specificatietaal: "en",
       specificatietype: "simple",
       kantoorkosten_actief: true,
@@ -147,8 +145,6 @@ async function main() {
       juridische_naam: "Lipton Teas and Infusions Group B.V.",
       hubspot_id: "hs-lipton-001",
       accountview_debiteurnummer: "10041",
-      contactpersoon_naam: "Mark van Dijk",
-      contact_email: "mark.vandijk@liptonteas.com",
       specificatietaal: "en",
       specificatietype: "extended",
       kantoorkosten_actief: true,
@@ -206,8 +202,20 @@ async function main() {
   // Projecten per klant: 0..n, elk met eigen PO-nummer — facturatie wordt hierop
   // hard gescoped (zie src/actions/facturatie.ts).
   const projectenGewenst = [
-    { klant_id: arcadis.id, naam: "Oppositiezaken NL/PL", po_nummer: "PO-AR-2026-02", actief: true },
-    { klant_id: lipton.id, naam: "US/Azië merkuitbreiding", po_nummer: "PO-LIP-2026-01", actief: true },
+    {
+      klant_id: arcadis.id,
+      naam: "Oppositiezaken NL/PL",
+      po_nummer: "PO-AR-2026-02",
+      omschrijving: "Oppositieprocedures tegen concurrerende merkaanvragen in Nederland en Polen.",
+      actief: true,
+    },
+    {
+      klant_id: lipton.id,
+      naam: "US/Azië merkuitbreiding",
+      po_nummer: "PO-LIP-2026-01",
+      omschrijving: "Uitbreiding van het merkenportefeuille naar de VS en Zuidoost-Azië.",
+      actief: true,
+    },
   ];
   const { data: bestaandeProjecten, error: projectenLeesError } = await admin
     .from("projecten")

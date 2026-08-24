@@ -426,7 +426,9 @@ export function FactuurItemForm({
 
               <div className="grid gap-4 border-t border-border pt-5 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="externe_kosten_input">Kosten van derden (optioneel)</Label>
+                  <div className="flex h-6 items-center">
+                    <Label htmlFor="externe_kosten_input">Kosten van derden (optioneel)</Label>
+                  </div>
                   <div className="relative">
                     <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
                       €
@@ -443,7 +445,7 @@ export function FactuurItemForm({
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
+                  <div className="flex h-6 items-center justify-between">
                     <Label htmlFor="korting_input">Korting (optioneel)</Label>
                     <div className="flex overflow-hidden rounded-md border border-input">
                       <button

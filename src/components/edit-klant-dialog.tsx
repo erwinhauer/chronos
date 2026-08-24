@@ -22,8 +22,6 @@ type Klant = {
   id: string;
   naam: string;
   subtitel: string | null;
-  contactpersoon_naam: string | null;
-  contact_email: string | null;
   adres: string | null;
   accountview_debiteurnummer: string | null;
   specificatietaal: "nl" | "en";
@@ -67,28 +65,6 @@ export function EditKlantDialog({ klant }: { klant: Klant }) {
             <div className="flex flex-col gap-2">
               <Label htmlFor="subtitel">Subtitel (optioneel)</Label>
               <Input id="subtitel" name="subtitel" defaultValue={klant.subtitel ?? ""} placeholder="Korte omschrijving of alias" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="contactpersoon_naam">Contactpersoon</Label>
-              <Input
-                id="contactpersoon_naam"
-                name="contactpersoon_naam"
-                defaultValue={klant.contactpersoon_naam ?? ""}
-                required
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="contact_email">E-mailadres</Label>
-              <Input
-                id="contact_email"
-                name="contact_email"
-                type="email"
-                defaultValue={klant.contact_email ?? ""}
-                required
-              />
             </div>
           </div>
 

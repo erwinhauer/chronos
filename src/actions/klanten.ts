@@ -17,8 +17,6 @@ export type KlantFormState = { error: string | null; success: boolean; klant?: N
 export async function createKlant(_prevState: KlantFormState, formData: FormData): Promise<KlantFormState> {
   const naam = String(formData.get("naam") ?? "").trim();
   const subtitel = String(formData.get("subtitel") ?? "").trim();
-  const contactpersoon_naam = String(formData.get("contactpersoon_naam") ?? "").trim();
-  const contact_email = String(formData.get("contact_email") ?? "").trim();
   const adres = String(formData.get("adres") ?? "").trim();
   const accountview_debiteurnummer = String(formData.get("accountview_debiteurnummer") ?? "").trim();
   const specificatietaal = String(formData.get("specificatietaal") ?? "nl").trim();
@@ -28,11 +26,8 @@ export async function createKlant(_prevState: KlantFormState, formData: FormData
   const btw_vermelding = String(formData.get("btw_vermelding") ?? "").trim();
   const opmerkingen = String(formData.get("opmerkingen") ?? "").trim();
 
-  if (!naam || !contactpersoon_naam || !contact_email) {
-    return { error: "Klantnaam, contactpersoon en e-mailadres zijn verplicht.", success: false };
-  }
-  if (!contact_email.includes("@")) {
-    return { error: "Vul een geldig e-mailadres in voor de contactpersoon.", success: false };
+  if (!naam) {
+    return { error: "Klantnaam is verplicht.", success: false };
   }
   if (!Number.isFinite(btw_percentage) || btw_percentage < 0) {
     return { error: "Vul een geldig BTW-percentage in.", success: false };
@@ -44,8 +39,6 @@ export async function createKlant(_prevState: KlantFormState, formData: FormData
     .insert({
       naam,
       subtitel: subtitel || null,
-      contactpersoon_naam,
-      contact_email,
       adres: adres || null,
       accountview_debiteurnummer: accountview_debiteurnummer || null,
       specificatietaal: specificatietaal as "nl" | "en",
@@ -78,8 +71,6 @@ export async function updateKlant(
 ): Promise<KlantFormState> {
   const naam = String(formData.get("naam") ?? "").trim();
   const subtitel = String(formData.get("subtitel") ?? "").trim();
-  const contactpersoon_naam = String(formData.get("contactpersoon_naam") ?? "").trim();
-  const contact_email = String(formData.get("contact_email") ?? "").trim();
   const adres = String(formData.get("adres") ?? "").trim();
   const accountview_debiteurnummer = String(formData.get("accountview_debiteurnummer") ?? "").trim();
   const specificatietaal = String(formData.get("specificatietaal") ?? "nl").trim();
@@ -89,11 +80,8 @@ export async function updateKlant(
   const btw_vermelding = String(formData.get("btw_vermelding") ?? "").trim();
   const opmerkingen = String(formData.get("opmerkingen") ?? "").trim();
 
-  if (!naam || !contactpersoon_naam || !contact_email) {
-    return { error: "Klantnaam, contactpersoon en e-mailadres zijn verplicht.", success: false };
-  }
-  if (!contact_email.includes("@")) {
-    return { error: "Vul een geldig e-mailadres in voor de contactpersoon.", success: false };
+  if (!naam) {
+    return { error: "Klantnaam is verplicht.", success: false };
   }
   if (!Number.isFinite(btw_percentage) || btw_percentage < 0) {
     return { error: "Vul een geldig BTW-percentage in.", success: false };
@@ -105,8 +93,6 @@ export async function updateKlant(
     .update({
       naam,
       subtitel: subtitel || null,
-      contactpersoon_naam,
-      contact_email,
       adres: adres || null,
       accountview_debiteurnummer: accountview_debiteurnummer || null,
       specificatietaal: specificatietaal as "nl" | "en",

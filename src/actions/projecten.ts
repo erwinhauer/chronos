@@ -12,6 +12,7 @@ export async function createProject(
 ): Promise<ProjectFormState> {
   const naam = String(formData.get("naam") ?? "").trim();
   const po_nummer = String(formData.get("po_nummer") ?? "").trim();
+  const omschrijving = String(formData.get("omschrijving") ?? "").trim();
 
   if (!naam) {
     return { error: "Projectnaam is verplicht.", success: false };
@@ -22,6 +23,7 @@ export async function createProject(
     klant_id: klantId,
     naam,
     po_nummer: po_nummer || null,
+    omschrijving: omschrijving || null,
   });
 
   if (error) {
@@ -45,6 +47,7 @@ export async function updateProject(
 ): Promise<ProjectFormState> {
   const naam = String(formData.get("naam") ?? "").trim();
   const po_nummer = String(formData.get("po_nummer") ?? "").trim();
+  const omschrijving = String(formData.get("omschrijving") ?? "").trim();
   const actief = formData.get("actief") === "on";
 
   if (!naam) {
@@ -54,7 +57,7 @@ export async function updateProject(
   const supabase = await createClient();
   const { data: project, error } = await supabase
     .from("projecten")
-    .update({ naam, po_nummer: po_nummer || null, actief })
+    .update({ naam, po_nummer: po_nummer || null, omschrijving: omschrijving || null, actief })
     .eq("id", id)
     .select("klant_id")
     .single();

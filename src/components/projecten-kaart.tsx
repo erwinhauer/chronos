@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -19,7 +20,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-export type Project = { id: string; naam: string; po_nummer: string | null; actief: boolean };
+export type Project = {
+  id: string;
+  naam: string;
+  po_nummer: string | null;
+  omschrijving: string | null;
+  actief: boolean;
+};
 
 const initialState: ProjectFormState = { error: null, success: false };
 
@@ -75,6 +82,17 @@ function ProjectRow({ project }: { project: Project }) {
           )}
         </div>
       </div>
+      <div className="flex flex-col gap-1">
+        <Label htmlFor={`omschrijving-${project.id}`} className="text-xs text-muted-foreground">
+          Omschrijving (optioneel)
+        </Label>
+        <Textarea
+          id={`omschrijving-${project.id}`}
+          name="omschrijving"
+          rows={2}
+          defaultValue={project.omschrijving ?? ""}
+        />
+      </div>
       {state.error && (
         <p role="alert" className="text-sm text-destructive">
           {state.error}
@@ -118,6 +136,10 @@ function NewProjectDialog({ klantId }: { klantId: string }) {
           <div className="flex flex-col gap-2">
             <Label htmlFor="po_nummer">PO-nummer (optioneel)</Label>
             <Input id="po_nummer" name="po_nummer" placeholder="Bijv. PO-2026-001" />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="omschrijving">Omschrijving (optioneel)</Label>
+            <Textarea id="omschrijving" name="omschrijving" rows={2} placeholder="Waar dit project over gaat." />
           </div>
           {state.error && (
             <p role="alert" className="text-sm text-destructive">

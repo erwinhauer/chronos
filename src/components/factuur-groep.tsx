@@ -44,12 +44,14 @@ export type FactuurGroepItem = {
   projectId: string | null;
   projectNaam: string | null;
   projectPoNummer: string | null;
+  projectOmschrijving: string | null;
 };
 
 type ProjectSectie = {
   sleutel: string;
   projectNaam: string | null;
   projectPoNummer: string | null;
+  projectOmschrijving: string | null;
   items: FactuurGroepItem[];
 };
 
@@ -89,11 +91,15 @@ export function FactuurGroep({
         sleutel,
         projectNaam: item.projectNaam,
         projectPoNummer: item.projectPoNummer,
+        projectOmschrijving: item.projectOmschrijving,
         items: [item],
       });
   }
   const secties = Array.from(sectieMap.values()).sort((a, b) => (a.projectNaam ?? "").localeCompare(b.projectNaam ?? ""));
-  const toonProjectHeaders = secties.length > 1;
+  // Ook tonen bij precies één sectie, zolang die een echt project is (naam,
+  // PO-nummer of omschrijving) — anders blijft die info onzichtbaar voor de
+  // (meest voorkomende) klant met maar één project.
+  const toonProjectHeaders = secties.length > 1 || (secties.length === 1 && secties[0].sleutel !== "__geen__");
 
   return (
     <Card>
@@ -211,20 +217,25 @@ function ProjectSectieBlok({
     <div className="flex flex-col gap-2">
       {toonHeader ? (
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            {sectie.projectNaam ?? "Geen project"}
-            {sectie.projectPoNummer && (
-              <Badge
-                variant="outline"
-                className="text-xs"
-                style={{
-                  color: projectKleur(kleurIndex),
-                  borderColor: `color-mix(in oklch, ${projectKleur(kleurIndex)} 40%, transparent)`,
-                  backgroundColor: `color-mix(in oklch, ${projectKleur(kleurIndex)} 12%, transparent)`,
-                }}
-              >
-                PO: {sectie.projectPoNummer}
-              </Badge>
+          <div>
+            <div className="flex items-center gap-2 text-sm font-medium">
+              {sectie.projectNaam ?? "Geen project"}
+              {sectie.projectPoNummer && (
+                <Badge
+                  variant="outline"
+                  className="text-xs"
+                  style={{
+                    color: projectKleur(kleurIndex),
+                    borderColor: `color-mix(in oklch, ${projectKleur(kleurIndex)} 40%, transparent)`,
+                    backgroundColor: `color-mix(in oklch, ${projectKleur(kleurIndex)} 12%, transparent)`,
+                  }}
+                >
+                  PO: {sectie.projectPoNummer}
+                </Badge>
+              )}
+            </div>
+            {sectie.projectOmschrijving && (
+              <p className="text-xs text-muted-foreground">{sectie.projectOmschrijving}</p>
             )}
           </div>
           {acties}

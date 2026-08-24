@@ -6,25 +6,26 @@ import { createClient } from "@supabase/supabase-js";
 
 // Vóór elke commit bijwerken met de wijzigingen van die release.
 const CHANGELOG_ENTRY = {
-  versienummer: "0.20.0",
+  versienummer: "0.21.0",
   releasedatum: "2026-08-24",
-  titel: "Vlaggen en icoontjes op het dashboard, opmaak- en bestandsnaam-fixes op de specificatie",
-  nieuwe_functies: [],
+  titel: "Benelux-vlag, HubSpot-import vanuit Klanten, projectomschrijving en formulierfixes",
+  nieuwe_functies: [
+    "Klanten: vanaf de Klanten-pagina kan een nieuwe klant nu ook rechtstreeks uit HubSpot geïmporteerd worden (voorheen alleen via Instellingen)",
+    "Projecten kunnen nu ook een vrije omschrijving krijgen, naast de projectnaam en het PO-nummer — zichtbaar bij de factuuritems van die klant",
+  ],
   wijzigingen: [
-    "Dashboard: 'Diensten per land/regio' toont nu de landsvlag in plaats van een avatar, en 'Verkochte diensten' een bij de dienst passend icoon in een cirkel",
-    "De gedownloade specificatie-PDF krijgt nu een herkenbare bestandsnaam: 'JJJJMMDD Klantnaam Specificatie factuur.pdf' (of 'Specification Invoice' in het Engels)",
-    "Factuuritem aanmaken/bewerken: 'Honorarium en kosten' is nu duidelijker onderverdeeld in Kosten Knijff (met Aantal (Qty), dat hiernaartoe verhuisd is), Kosten van derden, Korting en Kantoorkosten",
-    "Het veld 'Declarabel' staat bij een nieuw factuuritem niet meer standaard aangevinkt",
+    "Dashboard: regio 'Benelux' toont nu de Benelux-vlag in plaats van een generiek wereldbol-icoon (voor 'Wereldwijd'/internationale registraties blijft dat icoon staan — daarvoor bestaat geen vlag)",
+    "De contactpersoon-koppeling op een klant (naam + e-mailadres) is verwijderd — die werd nergens gebruikt en stond alleen maar in de weg bij het aanmaken van een klant",
+    "Nieuw factuuritem: de velden 'Kosten van derden' en 'Korting' lijnen nu verticaal netjes uit",
+    "Nieuw factuuritem: de placeholder bij 'Dossier(s)' legt nu uit hoe je een dossiernummer toevoegt, in plaats van een voorbeeldformaat te tonen",
   ],
-  bugfixes: [
-    "De bevestigingsdialoog bij 'Specificatie maken' liep met zijn knoppen buiten de dialoog — die knoppen staan nu netjes gestapeld binnen de dialoog",
-  ],
+  bugfixes: [],
   bekende_beperkingen: [
     "Netto-omzet is nog een tijdelijke placeholder (67% van de bruto-omzet) — de echte netto-omzet per regel kan nog niet uit Chronos worden afgeleid, dat rekent Finance vooralsnog zelf maandelijks uit",
     "'Diensten per land/regio' is afgeleid van de landcode in het dossiernummer; factuuritems zonder (herkenbare) landcode in het dossiernummer tellen niet mee in die tegel",
     "Matter (dossieromschrijving) staat nog niet op nieuwe factuuritems — dat komt pas mee zodra de echte Patricia-koppeling er is; op de specificatie staat dan tijdelijk een '—'",
     "Matter type wordt nog steeds afgeleid uit het dossiernummer; in de praktijk kan hetzelfde dossier bij verschillende werkzaamheden een andere matter type hebben — dat is nog niet per factuurregel instelbaar",
-    "HubSpot-import haalt alleen naam en adres op (Companies hebben geen contactpersoon-veld) — contactpersoon en e-mailadres vul je na import zelf in bij Klant bewerken",
+    "HubSpot-import haalt alleen naam en adres op — overige klantgegevens vul je na import zelf aan bij Klant bewerken",
   ],
   gebruikersactie: null,
 };

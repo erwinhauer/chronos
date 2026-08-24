@@ -340,8 +340,6 @@ export function parseDossiernummer(input: string): DossiernummerParseResult | nu
   return null;
 }
 
-export const DOSSIERNUMMER_VOORBEELD = "TM93905GB00";
-
 // `landen` komt bij voorkeur van de beheerder-bewerkbare `landcodes`-tabel
 // (zie src/lib/landen.ts); zonder dat argument valt dit terug op de statische
 // lijst hierboven (die overigens ook de seed-data voor die tabel is).
