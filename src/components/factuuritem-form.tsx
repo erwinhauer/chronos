@@ -123,7 +123,7 @@ export function FactuurItemForm({
   const [kortingBedrag, setKortingBedrag] = useState(initial?.korting ?? 0);
   const [kortingPercentage, setKortingPercentage] = useState(initial?.korting_percentage ?? 0);
   const [kantoorkostenActief, setKantoorkostenActief] = useState(initial?.kantoorkosten_van_toepassing ?? true);
-  const [declarabel, setDeclarabel] = useState(initial?.declarabel ?? true);
+  const [declarabel, setDeclarabel] = useState(initial?.declarabel ?? false);
   const [voorgesteldTarief, setVoorgesteldTarief] = useState<number | null>(null);
   const [toonSluitenBevestiging, setToonSluitenBevestiging] = useState(false);
 
@@ -330,7 +330,7 @@ export function FactuurItemForm({
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="datum">Datum</Label>
                   <Input
@@ -355,19 +355,6 @@ export function FactuurItemForm({
                     ))}
                   </NativeSelect>
                 </div>
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="qty">Aantal (Qty)</Label>
-                  <Input
-                    id="qty"
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    value={qtyInput}
-                    onChange={(e) => setQtyInput(e.target.value)}
-                    onBlur={() => setQtyInput((Number(qtyInput) || 0).toFixed(1))}
-                    required
-                  />
-                </div>
               </div>
             </CardContent>
           </Card>
@@ -377,46 +364,67 @@ export function FactuurItemForm({
               <CardTitle className="text-base">Honorarium en kosten</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-5">
-              <div className="flex flex-col gap-2 sm:w-64">
-                <Label htmlFor="prijstype">Prijstype</Label>
-                <NativeSelect
-                  key={`prijstype-${selectResetKey}`}
-                  id="prijstype"
-                  value={prijstype}
-                  onChange={(v) => setPrijstype(v as PrijsType)}
-                  required
-                >
-                  <option value="" disabled>
-                    Kies…
-                  </option>
-                  <option value="uren">Uren</option>
-                  <option value="vast_honorarium">Fixed fee</option>
-                </NativeSelect>
-              </div>
+              <div className="flex flex-col gap-3">
+                <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Kosten Knijff</p>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="prijstype">Prijstype</Label>
+                    <NativeSelect
+                      key={`prijstype-${selectResetKey}`}
+                      id="prijstype"
+                      value={prijstype}
+                      onChange={(v) => setPrijstype(v as PrijsType)}
+                      required
+                    >
+                      <option value="" disabled>
+                        Kies…
+                      </option>
+                      <option value="uren">Uren</option>
+                      <option value="vast_honorarium">Fixed fee</option>
+                    </NativeSelect>
+                  </div>
 
-              <div className="flex flex-col gap-2 sm:w-64">
-                <Label htmlFor="tarief_input">{prijstype === "vast_honorarium" ? "Vast honorarium (bedrag)" : "Prijs per uur"}</Label>
-                <div className="relative">
-                  <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                    €
-                  </span>
-                  <Input
-                    id="tarief_input"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    className="pl-6"
-                    value={tarief ?? ""}
-                    onChange={(e) => setTarief(e.target.value === "" ? null : Number(e.target.value))}
-                    required
-                  />
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="qty">Aantal (Qty)</Label>
+                    <Input
+                      id="qty"
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      value={qtyInput}
+                      onChange={(e) => setQtyInput(e.target.value)}
+                      onBlur={() => setQtyInput((Number(qtyInput) || 0).toFixed(1))}
+                      required
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="tarief_input">
+                      {prijstype === "vast_honorarium" ? "Vast honorarium (bedrag)" : "Prijs per uur"}
+                    </Label>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                        €
+                      </span>
+                      <Input
+                        id="tarief_input"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        className="pl-6"
+                        value={tarief ?? ""}
+                        onChange={(e) => setTarief(e.target.value === "" ? null : Number(e.target.value))}
+                        required
+                      />
+                    </div>
+                    {prijstype === "uren" && voorgesteldTarief !== null && (
+                      <p className="text-xs text-muted-foreground">Voorgesteld tarief: {euro(voorgesteldTarief)}</p>
+                    )}
+                  </div>
                 </div>
-                {prijstype === "uren" && voorgesteldTarief !== null && (
-                  <p className="text-xs text-muted-foreground">Voorgesteld tarief: {euro(voorgesteldTarief)}</p>
-                )}
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 border-t border-border pt-5 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="externe_kosten_input">Kosten van derden (optioneel)</Label>
                   <div className="relative">
@@ -491,7 +499,7 @@ export function FactuurItemForm({
                 </div>
               </div>
 
-              <div className="flex flex-col gap-3 border-t border-border pt-4">
+              <div className="flex flex-col gap-3 border-t border-border pt-5">
                 <label className="flex items-center gap-2 text-sm">
                   <Checkbox
                     checked={kantoorkostenActief}

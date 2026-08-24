@@ -7,6 +7,17 @@ import { haalLandenMap } from "@/lib/landen";
 
 export type SpecificatiePdfResultaat = { base64: string | null; filename: string | null; error: string | null };
 
+function sanitiseerBestandsnaamdeel(waarde: string): string {
+  return waarde.replace(/[\\/:*?"<>|]/g, "-").trim();
+}
+
+function specificatieBestandsnaam(klantNaam: string, taal: "nl" | "en", aangemaaktOp: string): string {
+  const datum = new Date(aangemaaktOp);
+  const yyyymmdd = `${datum.getFullYear()}${String(datum.getMonth() + 1).padStart(2, "0")}${String(datum.getDate()).padStart(2, "0")}`;
+  const titel = taal === "nl" ? "Specificatie factuur" : "Specification Invoice";
+  return `${yyyymmdd} ${sanitiseerBestandsnaamdeel(klantNaam)} ${titel}.pdf`;
+}
+
 // Genereert de specificatie-PDF on-demand (geen Storage meer nodig — de PDF is
 // een pure functie van de vastgelegde specificatie + haar items).
 export async function genereerSpecificatiePdfBase64(specificatieId: string): Promise<SpecificatiePdfResultaat> {
@@ -78,7 +89,8 @@ export async function genereerSpecificatiePdfBase64(specificatieId: string): Pro
       totalen,
       valuta: batch.valuta,
     });
-    return { base64: buffer.toString("base64"), filename: `specificatie-${klant.naam}.pdf`, error: null };
+    const filename = specificatieBestandsnaam(klant.naam, klant.specificatietaal, batch.created_at);
+    return { base64: buffer.toString("base64"), filename, error: null };
   } catch {
     return { base64: null, filename: null, error: "Genereren van de PDF is mislukt." };
   }

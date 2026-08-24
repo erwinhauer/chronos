@@ -15,6 +15,8 @@ import { SegmentedProgress } from "@/components/segmented-progress";
 import { StatIcon } from "@/components/stat-icon";
 import { LinkButton } from "@/components/link-button";
 import { AvatarInitials } from "@/components/ui/avatar-initials";
+import { CountryFlag } from "@/components/ui/country-flag";
+import { DienstIcon } from "@/components/ui/dienst-icon";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -246,11 +248,11 @@ export default async function DashboardPage({
 
   // Diensten per land/regio — zelfde bron en aanpak als "Verkochte diensten",
   // maar gegroepeerd op de dossiernummer-afgeleide land-ISO van het eerste dossier.
-  const perLand = new Map<string, { landNaam: string; omzet: number }>();
+  const perLand = new Map<string, { landNaam: string; iso: string | null; omzet: number }>();
   for (const r of inGekozenPeriode) {
     const iso = eersteLandIso(r);
     const landNaam = landNaamVoorIso(iso, landenMap);
-    const bestaand = perLand.get(landNaam) ?? { landNaam, omzet: 0 };
+    const bestaand = perLand.get(landNaam) ?? { landNaam, iso, omzet: 0 };
     bestaand.omzet += regelbedrag(r);
     perLand.set(landNaam, bestaand);
   }
@@ -639,7 +641,7 @@ export default async function DashboardPage({
           ) : (
             dienstenTabel.map((d) => (
               <div key={d.dienst} className="flex items-center gap-3 rounded-md p-2">
-                <AvatarInitials naam={d.dienst} />
+                <DienstIcon dienst={d.dienst} />
                 <div className="flex-1">
                   <p className="text-sm font-medium">{d.dienst}</p>
                   <p className="text-xs text-muted-foreground">{d.aantal} factuuritems</p>
@@ -664,7 +666,7 @@ export default async function DashboardPage({
           ) : (
             landenTabel.map((l) => (
               <div key={l.landNaam} className="flex items-center gap-3 rounded-md p-2">
-                <AvatarInitials naam={l.landNaam} />
+                <CountryFlag iso={l.iso} naam={l.landNaam} />
                 <span className="flex-1 text-sm font-medium">{l.landNaam}</span>
                 <span className="text-sm font-medium tabular-figures">{euro(l.omzet)}</span>
               </div>

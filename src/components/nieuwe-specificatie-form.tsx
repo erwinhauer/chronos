@@ -168,7 +168,7 @@ export function NieuweSpecificatieForm({
               aangepast worden. Het daadwerkelijke factureren gebeurt daarna handmatig, buiten Chronos om.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="sm:flex-col-reverse">
             <Button type="button" variant="outline" onClick={() => setToonBevestiging(false)}>
               Terug naar de specificatie
             </Button>
