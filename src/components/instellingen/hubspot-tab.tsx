@@ -3,11 +3,15 @@
 import { useState, useTransition } from "react";
 import { Search, Download, Check } from "lucide-react";
 import { zoekHubspotKlanten, importeerHubspotKlant, type HubspotZoekresultaat } from "@/actions/hubspot";
+import type { NieuweKlant } from "@/actions/klanten";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-export function HubspotTab({ showHeading = true }: { showHeading?: boolean } = {}) {
+export function HubspotTab({
+  showHeading = true,
+  onImported,
+}: { showHeading?: boolean; onImported?: (klant: NieuweKlant) => void } = {}) {
   const [zoekterm, setZoekterm] = useState("");
   const [resultaten, setResultaten] = useState<HubspotZoekresultaat[] | null>(null);
   const [zoekFout, setZoekFout] = useState<string | null>(null);
@@ -32,6 +36,7 @@ export function HubspotTab({ showHeading = true }: { showHeading?: boolean } = {
     setImportPending(null);
     if (res.success) {
       setGeimporteerd((prev) => new Set(prev).add(hubspotId));
+      if (res.klant) onImported?.(res.klant);
     } else {
       setImportFout((prev) => ({ ...prev, [hubspotId]: res.fout ?? "Importeren is mislukt." }));
     }

@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
-export type ProjectFormState = { error: string | null; success: boolean };
+export type NieuwProject = { id: string; naam: string; po_nummer: string | null; omschrijving: string | null };
+
+export type ProjectFormState = { error: string | null; success: boolean; project?: NieuwProject };
 
 export async function createProject(
   klantId: string,
@@ -19,25 +21,24 @@ export async function createProject(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.from("projecten").insert({
-    klant_id: klantId,
-    naam,
-    po_nummer: po_nummer || null,
-    omschrijving: omschrijving || null,
-  });
+  const { data: project, error } = await supabase
+    .from("projecten")
+    .insert({
+      klant_id: klantId,
+      naam,
+      po_nummer: po_nummer || null,
+      omschrijving: omschrijving || null,
+    })
+    .select("id, naam, po_nummer, omschrijving")
+    .single();
 
-  if (error) {
-    return {
-      error:
-        error.code === "42501"
-          ? "Alleen beheerders, of teamleiders van een team dat deze klant al bedient, kunnen projecten beheren."
-          : "Aanmaken van het project is mislukt.",
-      success: false,
-    };
+  if (error || !project) {
+    return { error: "Aanmaken van het project is mislukt.", success: false };
   }
 
   revalidatePath(`/klanten/${klantId}`);
-  return { error: null, success: true };
+  revalidatePath("/factuuritems");
+  return { error: null, success: true, project };
 }
 
 export async function updateProject(

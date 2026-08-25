@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Receipt, Pencil } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Receipt, Pencil, Search } from "lucide-react";
 import { landNaamVoorIso } from "@/lib/dossiernummer";
 import { euro, regelbedrag } from "@/lib/factuurbedragen";
 import type { LandenMap } from "@/lib/landen";
@@ -9,6 +9,7 @@ import { VerplaatsProjectDialog } from "@/components/verplaats-project-dialog";
 import { VerwijderFactuurItemDialog } from "@/components/verwijder-factuuritem-dialog";
 import { LinkButton } from "@/components/link-button";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -76,13 +77,23 @@ export function FactuurGroep({
   huidigeGebruikerId?: string;
   landen: LandenMap;
 }) {
-  const subtotaalHonorarium = items.reduce((sum, r) => sum + r.honorarium, 0);
-  const subtotaalKosten = items.reduce((sum, r) => sum + r.externe_kosten, 0);
-  const subtotaalKorting = items.reduce((sum, r) => sum + r.korting, 0);
+  const [zoekterm, setZoekterm] = useState("");
+  const gefilterdeItems = useMemo(() => {
+    const q = zoekterm.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((item) => {
+      const dossierTekst = item.dossiers.map((d) => d.dossiernummer).join(" ").toLowerCase();
+      return dossierTekst.includes(q) || item.omschrijving_klant.toLowerCase().includes(q);
+    });
+  }, [items, zoekterm]);
+
+  const subtotaalHonorarium = gefilterdeItems.reduce((sum, r) => sum + r.honorarium, 0);
+  const subtotaalKosten = gefilterdeItems.reduce((sum, r) => sum + r.externe_kosten, 0);
+  const subtotaalKorting = gefilterdeItems.reduce((sum, r) => sum + r.korting, 0);
   const subtotaalTotaal = subtotaalHonorarium + subtotaalKosten - subtotaalKorting;
 
   const sectieMap = new Map<string, ProjectSectie>();
-  for (const item of items) {
+  for (const item of gefilterdeItems) {
     const sleutel = item.projectId ?? "__geen__";
     const bestaand = sectieMap.get(sleutel);
     if (bestaand) bestaand.items.push(item);
@@ -113,22 +124,37 @@ export function FactuurGroep({
           <div className="font-semibold tabular-figures">Subtotaal {euro(subtotaalTotaal)}</div>
         </div>
       </CardHeader>
-      <CardContent className={toonProjectHeaders ? "flex flex-col gap-6 p-4" : "p-0"}>
-        {secties.map((sectie, index) => (
-          <ProjectSectieBlok
-            key={sectie.sleutel}
-            klantId={klantId}
-            sectie={sectie}
-            kleurIndex={index}
-            projecten={projecten}
-            toonHeader={toonProjectHeaders}
-            toonMedewerker={toonMedewerker}
-            kanFactureren={kanFactureren}
-            magAllesBewerken={magAllesBewerken}
-            huidigeGebruikerId={huidigeGebruikerId}
-            landen={landen}
+      <CardContent className="flex flex-col gap-4 p-4">
+        <div className="relative sm:w-80">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={zoekterm}
+            onChange={(e) => setZoekterm(e.target.value)}
+            placeholder="Zoek op dossier of omschrijving…"
+            className="pl-8"
           />
-        ))}
+        </div>
+        {secties.length === 0 ? (
+          <p className="py-10 text-center text-sm text-muted-foreground">Geen factuuritems gevonden.</p>
+        ) : (
+          <div className={toonProjectHeaders ? "flex flex-col gap-6" : "contents"}>
+            {secties.map((sectie, index) => (
+              <ProjectSectieBlok
+                key={sectie.sleutel}
+                klantId={klantId}
+                sectie={sectie}
+                kleurIndex={index}
+                projecten={projecten}
+                toonHeader={toonProjectHeaders}
+                toonMedewerker={toonMedewerker}
+                kanFactureren={kanFactureren}
+                magAllesBewerken={magAllesBewerken}
+                huidigeGebruikerId={huidigeGebruikerId}
+                landen={landen}
+              />
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

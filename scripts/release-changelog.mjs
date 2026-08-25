@@ -6,18 +6,18 @@ import { createClient } from "@supabase/supabase-js";
 
 // Vóór elke commit bijwerken met de wijzigingen van die release.
 const CHANGELOG_ENTRY = {
-  versienummer: "0.21.0",
-  releasedatum: "2026-08-24",
-  titel: "Benelux-vlag, HubSpot-import vanuit Klanten, projectomschrijving en formulierfixes",
+  versienummer: "0.22.0",
+  releasedatum: "2026-08-25",
+  titel: "HubSpot-import bij Nieuw factuuritem, projecten aanmaken vanuit factuuritems, teamgescoopte medewerkerlijst",
   nieuwe_functies: [
-    "Klanten: vanaf de Klanten-pagina kan een nieuwe klant nu ook rechtstreeks uit HubSpot geïmporteerd worden (voorheen alleen via Instellingen)",
-    "Projecten kunnen nu ook een vrije omschrijving krijgen, naast de projectnaam en het PO-nummer — zichtbaar bij de factuuritems van die klant",
+    "Nieuw factuuritem: bij het kiezen van de klant kan nu ook rechtstreeks uit HubSpot geïmporteerd worden, naast een bestaande klant kiezen of een nieuwe handmatig aanmaken",
+    "Nieuw factuuritem: een nieuw project (naam + PO-nummer + omschrijving) kan nu ook direct hier aangemaakt worden, en is daarna bij alle factuuritems van die klant te selecteren",
+    "Factuuritems > klant: een zoekveld filtert de lijst op dossiernummer of omschrijving",
   ],
   wijzigingen: [
-    "Dashboard: regio 'Benelux' toont nu de Benelux-vlag in plaats van een generiek wereldbol-icoon (voor 'Wereldwijd'/internationale registraties blijft dat icoon staan — daarvoor bestaat geen vlag)",
-    "De contactpersoon-koppeling op een klant (naam + e-mailadres) is verwijderd — die werd nergens gebruikt en stond alleen maar in de weg bij het aanmaken van een klant",
-    "Nieuw factuuritem: de velden 'Kosten van derden' en 'Korting' lijnen nu verticaal netjes uit",
-    "Nieuw factuuritem: de placeholder bij 'Dossier(s)' legt nu uit hoe je een dossiernummer toevoegt, in plaats van een voorbeeldformaat te tonen",
+    "Nieuw factuuritem: 'Eenheid' is vervangen door 'Taal' (Nederlands/Engels) — die stond al verderop in het formulier en is nu direct bij Datum te vinden",
+    "Het veld 'Declarabel' staat bij een nieuw factuuritem weer standaard aangevinkt",
+    "Bij het wijzigen van de medewerker op een factuuritem kan een teamleider alleen nog uit de eigen teamgenoten kiezen (was: alle actieve medewerkers); een beheerder kan nog steeds uit iedereen kiezen",
   ],
   bugfixes: [],
   bekende_beperkingen: [

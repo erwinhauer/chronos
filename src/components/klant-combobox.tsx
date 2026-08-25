@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { Plus, Search } from "lucide-react";
+import { Download, Plus, Search } from "lucide-react";
 import { NewKlantDialog } from "@/components/new-klant-dialog";
+import { HubspotImportDialog } from "@/components/hubspot-import-dialog";
 import type { NieuweKlant } from "@/actions/klanten";
 import { Input } from "@/components/ui/input";
 
@@ -13,11 +14,13 @@ export function KlantCombobox({
   value,
   onChange,
   onKlantAangemaakt,
+  magHubspotImporteren = false,
 }: {
   klanten: Klant[];
   value: string;
   onChange: (klantId: string) => void;
   onKlantAangemaakt: (klant: NieuweKlant) => void;
+  magHubspotImporteren?: boolean;
 }) {
   const [invoer, setInvoer] = useState("");
   const [open, setOpen] = useState(false);
@@ -82,7 +85,10 @@ export function KlantCombobox({
           ) : (
             <p className="px-2.5 py-1.5 text-sm text-muted-foreground">Geen klanten gevonden.</p>
           )}
-          <div className="mt-1 border-t border-border pt-1" onMouseDown={(e) => e.preventDefault()}>
+          <div
+            className="mt-1 flex flex-col gap-1 border-t border-border pt-1"
+            onMouseDown={(e) => e.preventDefault()}
+          >
             <NewKlantDialog
               initialNaam={invoer.trim()}
               onCreated={(klant) => {
@@ -98,6 +104,23 @@ export function KlantCombobox({
                 </>
               }
             />
+            {magHubspotImporteren && (
+              <HubspotImportDialog
+                variant="outline"
+                trigger={
+                  <>
+                    <Download className="h-4 w-4" />
+                    Importeren uit HubSpot
+                  </>
+                }
+                onImported={(klant) => {
+                  onKlantAangemaakt(klant);
+                  onChange(klant.id);
+                  setInvoer("");
+                  setOpen(false);
+                }}
+              />
+            )}
           </div>
         </div>
       )}

@@ -6,6 +6,35 @@ import { FactuurItemForm } from "@/components/factuuritem-form";
 import { SetBreadcrumb } from "@/lib/breadcrumb-context";
 import { haalLandenMap } from "@/lib/landen";
 
+// Beheerder mag uit alle actieve medewerkers kiezen; een teamleider alleen uit
+// zijn eigen teamgenoten (member van minstens één team dat de teamleider ook zelf lid van is).
+async function haalHerToewijsbareMedewerkers(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  role: string | undefined,
+  gebruikerId: string
+): Promise<{ id: string; full_name: string }[] | null> {
+  if (role === "beheerder") {
+    const { data } = await supabase.from("profiles").select("id, full_name").eq("actief", true).order("full_name");
+    return data ?? null;
+  }
+  if (role === "teamleider") {
+    const { data: eigenTeams } = await supabase.from("team_members").select("team_id").eq("profile_id", gebruikerId);
+    const teamIds = (eigenTeams ?? []).map((t) => t.team_id);
+    if (teamIds.length === 0) return [];
+    const { data: leden } = await supabase
+      .from("team_members")
+      .select("profiles!inner(id, full_name, actief)")
+      .in("team_id", teamIds);
+    const map = new Map<string, { id: string; full_name: string }>();
+    for (const row of leden ?? []) {
+      const p = row.profiles as unknown as { id: string; full_name: string; actief: boolean };
+      if (p.actief) map.set(p.id, { id: p.id, full_name: p.full_name });
+    }
+    return Array.from(map.values()).sort((a, b) => a.full_name.localeCompare(b.full_name));
+  }
+  return null;
+}
+
 export default async function FactuurItemBewerkenPage({
   params,
 }: {
@@ -43,16 +72,14 @@ export default async function FactuurItemBewerkenPage({
     redirect("/factuuritems");
   }
 
-  const [{ data: actieveKlanten }, { data: projecten }, { data: medewerkers }, landen] = await Promise.all([
+  const [{ data: actieveKlanten }, { data: projecten }, medewerkers, landen] = await Promise.all([
     supabase
       .from("klanten")
       .select("id, naam, adres, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal")
       .eq("status", "actief")
       .order("naam"),
     supabase.from("projecten").select("id, klant_id, naam, po_nummer").eq("actief", true).order("naam"),
-    magAllesBewerken
-      ? supabase.from("profiles").select("id, full_name").eq("actief", true).order("full_name")
-      : Promise.resolve({ data: null }),
+    magAllesBewerken ? haalHerToewijsbareMedewerkers(supabase, profile?.role, user.id) : Promise.resolve(null),
     haalLandenMap(supabase),
   ]);
 

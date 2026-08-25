@@ -2,12 +2,13 @@
 
 import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, EyeOff } from "lucide-react";
+import { ChevronDown, EyeOff, Plus } from "lucide-react";
 import type { FactuurItemFormState } from "@/actions/factuuritems";
 import { wisselKlantTaal } from "@/actions/klanten";
 import { createClient } from "@/lib/supabase/client";
 import { DossiernummerTagInput } from "@/components/dossiernummer-tag-input";
 import { KlantCombobox } from "@/components/klant-combobox";
+import { NewProjectDialog } from "@/components/new-project-dialog";
 import type { LandenMap } from "@/lib/landen";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,8 +60,6 @@ type Initial = {
   declarabel: boolean;
 };
 
-const EENHEDEN = ["uren", "stuks", "landen", "registraties", "overig"];
-
 const initialState: FactuurItemFormState = { error: null, success: false };
 
 function euro(n: number) {
@@ -78,6 +77,7 @@ export function FactuurItemForm({
   landen,
   medewerkers,
   magMedewerkerWijzigen = false,
+  magHubspotImporteren = true,
 }: {
   klanten: Klant[];
   projectenPerKlant: Record<string, Project[]>;
@@ -89,6 +89,7 @@ export function FactuurItemForm({
   landen?: LandenMap;
   medewerkers?: Medewerker[];
   magMedewerkerWijzigen?: boolean;
+  magHubspotImporteren?: boolean;
 }) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(action, initialState);
@@ -105,7 +106,15 @@ export function FactuurItemForm({
   }
 
   const [extraKlanten, setExtraKlanten] = useState<Klant[]>([]);
-  const klanten = useMemo(() => [...klantenProp, ...extraKlanten], [klantenProp, extraKlanten]);
+  const klanten = useMemo(() => {
+    // Zelfde dedupe-reden als bij projectenVoorKlant: een serverrefresh na het
+    // aanmaken/importeren kan de nieuwe klant ook al in klantenProp leveren.
+    const map = new Map<string, Klant>();
+    for (const k of klantenProp) map.set(k.id, k);
+    for (const k of extraKlanten) map.set(k.id, k);
+    return Array.from(map.values());
+  }, [klantenProp, extraKlanten]);
+  const [extraProjecten, setExtraProjecten] = useState<Record<string, Project[]>>({});
 
   const [projectId, setProjectId] = useState(initial?.project_id ?? "");
   const [dossierSelectie, setDossierSelectie] = useState<string[]>(initial?.dossiernummers ?? []);
@@ -123,7 +132,7 @@ export function FactuurItemForm({
   const [kortingBedrag, setKortingBedrag] = useState(initial?.korting ?? 0);
   const [kortingPercentage, setKortingPercentage] = useState(initial?.korting_percentage ?? 0);
   const [kantoorkostenActief, setKantoorkostenActief] = useState(initial?.kantoorkosten_van_toepassing ?? true);
-  const [declarabel, setDeclarabel] = useState(initial?.declarabel ?? false);
+  const [declarabel, setDeclarabel] = useState(initial?.declarabel ?? true);
   const [voorgesteldTarief, setVoorgesteldTarief] = useState<number | null>(null);
   const [toonSluitenBevestiging, setToonSluitenBevestiging] = useState(false);
 
@@ -145,7 +154,15 @@ export function FactuurItemForm({
   }));
 
   const klant = klanten.find((k) => k.id === klantId);
-  const projectenVoorKlant = useMemo(() => projectenPerKlant[klantId] ?? [], [projectenPerKlant, klantId]);
+  const projectenVoorKlant = useMemo(() => {
+    // Een server refresh na het aanmaken kan het net toegevoegde project ook
+    // al in projectenPerKlant leveren — dedupliceren op id voorkomt een
+    // dubbele optie in de select.
+    const map = new Map<string, Project>();
+    for (const p of projectenPerKlant[klantId] ?? []) map.set(p.id, p);
+    for (const p of extraProjecten[klantId] ?? []) map.set(p.id, p);
+    return Array.from(map.values());
+  }, [projectenPerKlant, extraProjecten, klantId]);
 
   // Wanneer de klant wijzigt: kantoorkosten-standaard overnemen, de oude
   // tariefsuggestie laten vervallen en het projectveld resetten (projecten
@@ -220,6 +237,7 @@ export function FactuurItemForm({
       <input type="hidden" name="datum" value={datum} />
       <input type="hidden" name="qty" value={qty} />
       <input type="hidden" name="prijstype" value={prijstype} />
+      <input type="hidden" name="eenheidstype" value={prijstype === "vast_honorarium" ? "stuks" : "uren"} />
       <input type="hidden" name="tarief" value={tarief ?? ""} />
       <input type="hidden" name="externe_kosten" value={externeKosten} />
       <input type="hidden" name="korting_type" value={kortingType} />
@@ -247,6 +265,7 @@ export function FactuurItemForm({
                     value={klantId}
                     onChange={setKlantId}
                     onKlantAangemaakt={(nieuw) => setExtraKlanten((prev) => [...prev, nieuw])}
+                    magHubspotImporteren={magHubspotImporteren}
                   />
                   {klant?.adres && (
                     <p className="text-xs whitespace-pre-line text-muted-foreground">{klant.adres}</p>
@@ -255,7 +274,6 @@ export function FactuurItemForm({
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
-                {klant && <TaalVeld klant={klant} />}
                 {initial && magMedewerkerWijzigen && medewerkers && (
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="medewerker">Medewerker</Label>
@@ -273,23 +291,49 @@ export function FactuurItemForm({
                     </NativeSelect>
                   </div>
                 )}
-                {projectenVoorKlant.length > 0 && (
+                {klantId && (
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="project">Project (optioneel)</Label>
-                    <NativeSelect
-                      key={`project-${klantId}-${selectResetKey}`}
-                      id="project"
-                      value={projectId}
-                      onChange={setProjectId}
-                    >
-                      <option value="">Geen project</option>
-                      {projectenVoorKlant.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.naam}
-                          {p.po_nummer ? ` (${p.po_nummer})` : ""}
-                        </option>
-                      ))}
-                    </NativeSelect>
+                    <div className="flex h-6 items-center justify-between">
+                      <Label htmlFor="project" className="mb-0">
+                        Project (optioneel)
+                      </Label>
+                      <NewProjectDialog
+                        klantId={klantId}
+                        size="xs"
+                        variant="ghost"
+                        trigger={
+                          <>
+                            <Plus className="h-3.5 w-3.5" />
+                            Nieuw project
+                          </>
+                        }
+                        onCreated={(project) => {
+                          setExtraProjecten((prev) => ({
+                            ...prev,
+                            [klantId]: [...(prev[klantId] ?? []), project],
+                          }));
+                          setProjectId(project.id);
+                        }}
+                      />
+                    </div>
+                    {projectenVoorKlant.length > 0 ? (
+                      <NativeSelect
+                        key={`project-${klantId}-${selectResetKey}`}
+                        id="project"
+                        value={projectId}
+                        onChange={setProjectId}
+                      >
+                        <option value="">Geen project</option>
+                        {projectenVoorKlant.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.naam}
+                            {p.po_nummer ? ` (${p.po_nummer})` : ""}
+                          </option>
+                        ))}
+                      </NativeSelect>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">Nog geen projecten voor deze klant.</p>
+                    )}
                   </div>
                 )}
               </div>
@@ -341,20 +385,7 @@ export function FactuurItemForm({
                     required
                   />
                 </div>
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="eenheidstype">Eenheid</Label>
-                  <NativeSelect
-                    id="eenheidstype"
-                    name="eenheidstype"
-                    defaultValue={initial?.eenheidstype ?? "uren"}
-                  >
-                    {EENHEDEN.map((e) => (
-                      <option key={e} value={e}>
-                        {e.charAt(0).toUpperCase() + e.slice(1)}
-                      </option>
-                    ))}
-                  </NativeSelect>
-                </div>
+                {klant && <TaalVeld klant={klant} />}
               </div>
             </CardContent>
           </Card>

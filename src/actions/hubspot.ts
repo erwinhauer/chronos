@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { createClient } from "@/lib/supabase/server";
+import type { NieuweKlant } from "@/actions/klanten";
 
 type HubspotCompanyProperties = {
   name?: string | null;
@@ -21,7 +22,7 @@ export type HubspotZoekresultaat = {
   bestaatAl: boolean;
 };
 export type HubspotZoekResponse = { resultaten: HubspotZoekresultaat[]; fout: string | null };
-export type HubspotImportResponse = { success: boolean; fout: string | null };
+export type HubspotImportResponse = { success: boolean; fout: string | null; klant: NieuweKlant | null };
 
 // Adresregels overslaan die leeg zijn — niet elk HubSpot-bedrijf heeft alle velden gevuld.
 function bouwAdres(p: HubspotCompanyProperties): string | null {
@@ -34,8 +35,8 @@ function bouwAdres(p: HubspotCompanyProperties): string | null {
   return regels.length > 0 ? regels.join("\n") : null;
 }
 
-function magHubspotBeheren(role: string | undefined) {
-  return role === "beheerder";
+function magHubspotImporteren(profile: { actief: boolean } | null) {
+  return profile?.actief === true;
 }
 
 const PROPERTIES = "name,address,address2,city,zip,country";
@@ -57,8 +58,8 @@ async function hubspotFetch(token: string, path: string, init?: RequestInit) {
 // dus wordt hier gericht gezocht i.p.v. alles binnen te halen.
 export async function zoekHubspotKlanten(zoekterm: string): Promise<HubspotZoekResponse> {
   const profile = await getCurrentProfile();
-  if (!magHubspotBeheren(profile?.role)) {
-    return { resultaten: [], fout: "Alleen beheerders kunnen klanten uit HubSpot importeren." };
+  if (!magHubspotImporteren(profile)) {
+    return { resultaten: [], fout: "Je account is niet actief." };
   }
   const term = zoekterm.trim();
   if (!term) {
@@ -111,13 +112,13 @@ export async function zoekHubspotKlanten(zoekterm: string): Promise<HubspotZoekR
 // al ingevuld Chronos-veld: bij een bestaande klant wordt alleen een leeg adres aangevuld.
 export async function importeerHubspotKlant(hubspotId: string): Promise<HubspotImportResponse> {
   const profile = await getCurrentProfile();
-  if (!magHubspotBeheren(profile?.role)) {
-    return { success: false, fout: "Alleen beheerders kunnen klanten uit HubSpot importeren." };
+  if (!magHubspotImporteren(profile)) {
+    return { success: false, fout: "Je account is niet actief.", klant: null };
   }
 
   const token = process.env.HUBSPOT_ACCESS_TOKEN;
   if (!token) {
-    return { success: false, fout: "HUBSPOT_ACCESS_TOKEN ontbreekt in de omgeving." };
+    return { success: false, fout: "HUBSPOT_ACCESS_TOKEN ontbreekt in de omgeving.", klant: null };
   }
 
   let company: HubspotCompany;
@@ -128,34 +129,49 @@ export async function importeerHubspotKlant(hubspotId: string): Promise<HubspotI
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : "Ophalen van dit bedrijf uit HubSpot is mislukt.";
-    return { success: false, fout: message };
+    return { success: false, fout: message, klant: null };
   }
 
   const naam = company.properties.name?.trim();
   if (!naam) {
-    return { success: false, fout: "Dit HubSpot-bedrijf heeft geen naam." };
+    return { success: false, fout: "Dit HubSpot-bedrijf heeft geen naam.", klant: null };
   }
   const adres = bouwAdres(company.properties);
 
+  const KLANT_VELDEN = "id, naam, adres, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal";
   const supabase = await createClient();
   const { data: bestaandeKlant } = await supabase
     .from("klanten")
-    .select("id, adres")
+    .select(KLANT_VELDEN)
     .eq("hubspot_id", hubspotId)
     .maybeSingle();
 
+  let klant: NieuweKlant | null = null;
   if (!bestaandeKlant) {
-    const { error } = await supabase.from("klanten").insert({ hubspot_id: hubspotId, naam, adres, status: "actief" });
-    if (error) {
-      return { success: false, fout: "Aanmaken van de klant is mislukt." };
+    const { data, error } = await supabase
+      .from("klanten")
+      .insert({ hubspot_id: hubspotId, naam, adres, status: "actief" })
+      .select(KLANT_VELDEN)
+      .single();
+    if (error || !data) {
+      return { success: false, fout: "Aanmaken van de klant is mislukt.", klant: null };
     }
+    klant = data;
   } else if (!bestaandeKlant.adres && adres) {
-    const { error } = await supabase.from("klanten").update({ adres }).eq("id", bestaandeKlant.id);
-    if (error) {
-      return { success: false, fout: "Bijwerken van de klant is mislukt." };
+    const { data, error } = await supabase
+      .from("klanten")
+      .update({ adres })
+      .eq("id", bestaandeKlant.id)
+      .select(KLANT_VELDEN)
+      .single();
+    if (error || !data) {
+      return { success: false, fout: "Bijwerken van de klant is mislukt.", klant: null };
     }
+    klant = data;
+  } else {
+    klant = bestaandeKlant;
   }
 
   revalidatePath("/klanten");
-  return { success: true, fout: null };
+  return { success: true, fout: null, klant };
 }
