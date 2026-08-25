@@ -10,7 +10,7 @@ const CHANGELOG_ENTRY = {
   releasedatum: "2026-08-25",
   titel: "HubSpot-import bij Nieuw factuuritem, projecten aanmaken vanuit factuuritems, teamgescoopte medewerkerlijst",
   nieuwe_functies: [
-    "Nieuw factuuritem: bij het kiezen van de klant kan nu ook rechtstreeks uit HubSpot geïmporteerd worden, naast een bestaande klant kiezen of een nieuwe handmatig aanmaken",
+    "Nieuw factuuritem: het klant-zoekveld doorzoekt nu ook live HubSpot — bedrijven die nog geen klant in Chronos zijn staan gewoon tussen de zoekresultaten en zijn met één klik te selecteren (Chronos maakt de klant dan automatisch aan)",
     "Nieuw factuuritem: een nieuw project (naam + PO-nummer + omschrijving) kan nu ook direct hier aangemaakt worden, en is daarna bij alle factuuritems van die klant te selecteren",
     "Factuuritems > klant: een zoekveld filtert de lijst op dossiernummer of omschrijving",
   ],
