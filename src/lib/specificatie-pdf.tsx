@@ -30,6 +30,10 @@ const SPEC_LABELS = {
     kostenVanDerden: "Kosten van derden",
     korting: "Korting",
     totaalExBtw: "Totaal (ex BTW)",
+    subtotaal: "Subtotaal",
+    kantoorkosten: "Kantoorkosten",
+    extraKorting: "Extra korting",
+    totaal: "Totaal",
   },
   en: {
     titel: "Specification invoice",
@@ -44,6 +48,10 @@ const SPEC_LABELS = {
     kostenVanDerden: "External Fee",
     korting: "Discount",
     totaalExBtw: "Total (ex VAT)",
+    subtotaal: "Subtotal",
+    kantoorkosten: "Office costs",
+    extraKorting: "Additional discount",
+    totaal: "Total",
   },
 };
 
@@ -94,12 +102,17 @@ const specStyles = StyleSheet.create({
   kopMetaRegel: { fontSize: 7, color: "#5b6270", marginTop: 1 },
   kopLogo: { height: 34, width: 85.8, marginTop: 2 },
   tableHeaderRow: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#171b24", paddingBottom: 4 },
-  totalenRow: { flexDirection: "row", paddingTop: 3, paddingBottom: 3 },
   tableRow: { flexDirection: "row", borderBottomWidth: 0.5, borderBottomColor: "#d9dbd5", paddingVertical: 4 },
   th: { fontWeight: 700, fontSize: 7, color: "#5b6270" },
   cellRight: { textAlign: "right" },
   cellSub: { color: "#5b6270", marginTop: 1 },
-  totaalCel: { fontWeight: 700, fontStyle: "italic", fontSize: 8 },
+  totalenBlok: { flexDirection: "column", alignSelf: "flex-end", width: 200, marginTop: 12 },
+  totalenRij: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 },
+  totalenLabel: { fontSize: 8, color: "#5b6270" },
+  totalenWaarde: { fontSize: 8, color: "#5b6270" },
+  totalenDivider: { borderTopWidth: 0.5, borderTopColor: "#171b24", marginVertical: 3 },
+  totalenTotaalLabel: { fontSize: 9, fontWeight: 700 },
+  totalenTotaalWaarde: { fontSize: 9, fontWeight: 700 },
   paginaVoetnoot: {
     position: "absolute",
     bottom: 16,
@@ -215,24 +228,37 @@ export async function genereerSpecificatiePdf({
           </Text>
         ))}
       </View>
-      <View style={specStyles.totalenRow}>
-        {kolommen.map((k) => {
-          if (k.key === "korting" && toontKortingKolom) {
-            return (
-              <Text key={k.key} style={[specStyles.totaalCel, specStyles.cellRight, { width: breedte(k.key) }]}>
-                {euro(totalen.totaal_korting)}
-              </Text>
-            );
-          }
-          if (k.key === "totaal") {
-            return (
-              <Text key={k.key} style={[specStyles.totaalCel, specStyles.cellRight, { width: breedte(k.key) }]}>
-                {euro(totaalExBtw)}
-              </Text>
-            );
-          }
-          return <Text key={k.key} style={{ width: breedte(k.key) }} />;
-        })}
+    </View>
+  );
+
+  const totalenBlok = (
+    <View style={specStyles.totalenBlok}>
+      {toontKortingKolom && totalen.totaal_korting > 0 && (
+        <View style={specStyles.totalenRij}>
+          <Text style={specStyles.totalenLabel}>{t.korting}</Text>
+          <Text style={specStyles.totalenWaarde}>- {euro(totalen.totaal_korting)}</Text>
+        </View>
+      )}
+      <View style={specStyles.totalenRij}>
+        <Text style={specStyles.totalenLabel}>{t.subtotaal}</Text>
+        <Text style={specStyles.totalenWaarde}>{euro(totaalExBtw)}</Text>
+      </View>
+      {totalen.totaal_kantoorkosten > 0 && (
+        <View style={specStyles.totalenRij}>
+          <Text style={specStyles.totalenLabel}>{t.kantoorkosten}</Text>
+          <Text style={specStyles.totalenWaarde}>{euro(totalen.totaal_kantoorkosten)}</Text>
+        </View>
+      )}
+      {totalen.extra_korting > 0 && (
+        <View style={specStyles.totalenRij}>
+          <Text style={specStyles.totalenLabel}>{t.extraKorting}</Text>
+          <Text style={specStyles.totalenWaarde}>- {euro(totalen.extra_korting)}</Text>
+        </View>
+      )}
+      <View style={specStyles.totalenDivider} />
+      <View style={specStyles.totalenRij}>
+        <Text style={specStyles.totalenTotaalLabel}>{t.totaal}</Text>
+        <Text style={specStyles.totalenTotaalWaarde}>{euro(totalen.totaal_bedrag)}</Text>
       </View>
     </View>
   );
@@ -281,6 +307,7 @@ export async function genereerSpecificatiePdf({
             </View>
           );
         })}
+        {totalenBlok}
       </Page>
     </Document>
   );

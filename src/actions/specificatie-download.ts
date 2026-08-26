@@ -198,7 +198,7 @@ export async function genereerConceptSpecificatiePdfBase64(input: {
       items: specificatieItems,
       totalen,
       valuta: klant.valuta,
-      watermerk: "CONCEPT",
+      watermerk: klant.specificatietaal === "nl" ? "CONCEPT" : "DRAFT",
     });
     const filename = specificatieBestandsnaam(klant.naam, klant.specificatietaal, aangemaaktOp).replace(
       /\.pdf$/,
