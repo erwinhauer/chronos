@@ -63,7 +63,11 @@ export async function zoekHubspotKlanten(zoekterm: string): Promise<HubspotZoekR
   if (!magHubspotImporteren(profile)) {
     return { resultaten: [], fout: "Je account is niet actief." };
   }
-  const term = zoekterm.trim();
+  // Normaliseer whitespace (ook non-breaking spaces/tabs, bv. uit een
+  // geplakte naam) naar gewone spaties — CONTAINS_TOKEN splitst op whitespace
+  // en een niet-herkend spatie-achtig teken zou de tokenisatie stilletjes
+  // kunnen verstoren.
+  const term = zoekterm.replace(/\s+/g, " ").trim();
   if (!term) {
     return { resultaten: [], fout: null };
   }
@@ -73,17 +77,23 @@ export async function zoekHubspotKlanten(zoekterm: string): Promise<HubspotZoekR
     return { resultaten: [], fout: "HUBSPOT_ACCESS_TOKEN ontbreekt in de omgeving." };
   }
 
+  // CONTAINS_TOKEN matcht alleen complete woorden — zonder wildcard levert een
+  // nog niet afgetypt woord (bv. "bouwmach" voordat je "bouwmachines" afmaakt)
+  // dus geen enkel resultaat op. Elk woord een eigen prefix-wildcard geven
+  // (i.p.v. alleen het laatste) maakt de match ook bestand tegen een niet
+  // volledig getypt eerder woord en tegen kleine tokenisatie-afwijkingen
+  // (bv. leestekens) op een eerder woord.
+  const zoekwaarde = term
+    .split(" ")
+    .map((woord) => `${woord}*`)
+    .join(" ");
+
   let companies: HubspotCompany[];
   try {
-    // CONTAINS_TOKEN matcht alleen complete woorden — zonder wildcard levert
-    // een nog niet afgetypt woord (bv. "bouwmach" voordat je "bouwmachines"
-    // afmaakt) dus geen enkel resultaat op. De trailing "*" maakt er een
-    // prefix-match van op het laatste woord, wat zoeken-terwijl-je-typt pas
-    // echt bruikbaar maakt.
     const data = await hubspotFetch(token, "/crm/v3/objects/companies/search", {
       method: "POST",
       body: JSON.stringify({
-        filterGroups: [{ filters: [{ propertyName: "name", operator: "CONTAINS_TOKEN", value: `${term}*` }] }],
+        filterGroups: [{ filters: [{ propertyName: "name", operator: "CONTAINS_TOKEN", value: zoekwaarde }] }],
         properties: PROPERTIES.split(","),
         limit: 20,
       }),
