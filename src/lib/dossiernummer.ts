@@ -314,6 +314,19 @@ export function typeDienstLabel(typeDienst: string | null, taal: "nl" | "en"): s
   return typeDienst;
 }
 
+// Dossiernummer-prefixcode terug opzoeken bij een opgeslagen dienst-label
+// (factuuritem_dossiers.type_dienst slaat het Nederlandse label op, niet de
+// code) — voor weergaves die juist de korte code willen tonen (bv. "Omzet
+// per productgroep" op het dashboard).
+export function codeVoorDienstLabel(typeDienst: string): string {
+  return TYPE_PREFIXES.find((p) => p.label === typeDienst)?.code ?? typeDienst;
+}
+
+// De acht productgroepen die de directie/beheerder-rapportage vast in deze
+// volgorde wil zien; andere diensten (bv. Algemeen/Mutaties) worden er in de
+// weergave achteraan aangeplakt in plaats van weggelaten.
+export const PRODUCTGROEP_CODES = ["TM", "D", "I", "O", "CA", "S", "W", "@"];
+
 function tryParsePrefix(code: string, rest: string): DossiernummerParseResult | null {
   const pattern = new RegExp(`^(\\d+)([A-Z]{2})(\\d*)$`);
   const match = pattern.exec(rest);

@@ -1,10 +1,10 @@
-import { Receipt, Plus, ArrowUpRight, TrendingUp, TrendingDown, Clock } from "lucide-react";
+import { Plus, ArrowUpRight, TrendingUp, TrendingDown, Clock, Briefcase } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { euro, isGefactureerd, isNogTeFactureren, regelbedrag, nettoOmzetPlaceholder } from "@/lib/factuurbedragen";
 import { parsePeriodeKey, periodeLabel, inPeriode } from "@/lib/omzet-periode";
-import { landNaamVoorIso } from "@/lib/dossiernummer";
-import { haalLandenMap } from "@/lib/landen";
+import { landNaamVoorIso, codeVoorDienstLabel, PRODUCTGROEP_CODES } from "@/lib/dossiernummer";
+import { haalLandenMap, type LandenMap } from "@/lib/landen";
 import { OmzetGrafiek, type OmzetRij } from "@/components/omzet-grafiek";
 import { PeriodeSelect } from "@/components/periode-select";
 import { JaarSelect } from "@/components/jaar-select";
@@ -20,6 +20,7 @@ import { DienstIcon } from "@/components/ui/dienst-icon";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { TopKlantenTabel, type TopKlantRij } from "@/components/top-klanten-tabel";
 
 const MAANDEN = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
 const MAX_SERIES = 5;
@@ -96,6 +97,64 @@ function buildOmzetGrafiekData(
   return { chartData, medewerkerNamen };
 }
 
+// Omzet per productgroep, geordend op de acht dossiernummercodes die de
+// directie/beheerder-rapportage vast wil zien (TM/D/I/O/CA/S/W/@) — overige
+// diensten (bv. Algemeen/Mutaties) komen er in de weergave achteraan, niet weg.
+function groepeerPerProductgroep(rows: FactuurRegel[]) {
+  const map = new Map<string, { code: string; label: string; omzet: number; aantal: number }>();
+  for (const r of rows) {
+    const label = eersteDienst(r);
+    const code = label === "Onbekend" ? "—" : codeVoorDienstLabel(label);
+    const bestaand = map.get(label) ?? { code, label, omzet: 0, aantal: 0 };
+    bestaand.omzet += regelbedrag(r);
+    bestaand.aantal += 1;
+    map.set(label, bestaand);
+  }
+  const volgordeIndex = (code: string) => {
+    const i = PRODUCTGROEP_CODES.indexOf(code);
+    return i === -1 ? PRODUCTGROEP_CODES.length : i;
+  };
+  return Array.from(map.values()).sort((a, b) => volgordeIndex(a.code) - volgordeIndex(b.code));
+}
+
+function groepeerPerLand(rows: FactuurRegel[], landenMap: LandenMap, top: number) {
+  const map = new Map<string, { landNaam: string; iso: string | null; omzet: number }>();
+  for (const r of rows) {
+    const iso = eersteLandIso(r);
+    const landNaam = landNaamVoorIso(iso, landenMap);
+    const bestaand = map.get(landNaam) ?? { landNaam, iso, omzet: 0 };
+    bestaand.omzet += regelbedrag(r);
+    map.set(landNaam, bestaand);
+  }
+  return Array.from(map.values())
+    .sort((a, b) => b.omzet - a.omzet)
+    .slice(0, top);
+}
+
+// Top-klanten mét een per-klant uitsplitsing naar productgroep en land/regio
+// (voor de uitklapbare rijen in TopKlantenTabel) — dezelfde functie voedt zowel
+// de bedrijfsbrede kaart als elke per-team kaart, elk met hun eigen rijenset.
+function berekenTopKlanten(rows: FactuurRegel[], landenMap: LandenMap, top: number): TopKlantRij[] {
+  const perKlant = new Map<string, { naam: string; omzet: number; rows: FactuurRegel[] }>();
+  for (const r of rows) {
+    const naam = r.klanten?.naam ?? "Onbekend";
+    const bestaand = perKlant.get(r.klant_id) ?? { naam, omzet: 0, rows: [] };
+    bestaand.omzet += regelbedrag(r);
+    bestaand.rows.push(r);
+    perKlant.set(r.klant_id, bestaand);
+  }
+  return Array.from(perKlant.entries())
+    .map(([klantId, v]) => ({
+      klantId,
+      naam: v.naam,
+      omzet: v.omzet,
+      perProductgroep: groepeerPerProductgroep(v.rows).map(({ code, label, omzet }) => ({ code, label, omzet })),
+      perLand: groepeerPerLand(v.rows, landenMap, 20),
+    }))
+    .sort((a, b) => b.omzet - a.omzet)
+    .slice(0, top);
+}
+
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -110,7 +169,7 @@ export default async function DashboardPage({
   const supabase = await createClient();
   const profile = await getCurrentProfile();
 
-  const [{ data: items }, { data: teamdoelen }, { data: teamMembers }, { data: profiles }, landenMap] =
+  const [{ data: items }, { data: teamdoelen }, { data: teamMembers }, { data: profiles }, { data: teamsBasis }, landenMap] =
     await Promise.all([
       supabase
         .from("factuuritems")
@@ -120,6 +179,7 @@ export default async function DashboardPage({
       supabase.from("teamdoelen").select("bruto_bedrag, netto_bedrag, teams(id, naam)").eq("jaar", gekozenJaar),
       supabase.from("team_members").select("team_id, profile_id"),
       supabase.from("profiles").select("id, full_name"),
+      supabase.from("teams").select("id, naam").order("naam"),
       haalLandenMap(supabase),
     ]);
 
@@ -131,9 +191,6 @@ export default async function DashboardPage({
   const inGekozenPeriode = ditJaar.filter((r) => inPeriode(r.datum, periode, gekozenJaar));
   const inGekozenPeriodeUren = inGekozenPeriode.filter((r) => r.prijstype === "uren");
 
-  const nogTeFactureren = rows
-    .filter((r) => isNogTeFactureren(r.status, r.declarabel) && inPeriode(r.datum, periode, gekozenJaar))
-    .reduce((sum, r) => sum + regelbedrag(r), 0);
   const gefactureerd = inGekozenPeriode.reduce((sum, r) => sum + regelbedrag(r), 0);
 
   const namenPerId = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
@@ -151,6 +208,22 @@ export default async function DashboardPage({
     (teamMembers ?? []).filter((lid) => lid.profile_id === profile?.id).map((lid) => lid.team_id)
   );
 
+  // Onderhanden werk (OHW) — declarabel werk dat al gedaan maar nog niet
+  // gefactureerd is, per team. Los van teamdoelen (die pas bestaan als er voor
+  // dat jaar een target is ingevuld) — OHW gaat over nú openstaand werk, dus
+  // gebaseerd op de volledige teamlijst.
+  const ohwRows = rows.filter((r) => isNogTeFactureren(r.status, r.declarabel) && inPeriode(r.datum, periode, gekozenJaar));
+  const ohwTotaalGroep = ohwRows.reduce((sum, r) => sum + regelbedrag(r), 0);
+  const ohwPerTeam = (teamsBasis ?? []).map((team) => {
+    const leden = ledenPerTeam.get(team.id) ?? new Set();
+    const bedrag = ohwRows.filter((r) => leden.has(r.medewerker_id)).reduce((sum, r) => sum + regelbedrag(r), 0);
+    return { teamId: team.id, teamNaam: team.naam, bedrag };
+  });
+  const eigenOhwPerTeam = ohwPerTeam.filter((t) => eigenTeamIds.has(t.teamId));
+  const persoonlijkeOhw = ohwRows
+    .filter((r) => r.medewerker_id === profile?.id)
+    .reduce((sum, r) => sum + regelbedrag(r), 0);
+
   const teamKaarten = (teamdoelen ?? [])
     .map((d) => {
       const team = d.teams as unknown as { id: string; naam: string } | null;
@@ -164,12 +237,13 @@ export default async function DashboardPage({
 
       const teamItemsInPeriode = inGekozenPeriode.filter((r) => leden.has(r.medewerker_id));
       const teamItemsUrenInPeriode = inGekozenPeriodeUren.filter((r) => leden.has(r.medewerker_id));
+      const teamItemsStuksInPeriode = teamItemsInPeriode.filter((r) => r.prijstype === "vast_honorarium");
       const brutoOmzetTeam = teamItemsInPeriode.reduce((sum, r) => sum + regelbedrag(r), 0);
       const urenOmzetTeam = teamItemsUrenInPeriode.reduce((sum, r) => sum + regelbedrag(r), 0);
 
-      const perTeamlid = new Map<string, { naam: string; bruto: number; uren: number }>();
+      const perTeamlid = new Map<string, { naam: string; bruto: number; uren: number; stuks: number }>();
       for (const lidId of leden) {
-        perTeamlid.set(lidId, { naam: namenPerId.get(lidId) ?? "Onbekend", bruto: 0, uren: 0 });
+        perTeamlid.set(lidId, { naam: namenPerId.get(lidId) ?? "Onbekend", bruto: 0, uren: 0, stuks: 0 });
       }
       for (const r of teamItemsInPeriode) {
         const rij = perTeamlid.get(r.medewerker_id);
@@ -179,18 +253,15 @@ export default async function DashboardPage({
         const rij = perTeamlid.get(r.medewerker_id);
         if (rij) rij.uren += regelbedrag(r);
       }
+      for (const r of teamItemsStuksInPeriode) {
+        const rij = perTeamlid.get(r.medewerker_id);
+        if (rij) rij.stuks += regelbedrag(r);
+      }
       const teamlidRijen = Array.from(perTeamlid.values()).sort((a, b) => b.bruto - a.bruto);
 
-      const perKlant = new Map<string, { naam: string; omzet: number }>();
-      for (const r of teamItemsInPeriode) {
-        const naam = r.klanten?.naam ?? "Onbekend";
-        const bestaand = perKlant.get(r.klant_id) ?? { naam, omzet: 0 };
-        bestaand.omzet += regelbedrag(r);
-        perKlant.set(r.klant_id, bestaand);
-      }
-      const top3Klanten = Array.from(perKlant.values())
-        .sort((a, b) => b.omzet - a.omzet)
-        .slice(0, 3);
+      const topKlanten = berekenTopKlanten(teamItemsInPeriode, landenMap, 20);
+      const perProductgroep = groepeerPerProductgroep(teamItemsInPeriode);
+      const perLandRegio = groepeerPerLand(teamItemsInPeriode, landenMap, 20);
 
       const teamLeden = ditJaar.filter((r) => leden.has(r.medewerker_id));
       const { chartData, medewerkerNamen } = buildOmzetGrafiekData(teamLeden, namenPerId);
@@ -204,7 +275,9 @@ export default async function DashboardPage({
         brutoOmzetTeam,
         urenOmzetTeam,
         teamlidRijen,
-        top3Klanten,
+        topKlanten,
+        perProductgroep,
+        perLandRegio,
         chartData,
         medewerkerNamen,
       };
@@ -242,10 +315,11 @@ export default async function DashboardPage({
   // hierboven die de rest van de pagina stuurt.
   const inMedewerkerPeriode = ditJaar.filter((r) => inPeriode(r.datum, medewerkerPeriode, gekozenJaar));
   const inMedewerkerPeriodeUren = inMedewerkerPeriode.filter((r) => r.prijstype === "uren");
-  const omzetPerMedewerkerMap = new Map<string, { naam: string; bruto: number; uren: number }>();
+  const inMedewerkerPeriodeStuks = inMedewerkerPeriode.filter((r) => r.prijstype === "vast_honorarium");
+  const omzetPerMedewerkerMap = new Map<string, { naam: string; bruto: number; uren: number; stuks: number }>();
   for (const r of inMedewerkerPeriode) {
     const naam = namenPerId.get(r.medewerker_id) ?? "Onbekend";
-    const bestaand = omzetPerMedewerkerMap.get(r.medewerker_id) ?? { naam, bruto: 0, uren: 0 };
+    const bestaand = omzetPerMedewerkerMap.get(r.medewerker_id) ?? { naam, bruto: 0, uren: 0, stuks: 0 };
     bestaand.bruto += regelbedrag(r);
     omzetPerMedewerkerMap.set(r.medewerker_id, bestaand);
   }
@@ -253,37 +327,41 @@ export default async function DashboardPage({
     const rij = omzetPerMedewerkerMap.get(r.medewerker_id);
     if (rij) rij.uren += regelbedrag(r);
   }
+  for (const r of inMedewerkerPeriodeStuks) {
+    const rij = omzetPerMedewerkerMap.get(r.medewerker_id);
+    if (rij) rij.stuks += regelbedrag(r);
+  }
   const omzetPerMedewerker = Array.from(omzetPerMedewerkerMap.values()).sort((a, b) => b.bruto - a.bruto);
 
-  // Verkochte diensten — op basis van de dossiernummer-afgeleide dienst van het
-  // eerste dossier op het item (bij meerdere dossiers op één regel is dat de
-  // conventie die de rest van de app ook al aanhoudt bij weergave).
-  const perDienst = new Map<string, { aantal: number; omzet: number; uren: number }>();
+  // Omzet per productgroep — op basis van de dossiernummer-afgeleide dienst van
+  // het eerste dossier op het item (bij meerdere dossiers op één regel is dat
+  // de conventie die de rest van de app ook al aanhoudt bij weergave). Geordend
+  // op de acht productgroepcodes (TM/D/I/O/CA/S/W/@) die de rapportage vast wil.
+  const perDienst = new Map<string, { code: string; aantal: number; omzet: number; uren: number }>();
   for (const r of inGekozenPeriode) {
     const dienst = eersteDienst(r);
-    const bestaand = perDienst.get(dienst) ?? { aantal: 0, omzet: 0, uren: 0 };
+    const code = dienst === "Onbekend" ? "—" : codeVoorDienstLabel(dienst);
+    const bestaand = perDienst.get(dienst) ?? { code, aantal: 0, omzet: 0, uren: 0 };
     bestaand.aantal += 1;
     bestaand.omzet += regelbedrag(r);
     if (r.prijstype === "uren") bestaand.uren += regelbedrag(r);
     perDienst.set(dienst, bestaand);
   }
+  const productgroepVolgordeIndex = (code: string) => {
+    const i = PRODUCTGROEP_CODES.indexOf(code);
+    return i === -1 ? PRODUCTGROEP_CODES.length : i;
+  };
   const dienstenTabel = Array.from(perDienst.entries())
     .map(([dienst, v]) => ({ dienst, ...v }))
-    .sort((a, b) => b.omzet - a.omzet);
+    .sort((a, b) => productgroepVolgordeIndex(a.code) - productgroepVolgordeIndex(b.code));
 
-  // Diensten per land/regio — zelfde bron en aanpak als "Verkochte diensten",
+  // Omzet per land/regio — zelfde bron en aanpak als "Omzet per productgroep",
   // maar gegroepeerd op de dossiernummer-afgeleide land-ISO van het eerste dossier.
-  const perLand = new Map<string, { landNaam: string; iso: string | null; omzet: number }>();
-  for (const r of inGekozenPeriode) {
-    const iso = eersteLandIso(r);
-    const landNaam = landNaamVoorIso(iso, landenMap);
-    const bestaand = perLand.get(landNaam) ?? { landNaam, iso, omzet: 0 };
-    bestaand.omzet += regelbedrag(r);
-    perLand.set(landNaam, bestaand);
-  }
-  const landenTabel = Array.from(perLand.values())
-    .sort((a, b) => b.omzet - a.omzet)
-    .slice(0, 5);
+  const landenTabel = groepeerPerLand(inGekozenPeriode, landenMap, 20);
+
+  // Omzet per klant, bedrijfsbreed/team- of persoonsgebonden (via RLS al op de
+  // juiste rol-scope beperkt) — met per-klant uitsplitsing voor de uitklaprijen.
+  const topKlantenHeleGroep = berekenTopKlanten(inGekozenPeriode, landenMap, 20);
 
   // Nog te factureren per klant — dezelfde periode/jaar-filter als de rest van het dashboard.
   const nogTeFacturenPerKlant = new Map<string, { naam: string; bedrag: number }>();
@@ -378,19 +456,52 @@ export default async function DashboardPage({
         <JaarSelect huidigJaar={gekozenJaar} />
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-2">
-        <HeroTile label={`Gefactureerd · ${periodeLabel(periode)}`} value={euro(gefactureerd)} icon={ArrowUpRight} />
-        <Card className="rounded-2xl">
-          <CardContent className="flex items-center gap-4">
-            <StatIcon icon={Receipt} tint="warning" className="h-11 w-11" />
-            <div>
-              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                Nog te factureren · {periodeLabel(periode)}
-              </p>
-              <div className="text-2xl font-semibold tabular-figures text-warning">{euro(nogTeFactureren)}</div>
-            </div>
-          </CardContent>
-        </Card>
+      <HeroTile label={`Gefactureerd · ${periodeLabel(periode)}`} value={euro(gefactureerd)} icon={ArrowUpRight} />
+
+      <div className="flex flex-col gap-3">
+        <h3 className="text-lg font-semibold tracking-tight">Onderhanden werk · {periodeLabel(periode)}</h3>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {zietAlleTeams ? (
+            <>
+              {ohwPerTeam.map((t) => (
+                <Card key={t.teamId} className="rounded-2xl">
+                  <CardContent className="flex items-center gap-4">
+                    <StatIcon icon={Briefcase} tint="warning" className="h-11 w-11" />
+                    <div>
+                      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{t.teamNaam}</p>
+                      <div className="text-xl font-semibold tabular-figures text-warning">{euro(t.bedrag)}</div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              <HeroTile label="Onderhanden werk · Groep" value={euro(ohwTotaalGroep)} icon={Briefcase} />
+            </>
+          ) : eigenOhwPerTeam.length > 0 ? (
+            eigenOhwPerTeam.map((t) => (
+              <Card key={t.teamId} className="rounded-2xl">
+                <CardContent className="flex items-center gap-4">
+                  <StatIcon icon={Briefcase} tint="warning" className="h-11 w-11" />
+                  <div>
+                    <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                      Onderhanden werk · {t.teamNaam}
+                    </p>
+                    <div className="text-xl font-semibold tabular-figures text-warning">{euro(t.bedrag)}</div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <Card className="rounded-2xl">
+              <CardContent className="flex items-center gap-4">
+                <StatIcon icon={Briefcase} tint="warning" className="h-11 w-11" />
+                <div>
+                  <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Onderhanden werk</p>
+                  <div className="text-xl font-semibold tabular-figures text-warning">{euro(persoonlijkeOhw)}</div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
 
       {zietAlleTeams && (
@@ -527,7 +638,7 @@ export default async function DashboardPage({
       {zietAlleTeams && (
         <Card className="rounded-2xl">
           <CardHeader className="flex flex-row items-center justify-between gap-4">
-            <CardTitle className="text-base">Omzet per medewerker · alle teams · {periodeLabel(medewerkerPeriode)}</CardTitle>
+            <CardTitle className="text-base">Omzet per medewerker · hele groep · {periodeLabel(medewerkerPeriode)}</CardTitle>
             <MedewerkerPeriodeSelect />
           </CardHeader>
           <CardContent className="p-0">
@@ -536,13 +647,14 @@ export default async function DashboardPage({
                 <TableRow>
                   <TableHead>Medewerker</TableHead>
                   <TableHead className="text-right">Bruto-omzet</TableHead>
-                  <TableHead className="text-right">Uren-omzet</TableHead>
+                  <TableHead className="text-right">Omzet (uren)</TableHead>
+                  <TableHead className="text-right">Omzet (stuks)</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {omzetPerMedewerker.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={3} className="py-10 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={4} className="py-10 text-center text-sm text-muted-foreground">
                       Nog geen omzet in deze periode.
                     </TableCell>
                   </TableRow>
@@ -552,6 +664,7 @@ export default async function DashboardPage({
                       <TableCell>{m.naam}</TableCell>
                       <TableCell className="text-right tabular-figures">{euro(m.bruto)}</TableCell>
                       <TableCell className="text-right tabular-figures">{euro(m.uren)}</TableCell>
+                      <TableCell className="text-right tabular-figures">{euro(m.stuks)}</TableCell>
                     </TableRow>
                   ))
                 )}
@@ -611,34 +724,69 @@ export default async function DashboardPage({
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-1 rounded-lg border border-border p-2">
-                  {t.teamlidRijen.map((lid) => (
-                    <div key={lid.naam} className="flex items-center gap-3 rounded-md p-2">
-                      <AvatarInitials naam={lid.naam} />
-                      <span className="flex-1 text-sm font-medium">{lid.naam}</span>
-                      <div className="text-right">
-                        <p className="text-sm font-medium tabular-figures">{euro(lid.bruto)}</p>
-                        <p className="text-xs text-muted-foreground tabular-figures">{euro(lid.uren)} uren</p>
+                <div className="border-t border-border pt-4">
+                  <p className="mb-2 text-sm text-muted-foreground">
+                    Omzet per medewerker (uren/stuks) · {periodeLabel(periode)}
+                  </p>
+                  <div className="flex flex-col gap-1 rounded-lg border border-border p-2">
+                    {t.teamlidRijen.map((lid) => (
+                      <div key={lid.naam} className="flex items-center gap-3 rounded-md p-2">
+                        <AvatarInitials naam={lid.naam} />
+                        <span className="flex-1 text-sm font-medium">{lid.naam}</span>
+                        <div className="text-right">
+                          <p className="text-sm font-medium tabular-figures">{euro(lid.bruto)}</p>
+                          <p className="text-xs text-muted-foreground tabular-figures">
+                            {euro(lid.uren)} uren · {euro(lid.stuks)} stuks
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
 
                 <div className="border-t border-border pt-4">
-                  <p className="mb-2 text-sm text-muted-foreground">Top 3 klanten · {periodeLabel(periode)}</p>
-                  {t.top3Klanten.length > 0 ? (
-                    <div className="flex flex-col gap-1 rounded-lg border border-border p-2">
-                      {t.top3Klanten.map((k) => (
-                        <div key={k.naam} className="flex items-center gap-3 rounded-md p-2">
-                          <AvatarInitials naam={k.naam} />
-                          <span className="flex-1 text-sm font-medium">{k.naam}</span>
-                          <span className="text-sm font-medium tabular-figures">{euro(k.omzet)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Geen omzet in deze periode.</p>
-                  )}
+                  <p className="mb-2 text-sm text-muted-foreground">Omzet per klant (top 20) · {periodeLabel(periode)}</p>
+                  <TopKlantenTabel rijen={t.topKlanten} />
+                </div>
+
+                <div className="grid gap-4 border-t border-border pt-4 sm:grid-cols-2">
+                  <div>
+                    <p className="mb-2 text-sm text-muted-foreground">
+                      Omzet per productgroep · {periodeLabel(periode)}
+                    </p>
+                    {t.perProductgroep.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">Geen omzet in deze periode.</p>
+                    ) : (
+                      <div className="flex flex-col gap-1">
+                        {t.perProductgroep.map((d) => (
+                          <div key={d.label} className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">
+                              {d.code} · {d.label}
+                            </span>
+                            <span className="font-medium tabular-figures">{euro(d.omzet)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <p className="mb-2 text-sm text-muted-foreground">
+                      Omzet per land/regio (top 20) · {periodeLabel(periode)}
+                    </p>
+                    {t.perLandRegio.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">Geen omzet in deze periode.</p>
+                    ) : (
+                      <div className="flex flex-col gap-1">
+                        {t.perLandRegio.map((l) => (
+                          <div key={l.landNaam} className="flex items-center gap-2 text-sm">
+                            <CountryFlag iso={l.iso} naam={l.landNaam} className="h-5 w-5" />
+                            <span className="flex-1 truncate">{l.landNaam}</span>
+                            <span className="font-medium tabular-figures">{euro(l.omzet)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="border-t border-border pt-4">
@@ -685,70 +833,81 @@ export default async function DashboardPage({
         </Card>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
-      <Card className="rounded-2xl">
-        <CardHeader>
-          <CardTitle className="text-base">Verkochte diensten · {periodeLabel(periode)}</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-1">
-          {dienstenTabel.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">Nog geen omzet in deze periode.</p>
-          ) : (
-            dienstenTabel.map((d) => (
-              <div key={d.dienst} className="flex items-center gap-3 rounded-md p-2">
-                <DienstIcon dienst={d.dienst} />
-                <div className="flex-1">
-                  <p className="text-sm font-medium">{d.dienst}</p>
-                  <p className="text-xs text-muted-foreground">{d.aantal} factuuritems</p>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card className="rounded-2xl">
+          <CardHeader>
+            <CardTitle className="text-base">Omzet per productgroep · {periodeLabel(periode)}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-1">
+            {dienstenTabel.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">Nog geen omzet in deze periode.</p>
+            ) : (
+              dienstenTabel.map((d) => (
+                <div key={d.dienst} className="flex items-center gap-3 rounded-md p-2">
+                  <DienstIcon dienst={d.dienst} />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">
+                      {d.code} · {d.dienst}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{d.aantal} factuuritems</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium tabular-figures">{euro(d.omzet)}</p>
+                    <p className="text-xs text-muted-foreground tabular-figures">{euro(d.uren)} uren</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium tabular-figures">{euro(d.omzet)}</p>
-                  <p className="text-xs text-muted-foreground tabular-figures">{euro(d.uren)} uren</p>
+              ))
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-2xl">
+          <CardHeader>
+            <CardTitle className="text-base">Omzet per land/regio (top 20) · {periodeLabel(periode)}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-1">
+            {landenTabel.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">Nog geen omzet in deze periode.</p>
+            ) : (
+              landenTabel.map((l) => (
+                <div key={l.landNaam} className="flex items-center gap-3 rounded-md p-2">
+                  <CountryFlag iso={l.iso} naam={l.landNaam} />
+                  <span className="flex-1 text-sm font-medium">{l.landNaam}</span>
+                  <span className="text-sm font-medium tabular-figures">{euro(l.omzet)}</span>
                 </div>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
+              ))
+            )}
+          </CardContent>
+        </Card>
 
-      <Card className="rounded-2xl">
-        <CardHeader>
-          <CardTitle className="text-base">Diensten per land/regio · {periodeLabel(periode)}</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-1">
-          {landenTabel.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">Nog geen omzet in deze periode.</p>
-          ) : (
-            landenTabel.map((l) => (
-              <div key={l.landNaam} className="flex items-center gap-3 rounded-md p-2">
-                <CountryFlag iso={l.iso} naam={l.landNaam} />
-                <span className="flex-1 text-sm font-medium">{l.landNaam}</span>
-                <span className="text-sm font-medium tabular-figures">{euro(l.omzet)}</span>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
+        <Card className="rounded-2xl">
+          <CardHeader>
+            <CardTitle className="text-base">Omzet per klant (top 20) · {periodeLabel(periode)}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TopKlantenTabel rijen={topKlantenHeleGroep} />
+          </CardContent>
+        </Card>
 
-      <Card className="rounded-2xl">
-        <CardHeader>
-          <CardTitle className="text-base">Nog te factureren per klant · {periodeLabel(periode)}</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-1">
-          {nogTeFacturenTabel.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">Niets nog te factureren.</p>
-          ) : (
-            nogTeFacturenTabel.map((r) => (
-              <div key={r.naam} className="flex items-center gap-3 rounded-md p-2">
-                <AvatarInitials naam={r.naam} />
-                <span className="flex-1 text-sm font-medium">{r.naam}</span>
-                <span className="text-sm font-medium tabular-figures text-warning">{euro(r.bedrag)}</span>
-                <Badge variant="warning">Openstaand</Badge>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
+        <Card className="rounded-2xl">
+          <CardHeader>
+            <CardTitle className="text-base">Nog te factureren per klant · {periodeLabel(periode)}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-1">
+            {nogTeFacturenTabel.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">Niets nog te factureren.</p>
+            ) : (
+              nogTeFacturenTabel.map((r) => (
+                <div key={r.naam} className="flex items-center gap-3 rounded-md p-2">
+                  <AvatarInitials naam={r.naam} />
+                  <span className="flex-1 text-sm font-medium">{r.naam}</span>
+                  <span className="text-sm font-medium tabular-figures text-warning">{euro(r.bedrag)}</span>
+                  <Badge variant="warning">Openstaand</Badge>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

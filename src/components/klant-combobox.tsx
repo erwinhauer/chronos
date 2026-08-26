@@ -31,6 +31,7 @@ export function KlantCombobox({
 
   const [hubspotResultaten, setHubspotResultaten] = useState<HubspotZoekresultaat[]>([]);
   const [hubspotZoekPending, setHubspotZoekPending] = useState(false);
+  const [hubspotZoekFout, setHubspotZoekFout] = useState<string | null>(null);
   const [importerenId, setImporterenId] = useState<string | null>(null);
   const [importFout, setImportFout] = useState<Record<string, string>>({});
   const zoekTokenRef = useRef(0);
@@ -74,6 +75,7 @@ export function KlantCombobox({
       zoekHubspotKlanten(term).then((res) => {
         if (zoekTokenRef.current !== token) return;
         setHubspotZoekPending(false);
+        setHubspotZoekFout(res.fout);
         setHubspotResultaten(res.fout ? [] : res.resultaten.filter((r) => !r.bestaatAl));
       });
     }, 350);
@@ -107,7 +109,9 @@ export function KlantCombobox({
   const toontHubspot = magHubspotImporteren && open && invoer.trim().length > 0;
   const getoondeHubspotResultaten = toontHubspot ? hubspotResultaten : [];
   const toontHubspotPending = toontHubspot && hubspotZoekPending;
-  const geenResultaten = matches.length === 0 && getoondeHubspotResultaten.length === 0 && !toontHubspotPending;
+  const getoondeHubspotFout = toontHubspot && !hubspotZoekPending ? hubspotZoekFout : null;
+  const geenResultaten =
+    matches.length === 0 && getoondeHubspotResultaten.length === 0 && !toontHubspotPending && !getoondeHubspotFout;
 
   return (
     <div ref={containerRef} className="relative flex flex-col gap-1">
@@ -232,6 +236,9 @@ export function KlantCombobox({
           )}
 
           {geenResultaten && <p className="px-2.5 py-1.5 text-sm text-muted-foreground">Geen klanten gevonden.</p>}
+          {getoondeHubspotFout && (
+            <p className="px-2.5 py-1.5 text-sm text-destructive">Zoeken in HubSpot mislukt: {getoondeHubspotFout}</p>
+          )}
 
           <div className="mt-1 border-t border-border pt-1" onMouseDown={(e) => e.preventDefault()}>
             <NewKlantDialog

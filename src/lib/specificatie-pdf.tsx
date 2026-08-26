@@ -86,6 +86,16 @@ const specStyles = StyleSheet.create({
   cellRight: { textAlign: "right" },
   cellSub: { color: "#5b6270", marginTop: 1 },
   totaalCel: { fontWeight: 700, fontStyle: "italic", fontSize: 8 },
+  watermerk: {
+    position: "absolute",
+    top: "40%",
+    left: "22%",
+    fontSize: 90,
+    fontWeight: 700,
+    color: "#0f053a",
+    opacity: 0.07,
+    transform: "rotate(-30deg)",
+  },
 });
 
 const KOLOM_GEWICHT: Record<string, number> = {
@@ -109,6 +119,7 @@ export async function genereerSpecificatiePdf({
   totalen,
   valuta,
   landen,
+  watermerk,
 }: {
   klant: FactuurSpecificatieKlant;
   periodeStart: string;
@@ -118,6 +129,7 @@ export async function genereerSpecificatiePdf({
   totalen: FactuurSpecificatieTotalen;
   valuta: string;
   landen?: LandenMap;
+  watermerk?: string;
 }): Promise<Buffer> {
   const taal = klant.specificatietaal;
   const t = SPEC_LABELS[taal];
@@ -186,6 +198,7 @@ export async function genereerSpecificatiePdf({
   return renderToBuffer(
     <Document>
       <Page size="A4" orientation="landscape" style={specStyles.page}>
+        {watermerk && <Text fixed style={specStyles.watermerk}>{watermerk}</Text>}
         {kopEnKoppen}
         {items.map((item) => {
           const dossiers = item.dossiers.slice().sort((a, b) => a.volgorde - b.volgorde);

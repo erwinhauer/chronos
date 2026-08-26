@@ -1,8 +1,8 @@
 "use client";
 
 import { useActionState, useMemo, useState, useTransition } from "react";
-import { Search, Pencil, LogIn } from "lucide-react";
-import { updateGebruiker, loginAls, type UpdateGebruikerFormState } from "@/actions/admin";
+import { Search, Pencil, LogIn, UserX } from "lucide-react";
+import { updateGebruiker, loginAls, deactiveerGebruiker, type UpdateGebruikerFormState } from "@/actions/admin";
 import { NewGebruikerDialog } from "./new-gebruiker-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -195,6 +195,7 @@ function GebruikerRij({
       <TableCell className="text-right">
         <div className="flex justify-end gap-2">
           {toontInloggenAls && <InloggenAlsDialog profile={profile} />}
+          {toontInloggenAls && profile.actief && <VerwijderGebruikerDialog profile={profile} />}
           <GebruikerBewerkenDialog
             profile={profile}
             teams={teams}
@@ -253,6 +254,53 @@ function InloggenAlsDialog({ profile }: { profile: ProfileRow }) {
   );
 }
 
+function VerwijderGebruikerDialog({ profile }: { profile: ProfileRow }) {
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  function bevestig() {
+    setError(null);
+    startTransition(async () => {
+      const result = await deactiveerGebruiker(profile.id);
+      if (result.error) setError(result.error);
+      else setOpen(false);
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger render={<Button size="sm" variant="outline" />}>
+        <UserX className="h-4 w-4" />
+        Verwijderen
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{profile.full_name} verwijderen?</DialogTitle>
+          <DialogDescription>
+            Deze gebruiker wordt op inactief gezet — dat is veiliger dan echt verwijderen, omdat factuuritems, de
+            auditlog en het wijzigingenlog naar deze gebruiker blijven verwijzen. Een inactieve gebruiker verdwijnt
+            uit alle keuzelijsten en verliest toegang, maar de historie blijft intact.
+          </DialogDescription>
+        </DialogHeader>
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            Annuleren
+          </Button>
+          <Button type="button" variant="destructive" onClick={bevestig} disabled={pending}>
+            {pending ? "Bezig…" : "Verwijderen"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 const initialState: UpdateGebruikerFormState = { error: null, success: false };
 
 function GebruikerBewerkenDialog({
@@ -274,6 +322,7 @@ function GebruikerBewerkenDialog({
   }, initialState);
   const [voornaam, setVoornaam] = useState(profile.voornaam);
   const [achternaam, setAchternaam] = useState(profile.achternaam);
+  const [email, setEmail] = useState(profile.email);
   const [roleIds, setRoleIds] = useState<UserRole[]>(huidigeRolIds);
   const [actief, setActief] = useState(profile.actief);
   const [teamIds, setTeamIds] = useState<string[]>(huidigeTeamIds);
@@ -296,7 +345,6 @@ function GebruikerBewerkenDialog({
           ))}
           <DialogHeader>
             <DialogTitle>{profile.full_name}</DialogTitle>
-            <DialogDescription>{profile.email}</DialogDescription>
           </DialogHeader>
 
           <div className="grid grid-cols-2 gap-4">
@@ -308,6 +356,20 @@ function GebruikerBewerkenDialog({
               <label className="text-sm font-medium">Achternaam</label>
               <Input name="achternaam" value={achternaam} onChange={(e) => setAchternaam(e.target.value)} />
             </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium">E-mailadres</label>
+            <Input
+              type="email"
+              name="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <p className="text-xs text-muted-foreground">
+              Dit is ook het e-mailadres waarmee deze gebruiker inlogt.
+            </p>
           </div>
 
           <div className="flex flex-col gap-2">

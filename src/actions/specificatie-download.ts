@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { genereerSpecificatiePdf } from "@/lib/specificatie-pdf";
 import { haalLandenMap } from "@/lib/landen";
+import { berekenFactuurtotalen, round2 } from "@/lib/factuurbedragen";
 
 export type SpecificatiePdfResultaat = { base64: string | null; filename: string | null; error: string | null };
 
@@ -94,5 +95,104 @@ export async function genereerSpecificatiePdfBase64(specificatieId: string): Pro
     return { base64: buffer.toString("base64"), filename, error: null };
   } catch {
     return { base64: null, filename: null, error: "Genereren van de PDF is mislukt." };
+  }
+}
+
+// Downloadbaar concept vóórdat de specificatie definitief wordt gemaakt —
+// dezelfde selectie/berekening als genereerSpecificatie (src/actions/specificaties.ts),
+// maar zonder facturatiebatch aan te maken. Altijd met een "CONCEPT"-watermerk,
+// zodat een gebruiker dit voorbeeld niet per ongeluk als definitieve specificatie
+// verstuurt in plaats van de workflow af te ronden.
+export async function genereerConceptSpecificatiePdfBase64(input: {
+  klant_id: string;
+  itemIds: string[];
+  periode_start: string;
+  periode_eind: string;
+  extra_korting: number;
+}): Promise<SpecificatiePdfResultaat> {
+  const profile = await getCurrentProfile();
+  if (profile?.role !== "finance" && profile?.role !== "beheerder" && profile?.role !== "teamleider") {
+    return { base64: null, filename: null, error: "Geen toegang tot specificaties." };
+  }
+  if (!input.klant_id || input.itemIds.length === 0) {
+    return { base64: null, filename: null, error: "Selecteer minimaal één factuuritem." };
+  }
+
+  const supabase = await createClient();
+
+  const { data: klant } = await supabase.from("klanten").select("*").eq("id", input.klant_id).single();
+  if (!klant) {
+    return { base64: null, filename: null, error: "Klant niet gevonden." };
+  }
+
+  const [{ data: items }, landen] = await Promise.all([
+    supabase
+      .from("factuuritems")
+      .select(
+        "id, datum, omschrijving_klant, eenheidstype, qty, tarief, honorarium, externe_kosten, korting, kantoorkosten_van_toepassing, profiles!factuuritems_medewerker_id_fkey(full_name), factuuritem_dossiers(dossiernummer, type_dienst, land, matter_naam, volgorde)"
+      )
+      .eq("klant_id", input.klant_id)
+      .eq("status", "aangemaakt")
+      .in("id", input.itemIds)
+      .order("datum", { ascending: true }),
+    haalLandenMap(supabase),
+  ]);
+
+  if (!items || items.length !== input.itemIds.length) {
+    return {
+      base64: null,
+      filename: null,
+      error: "Een of meer geselecteerde items zijn niet meer beschikbaar.",
+    };
+  }
+
+  const ruw = berekenFactuurtotalen(items, klant.kantoorkosten_percentage);
+  const extraKorting = round2(input.extra_korting) || 0;
+  if (extraKorting > ruw.subtotaalVoorExtraKorting) {
+    return { base64: null, filename: null, error: "Extra korting kan niet groter zijn dan het bedrag van de specificatie." };
+  }
+  const totalen = {
+    totaal_honorarium: ruw.totaalHonorarium,
+    totaal_externe_kosten: ruw.totaalExterneKosten,
+    totaal_korting: ruw.totaalKorting,
+    totaal_kantoorkosten: ruw.totaalKantoorkosten,
+    extra_korting: extraKorting,
+    totaal_bedrag: round2(ruw.subtotaalVoorExtraKorting - extraKorting),
+  };
+
+  const specificatieItems = items.map((item) => ({
+    id: item.id,
+    datum: item.datum,
+    omschrijving_klant: item.omschrijving_klant,
+    eenheidstype: item.eenheidstype,
+    qty: item.qty,
+    tarief: item.tarief,
+    honorarium: item.honorarium,
+    externe_kosten: item.externe_kosten,
+    korting: item.korting,
+    medewerkerNaam: (item.profiles as unknown as { full_name: string } | null)?.full_name ?? null,
+    dossiers: item.factuuritem_dossiers ?? [],
+  }));
+
+  try {
+    const aangemaaktOp = new Date().toISOString();
+    const buffer = await genereerSpecificatiePdf({
+      klant,
+      periodeStart: input.periode_start,
+      periodeEind: input.periode_eind,
+      aangemaaktOp,
+      landen,
+      items: specificatieItems,
+      totalen,
+      valuta: klant.valuta,
+      watermerk: "CONCEPT",
+    });
+    const filename = specificatieBestandsnaam(klant.naam, klant.specificatietaal, aangemaaktOp).replace(
+      /\.pdf$/,
+      " (concept).pdf"
+    );
+    return { base64: buffer.toString("base64"), filename, error: null };
+  } catch {
+    return { base64: null, filename: null, error: "Genereren van de concept-PDF is mislukt." };
   }
 }

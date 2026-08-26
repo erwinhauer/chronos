@@ -161,25 +161,41 @@ export async function updateGebruiker(
 
   const voornaam = String(formData.get("voornaam") ?? "").trim();
   const achternaam = String(formData.get("achternaam") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const roles = formData.getAll("role_ids").map(String) as UserRole[];
   const actief = formData.get("actief") === "on";
   const teamIds = formData.getAll("team_ids").map(String);
   const initialen = String(formData.get("initialen") ?? "").trim().toUpperCase().slice(0, 3);
 
-  if (!voornaam || roles.length === 0) {
-    return { error: "Voornaam en minimaal één rol zijn verplicht.", success: false };
+  if (!voornaam || roles.length === 0 || !email) {
+    return { error: "Voornaam, e-mailadres en minimaal één rol zijn verplicht.", success: false };
   }
 
   // Service-role: admin-bewerkingen lopen hiermee altijd door, los van de
   // zelfbedienings-trigger die gewone gebruikers hun eigen rij/rol laat aanpassen.
   const admin = createAdminClient();
 
-  const { data: huidig } = await admin.from("profiles").select("role").eq("id", profileId).single();
+  const { data: huidig } = await admin.from("profiles").select("role, email").eq("id", profileId).single();
   const actieveRol = huidig && roles.includes(huidig.role) ? huidig.role : roles[0];
+
+  if (huidig && email !== huidig.email) {
+    const { error: emailError } = await admin.auth.admin.updateUserById(profileId, {
+      email,
+      email_confirm: true,
+    });
+    if (emailError) {
+      return {
+        error: emailError.message?.includes("already been registered")
+          ? "Er bestaat al een gebruiker met dit e-mailadres."
+          : "Bijwerken van het e-mailadres is mislukt.",
+        success: false,
+      };
+    }
+  }
 
   const { error } = await admin
     .from("profiles")
-    .update({ voornaam, achternaam, role: actieveRol, actief, initialen: initialen || null })
+    .update({ voornaam, achternaam, email, role: actieveRol, actief, initialen: initialen || null })
     .eq("id", profileId);
   if (error) {
     return { error: "Bijwerken van de gebruiker is mislukt.", success: false };
@@ -207,6 +223,35 @@ export async function updateGebruiker(
     if (insertError) {
       return { error: "Bijwerken van teams is mislukt.", success: false };
     }
+  }
+
+  revalidatePath("/instellingen");
+  revalidatePath("/profiel");
+  revalidatePath("/dashboard");
+  return { error: null, success: true };
+}
+
+export type DeactiveerGebruikerResultaat = { error: string | null; success: boolean };
+
+// Een gebruiker "verwijderen" is bewust een zachte verwijdering (status
+// inactief): factuuritems, de auditlog en het wijzigingenlog verwijzen naar
+// profiles.id, zonder cascade — een echte delete van een gebruiker die ooit
+// iets geregistreerd heeft, zou daarom altijd op een foreign-key-fout
+// stuklopen (en anders bestaande historie/audit-trail beschadigen). Een
+// inactieve gebruiker kan nog wel inloggen, maar is_active_user() in de RLS
+// blokkeert dan vrijwel alle lees- en schrijftoegang (zie migratie
+// 20260721160100_rls_and_audit.sql) — en verdwijnt uit alle keuzelijsten voor
+// nieuw werk.
+export async function deactiveerGebruiker(profileId: string): Promise<DeactiveerGebruikerResultaat> {
+  const beheerder = await assertBeheerder();
+  if (profileId === beheerder.id) {
+    return { error: "Je kunt jezelf niet deactiveren.", success: false };
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("profiles").update({ actief: false }).eq("id", profileId);
+  if (error) {
+    return { error: "Deactiveren van de gebruiker is mislukt.", success: false };
   }
 
   revalidatePath("/instellingen");

@@ -1,7 +1,9 @@
 "use client";
 
 import { useActionState, useMemo, useRef, useState } from "react";
+import { Download } from "lucide-react";
 import { genereerSpecificatie, type SpecificatieFormState } from "@/actions/specificaties";
+import { genereerConceptSpecificatiePdfBase64 } from "@/actions/specificatie-download";
 import { round2 } from "@/lib/factuurbedragen";
 import type { LandenMap } from "@/lib/landen";
 import {
@@ -61,6 +63,33 @@ export function NieuweSpecificatieForm({
   const [state, formAction, pending] = useActionState(genereerSpecificatie, initialState);
   const [toonBevestiging, setToonBevestiging] = useState(false);
   const [extraKorting, setExtraKorting] = useState(0);
+  const [conceptBezig, setConceptBezig] = useState(false);
+  const [conceptFout, setConceptFout] = useState<string | null>(null);
+
+  async function downloadConcept() {
+    setConceptBezig(true);
+    setConceptFout(null);
+    const { base64, filename, error } = await genereerConceptSpecificatiePdfBase64({
+      klant_id: klant.id,
+      itemIds,
+      periode_start: periodeStart,
+      periode_eind: periodeEind,
+      extra_korting: extraKorting,
+    });
+    setConceptBezig(false);
+    if (error || !base64 || !filename) {
+      setConceptFout(error ?? "Downloaden is mislukt.");
+      return;
+    }
+    const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+    const blob = new Blob([bytes], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
 
   const totalen = useMemo(
     () => ({
@@ -148,14 +177,21 @@ export function NieuweSpecificatieForm({
             />
           </FactuurVoorbeeldKaart>
         </CardContent>
-        {state.error && (
-          <CardContent className="pt-0">
-            <p role="alert" className="text-sm text-destructive">
-              {state.error}
-            </p>
+        {(state.error || conceptFout) && (
+          <CardContent className="flex flex-col gap-1 pt-0">
+            {state.error && (
+              <p role="alert" className="text-sm text-destructive">
+                {state.error}
+              </p>
+            )}
+            {conceptFout && <p className="text-sm text-destructive">{conceptFout}</p>}
           </CardContent>
         )}
-        <CardFooter className="justify-end">
+        <CardFooter className="justify-end gap-2">
+          <Button type="button" variant="outline" disabled={conceptBezig} onClick={downloadConcept}>
+            <Download className="h-4 w-4" />
+            {conceptBezig ? "Bezig…" : "Download concept (PDF)"}
+          </Button>
           <Button type="button" disabled={pending || extraKortingTeHoog} onClick={() => setToonBevestiging(true)}>
             {pending ? "Bezig…" : "Bevestigen en specificatie maken"}
           </Button>

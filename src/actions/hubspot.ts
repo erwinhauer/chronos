@@ -75,10 +75,15 @@ export async function zoekHubspotKlanten(zoekterm: string): Promise<HubspotZoekR
 
   let companies: HubspotCompany[];
   try {
+    // CONTAINS_TOKEN matcht alleen complete woorden — zonder wildcard levert
+    // een nog niet afgetypt woord (bv. "bouwmach" voordat je "bouwmachines"
+    // afmaakt) dus geen enkel resultaat op. De trailing "*" maakt er een
+    // prefix-match van op het laatste woord, wat zoeken-terwijl-je-typt pas
+    // echt bruikbaar maakt.
     const data = await hubspotFetch(token, "/crm/v3/objects/companies/search", {
       method: "POST",
       body: JSON.stringify({
-        filterGroups: [{ filters: [{ propertyName: "name", operator: "CONTAINS_TOKEN", value: term }] }],
+        filterGroups: [{ filters: [{ propertyName: "name", operator: "CONTAINS_TOKEN", value: `${term}*` }] }],
         properties: PROPERTIES.split(","),
         limit: 20,
       }),
