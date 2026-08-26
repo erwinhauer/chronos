@@ -85,19 +85,36 @@ export function NewKlantDialog({
             </div>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="specificatietaal">Taal factuur/specificatie</Label>
-            <div className="relative">
-              <select
-                id="specificatietaal"
-                name="specificatietaal"
-                defaultValue="nl"
-                className="h-9 w-full appearance-none rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-base outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm dark:bg-input/30"
-              >
-                <option value="nl">Nederlands</option>
-                <option value="en">Engels</option>
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="specificatietaal">Taal factuur/specificatie</Label>
+              <div className="relative">
+                <select
+                  id="specificatietaal"
+                  name="specificatietaal"
+                  defaultValue="nl"
+                  className="h-9 w-full appearance-none rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-base outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm dark:bg-input/30"
+                >
+                  <option value="nl">Nederlands</option>
+                  <option value="en">Engels</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="valuta">Valuta</Label>
+              <div className="relative">
+                <select
+                  id="valuta"
+                  name="valuta"
+                  defaultValue="EUR"
+                  className="h-9 w-full appearance-none rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-base outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm dark:bg-input/30"
+                >
+                  <option value="EUR">Euro (EUR)</option>
+                  <option value="USD">US dollar (USD)</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              </div>
             </div>
           </div>
 

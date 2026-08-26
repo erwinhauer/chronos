@@ -271,6 +271,7 @@ export type Database = {
           status: Database["public"]["Enums"]["factuuritem_status"]
           tarief: number | null
           tarief_afwijkend: boolean
+          team_id: string | null
           updated_at: string
         }
         Insert: {
@@ -297,6 +298,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["factuuritem_status"]
           tarief?: number | null
           tarief_afwijkend?: boolean
+          team_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -323,6 +325,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["factuuritem_status"]
           tarief?: number | null
           tarief_afwijkend?: boolean
+          team_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -359,6 +362,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projecten"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "factuuritems_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
             referencedColumns: ["id"]
           },
         ]
@@ -854,6 +864,10 @@ export type Database = {
           nieuwe_taal: Database["public"]["Enums"]["specificatietaal"]
           target_klant_id: string
         }
+        Returns: undefined
+      }
+      set_klant_valuta: {
+        Args: { nieuwe_valuta: string; target_klant_id: string }
         Returns: undefined
       }
       shares_team_with: { Args: { target_profile: string }; Returns: boolean }

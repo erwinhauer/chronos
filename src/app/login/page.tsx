@@ -5,9 +5,9 @@ import { LoginForm } from "./login-form";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; fout?: string }>;
 }) {
-  const { next } = await searchParams;
+  const { next, fout } = await searchParams;
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
@@ -41,7 +41,7 @@ export default async function LoginPage({
             <ChronosLogo className="text-foreground [&>span]:text-[2rem]" />
             <p className="text-sm text-muted-foreground">Tijdschrijf- en facturatiesysteem</p>
           </div>
-          <LoginForm next={next ?? "/dashboard"} />
+          <LoginForm next={next ?? "/dashboard"} foutmelding={fout} />
         </div>
       </div>
     </div>

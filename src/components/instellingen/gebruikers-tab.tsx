@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState, useTransition } from "react";
+import { useActionState, useCallback, useMemo, useState, useTransition } from "react";
 import { Search, Pencil, LogIn, UserX } from "lucide-react";
 import { updateGebruiker, loginAls, deactiveerGebruiker, type UpdateGebruikerFormState } from "@/actions/admin";
 import { NewGebruikerDialog } from "./new-gebruiker-dialog";
@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { AvatarInitials } from "@/components/ui/avatar-initials";
 import { StatusDot } from "@/components/ui/status-dot";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { SortableTh } from "@/components/sortable-th";
 import { tagKleurStijl } from "@/lib/tag-kleur";
 import {
@@ -68,18 +69,30 @@ export function GebruikersTab({
     }
   }
 
-  const zichtbaar = useMemo(() => {
-    const q = zoek.trim().toLowerCase();
-    const gefilterd = q
-      ? profiles.filter((p) => p.full_name.toLowerCase().includes(q) || p.email.toLowerCase().includes(q))
-      : profiles;
-    const keyFn = {
-      naam: (p: ProfileRow) => p.full_name,
-      rol: (p: ProfileRow) => ROLE_LABELS[p.role],
-      actief: (p: ProfileRow) => (p.actief ? 1 : 0),
-    }[sortKey];
-    return sortRows(gefilterd, keyFn, sortRichting);
-  }, [profiles, zoek, sortKey, sortRichting]);
+  const filterEnSorteer = useCallback(
+    (lijst: ProfileRow[]) => {
+      const q = zoek.trim().toLowerCase();
+      const gefilterd = q
+        ? lijst.filter((p) => p.full_name.toLowerCase().includes(q) || p.email.toLowerCase().includes(q))
+        : lijst;
+      const keyFn = {
+        naam: (p: ProfileRow) => p.full_name,
+        rol: (p: ProfileRow) => ROLE_LABELS[p.role],
+        actief: (p: ProfileRow) => (p.actief ? 1 : 0),
+      }[sortKey];
+      return sortRows(gefilterd, keyFn, sortRichting);
+    },
+    [zoek, sortKey, sortRichting]
+  );
+
+  const actieveProfiles = useMemo(
+    () => filterEnSorteer(profiles.filter((p) => p.actief)),
+    [profiles, filterEnSorteer]
+  );
+  const inactieveProfiles = useMemo(
+    () => filterEnSorteer(profiles.filter((p) => !p.actief)),
+    [profiles, filterEnSorteer]
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -95,48 +108,105 @@ export function GebruikersTab({
         </div>
         <NewGebruikerDialog teams={teams} />
       </div>
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <SortableTh label="Naam" actief={sortKey === "naam"} richting={sortRichting} onClick={() => toggleSort("naam")} />
-                <SortableTh label="Rol" actief={sortKey === "rol"} richting={sortRichting} onClick={() => toggleSort("rol")} />
-                <TableHead>Teams</TableHead>
-                <TableHead>Initialen</TableHead>
-                <SortableTh
-                  label="Actief"
-                  actief={sortKey === "actief"}
-                  richting={sortRichting}
-                  onClick={() => toggleSort("actief")}
-                />
-                <TableHead className="text-right">Acties</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {zichtbaar.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
-                    Geen gebruikers gevonden.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                zichtbaar.map((p) => (
-                  <GebruikerRij
-                    key={p.id}
-                    profile={p}
-                    teams={teams}
-                    huidigeTeamIds={teamIdsPerProfile[p.id] ?? []}
-                    huidigeRolIds={rolIdsPerProfile[p.id] ?? [p.role]}
-                    toontInloggenAls={p.id !== eigenProfielId}
-                  />
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="actief">
+        <TabsList>
+          <TabsTrigger value="actief">Actief ({actieveProfiles.length})</TabsTrigger>
+          <TabsTrigger value="inactief">Inactief ({inactieveProfiles.length})</TabsTrigger>
+        </TabsList>
+        <TabsContent value="actief">
+          <GebruikersTabel
+            rijen={actieveProfiles}
+            teams={teams}
+            teamIdsPerProfile={teamIdsPerProfile}
+            rolIdsPerProfile={rolIdsPerProfile}
+            eigenProfielId={eigenProfielId}
+            sortKey={sortKey}
+            sortRichting={sortRichting}
+            toggleSort={toggleSort}
+            leegBericht="Geen actieve gebruikers gevonden."
+          />
+        </TabsContent>
+        <TabsContent value="inactief">
+          <GebruikersTabel
+            rijen={inactieveProfiles}
+            teams={teams}
+            teamIdsPerProfile={teamIdsPerProfile}
+            rolIdsPerProfile={rolIdsPerProfile}
+            eigenProfielId={eigenProfielId}
+            sortKey={sortKey}
+            sortRichting={sortRichting}
+            toggleSort={toggleSort}
+            leegBericht="Geen inactieve gebruikers gevonden."
+          />
+        </TabsContent>
+      </Tabs>
     </div>
+  );
+}
+
+function GebruikersTabel({
+  rijen,
+  teams,
+  teamIdsPerProfile,
+  rolIdsPerProfile,
+  eigenProfielId,
+  sortKey,
+  sortRichting,
+  toggleSort,
+  leegBericht,
+}: {
+  rijen: ProfileRow[];
+  teams: Team[];
+  teamIdsPerProfile: Record<string, string[]>;
+  rolIdsPerProfile: Record<string, UserRole[]>;
+  eigenProfielId: string;
+  sortKey: SortKey;
+  sortRichting: SortRichting;
+  toggleSort: (key: SortKey) => void;
+  leegBericht: string;
+}) {
+  return (
+    <Card>
+      <CardContent className="p-0">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <SortableTh label="Naam" actief={sortKey === "naam"} richting={sortRichting} onClick={() => toggleSort("naam")} />
+              <SortableTh label="Rol" actief={sortKey === "rol"} richting={sortRichting} onClick={() => toggleSort("rol")} />
+              <TableHead>Teams</TableHead>
+              <TableHead>Initialen</TableHead>
+              <SortableTh
+                label="Actief"
+                actief={sortKey === "actief"}
+                richting={sortRichting}
+                onClick={() => toggleSort("actief")}
+              />
+              <TableHead className="text-right">Acties</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rijen.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
+                  {leegBericht}
+                </TableCell>
+              </TableRow>
+            ) : (
+              rijen.map((p) => (
+                <GebruikerRij
+                  key={p.id}
+                  profile={p}
+                  teams={teams}
+                  huidigeTeamIds={teamIdsPerProfile[p.id] ?? []}
+                  huidigeRolIds={rolIdsPerProfile[p.id] ?? [p.role]}
+                  toontInloggenAls={p.id !== eigenProfielId}
+                />
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -195,7 +265,7 @@ function GebruikerRij({
       <TableCell className="text-right">
         <div className="flex justify-end gap-2">
           {toontInloggenAls && <InloggenAlsDialog profile={profile} />}
-          {toontInloggenAls && profile.actief && <VerwijderGebruikerDialog profile={profile} />}
+          {toontInloggenAls && profile.actief && <DeactiveerGebruikerDialog profile={profile} />}
           <GebruikerBewerkenDialog
             profile={profile}
             teams={teams}
@@ -254,7 +324,7 @@ function InloggenAlsDialog({ profile }: { profile: ProfileRow }) {
   );
 }
 
-function VerwijderGebruikerDialog({ profile }: { profile: ProfileRow }) {
+function DeactiveerGebruikerDialog({ profile }: { profile: ProfileRow }) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -272,15 +342,16 @@ function VerwijderGebruikerDialog({ profile }: { profile: ProfileRow }) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button size="sm" variant="outline" />}>
         <UserX className="h-4 w-4" />
-        Verwijderen
+        Deactiveren
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{profile.full_name} verwijderen?</DialogTitle>
+          <DialogTitle>{profile.full_name} deactiveren?</DialogTitle>
           <DialogDescription>
             Deze gebruiker wordt op inactief gezet — dat is veiliger dan echt verwijderen, omdat factuuritems, de
             auditlog en het wijzigingenlog naar deze gebruiker blijven verwijzen. Een inactieve gebruiker verdwijnt
-            uit alle keuzelijsten en verliest toegang, maar de historie blijft intact.
+            uit alle keuzelijsten en verliest toegang, maar de historie blijft intact. Je vindt de gebruiker terug
+            onder de tab “Inactief”.
           </DialogDescription>
         </DialogHeader>
         {error && (
@@ -293,7 +364,7 @@ function VerwijderGebruikerDialog({ profile }: { profile: ProfileRow }) {
             Annuleren
           </Button>
           <Button type="button" variant="destructive" onClick={bevestig} disabled={pending}>
-            {pending ? "Bezig…" : "Verwijderen"}
+            {pending ? "Bezig…" : "Deactiveren"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -21,6 +21,7 @@ function parseInput(formData: FormData) {
   const klant_id = String(formData.get("klant_id") ?? "").trim();
   const medewerker_id = String(formData.get("medewerker_id") ?? "").trim();
   const project_id = String(formData.get("project_id") ?? "").trim() || null;
+  const team_id = String(formData.get("team_id") ?? "").trim() || null;
   const dossiernummers = Array.from(
     new Set(formData.getAll("dossiernummers").map((v) => String(v).trim().toUpperCase()).filter(Boolean))
   );
@@ -44,6 +45,7 @@ function parseInput(formData: FormData) {
     klant_id,
     medewerker_id,
     project_id,
+    team_id,
     dossiernummers,
     datum,
     omschrijving_klant,
@@ -150,6 +152,30 @@ async function medewerkerNaam(
   return data?.full_name ?? "Onbekend";
 }
 
+async function teamNaam(supabase: Awaited<ReturnType<typeof createClient>>, team_id: string | null): Promise<string> {
+  if (!team_id) return "Geen team";
+  const { data } = await supabase.from("teams").select("naam").eq("id", team_id).single();
+  return data?.naam ?? "Onbekend";
+}
+
+// Nooit vertrouwen op de client welk team gekozen is — de RLS-policy bewaakt
+// dit ook al bij het opslaan, maar een expliciete check hier levert een
+// nette foutmelding i.p.v. een kale database-fout.
+async function teamIdGeldigVoorMedewerker(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  team_id: string | null,
+  medewerker_id: string
+): Promise<boolean> {
+  if (!team_id) return true;
+  const { data } = await supabase
+    .from("team_members")
+    .select("team_id")
+    .eq("team_id", team_id)
+    .eq("profile_id", medewerker_id)
+    .maybeSingle();
+  return Boolean(data);
+}
+
 type VeldWijziging = { veld: string; oud: string | null; nieuw: string | null };
 
 function vergelijkVeld(wijzigingen: VeldWijziging[], veld: string, oud: unknown, nieuw: unknown) {
@@ -240,6 +266,10 @@ export async function createFactuurItem(
     return { error: "Je sessie is verlopen. Log opnieuw in.", success: false };
   }
 
+  if (!(await teamIdGeldigVoorMedewerker(supabase, input.team_id, user.id))) {
+    return { error: "Ongeldig team gekozen.", success: false };
+  }
+
   const { data: voorgesteldTarief } = await supabase.rpc("resolve_tarief", {
     p_klant_id: input.klant_id,
     p_medewerker_id: user.id,
@@ -263,6 +293,7 @@ export async function createFactuurItem(
     .insert({
       klant_id: input.klant_id,
       project_id: input.project_id,
+      team_id: input.team_id,
       medewerker_id: user.id,
       datum: input.datum,
       omschrijving_klant: input.omschrijving_klant,
@@ -344,7 +375,7 @@ export async function updateFactuurItem(
   const { data: voor } = await supabase
     .from("factuuritems")
     .select(
-      "klant_id, project_id, medewerker_id, datum, omschrijving_klant, interne_opmerking, qty, prijstype, tarief, externe_kosten, korting, kantoorkosten_van_toepassing, declarabel, klanten(naam), projecten(naam), profiles!factuuritems_medewerker_id_fkey(full_name), factuuritem_dossiers(dossiernummer)"
+      "klant_id, project_id, team_id, medewerker_id, datum, omschrijving_klant, interne_opmerking, qty, prijstype, tarief, externe_kosten, korting, kantoorkosten_van_toepassing, declarabel, klanten(naam), projecten(naam), profiles!factuuritems_medewerker_id_fkey(full_name), factuuritem_dossiers(dossiernummer)"
     )
     .eq("id", id)
     .single();
@@ -379,11 +410,17 @@ export async function updateFactuurItem(
     medewerkerUpdate = { medewerker_id: input.medewerker_id };
   }
 
+  const effectieveMedewerkerId = medewerkerUpdate.medewerker_id ?? voor?.medewerker_id ?? user.id;
+  if (!(await teamIdGeldigVoorMedewerker(supabase, input.team_id, effectieveMedewerkerId))) {
+    return { error: "Ongeldig team gekozen.", success: false };
+  }
+
   const { error } = await supabase
     .from("factuuritems")
     .update({
       klant_id: input.klant_id,
       project_id: input.project_id,
+      team_id: input.team_id,
       datum: input.datum,
       omschrijving_klant: input.omschrijving_klant,
       interne_opmerking: input.interne_opmerking,
@@ -424,7 +461,9 @@ export async function updateFactuurItem(
     const oudeMedewerkerNaam = (voor.profiles as unknown as { full_name: string } | null)?.full_name ?? "Onbekend";
     const nieuweMedewerkerId = medewerkerUpdate.medewerker_id ?? voor.medewerker_id;
 
-    const [nieuweKlantNaamVal, nieuweProjectNaamVal, nieuweMedewerkerNaamVal] = await Promise.all([
+    const oudeTeamNaam = await teamNaam(supabase, voor.team_id);
+
+    const [nieuweKlantNaamVal, nieuweProjectNaamVal, nieuweMedewerkerNaamVal, nieuweTeamNaamVal] = await Promise.all([
       voor.klant_id === input.klant_id ? Promise.resolve(oudeKlantNaam) : klantNaam(supabase, input.klant_id),
       voor.project_id === input.project_id
         ? Promise.resolve(oudeProjectNaam)
@@ -432,6 +471,7 @@ export async function updateFactuurItem(
       nieuweMedewerkerId === voor.medewerker_id
         ? Promise.resolve(oudeMedewerkerNaam)
         : medewerkerNaam(supabase, nieuweMedewerkerId),
+      voor.team_id === input.team_id ? Promise.resolve(oudeTeamNaam) : teamNaam(supabase, input.team_id),
     ]);
 
     const oudeDossiers = (voor.factuuritem_dossiers ?? [])
@@ -447,6 +487,7 @@ export async function updateFactuurItem(
     vergelijkVeld(wijzigingen, "Klant", oudeKlantNaam, nieuweKlantNaamVal);
     vergelijkVeld(wijzigingen, "Project", oudeProjectNaam, nieuweProjectNaamVal);
     vergelijkVeld(wijzigingen, "Medewerker", oudeMedewerkerNaam, nieuweMedewerkerNaamVal);
+    vergelijkVeld(wijzigingen, "Team", oudeTeamNaam, nieuweTeamNaamVal);
     vergelijkVeld(wijzigingen, "Dossier(s)", oudeDossiers, nieuweDossiers);
     vergelijkVeld(wijzigingen, "Datum", voor.datum, input.datum);
     vergelijkVeld(wijzigingen, "Omschrijving voor klant", voor.omschrijving_klant, input.omschrijving_klant);

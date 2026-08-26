@@ -157,7 +157,8 @@ export async function importeerHubspotKlant(hubspotId: string): Promise<HubspotI
   const adres = bouwAdres(company.properties);
   const patriciaId = company.properties.patriciaid?.trim() || null;
 
-  const KLANT_VELDEN = "id, naam, adres, patricia_id, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal";
+  const KLANT_VELDEN =
+    "id, naam, adres, patricia_id, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal, valuta";
   const supabase = await createClient();
   const { data: bestaandeKlant } = await supabase
     .from("klanten")

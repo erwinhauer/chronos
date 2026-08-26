@@ -11,6 +11,7 @@ export type NieuweKlant = {
   kantoorkosten_actief: boolean;
   kantoorkosten_percentage: number;
   specificatietaal: "nl" | "en";
+  valuta: string;
 };
 
 export type KlantFormState = { error: string | null; success: boolean; klant?: NieuweKlant };
@@ -21,6 +22,7 @@ export async function createKlant(_prevState: KlantFormState, formData: FormData
   const adres = String(formData.get("adres") ?? "").trim();
   const accountview_debiteurnummer = String(formData.get("accountview_debiteurnummer") ?? "").trim();
   const specificatietaal = String(formData.get("specificatietaal") ?? "nl").trim();
+  const valuta = String(formData.get("valuta") ?? "EUR").trim();
   const kantoorkosten_actief = formData.get("kantoorkosten_actief") === "on";
   const kolom_externe_kosten_zichtbaar = formData.get("kolom_externe_kosten_zichtbaar") === "on";
   const btw_percentage = Number(formData.get("btw_percentage") ?? 21);
@@ -43,6 +45,7 @@ export async function createKlant(_prevState: KlantFormState, formData: FormData
       adres: adres || null,
       accountview_debiteurnummer: accountview_debiteurnummer || null,
       specificatietaal: specificatietaal as "nl" | "en",
+      valuta,
       kantoorkosten_actief,
       kolom_externe_kosten_zichtbaar,
       btw_percentage,
@@ -50,7 +53,7 @@ export async function createKlant(_prevState: KlantFormState, formData: FormData
       opmerkingen: opmerkingen || null,
       status: "actief",
     })
-    .select("id, naam, adres, patricia_id, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal")
+    .select("id, naam, adres, patricia_id, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal, valuta")
     .single();
 
   if (error || !klant) {
@@ -91,6 +94,16 @@ export async function wisselKlantTaal(klantId: string, taal: "nl" | "en") {
   const { error } = await supabase.rpc("set_klant_taal", { target_klant_id: klantId, nieuwe_taal: taal });
   if (error) {
     throw new Error("Wijzigen van de taal is mislukt.");
+  }
+
+  revalidatePath("/factuuritems");
+}
+
+export async function wisselKlantValuta(klantId: string, valuta: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_klant_valuta", { target_klant_id: klantId, nieuwe_valuta: valuta });
+  if (error) {
+    throw new Error("Wijzigen van de valuta is mislukt.");
   }
 
   revalidatePath("/factuuritems");

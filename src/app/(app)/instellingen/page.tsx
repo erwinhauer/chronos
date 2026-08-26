@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
+import { purgeVerweesGebruikers } from "@/actions/admin";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { GebruikersTab } from "@/components/instellingen/gebruikers-tab";
 import { TeamsTab } from "@/components/instellingen/teams-tab";
@@ -11,6 +12,8 @@ import type { UserRole } from "@/lib/supabase/types";
 export default async function InstellingenPage() {
   const profile = await getCurrentProfile();
   if (profile?.role !== "beheerder") redirect("/dashboard");
+
+  await purgeVerweesGebruikers();
 
   const supabase = await createClient();
   const jaar = new Date().getFullYear();

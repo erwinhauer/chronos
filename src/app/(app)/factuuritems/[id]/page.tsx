@@ -53,7 +53,7 @@ export default async function FactuurItemBewerkenPage({
   const { data: item } = await supabase
     .from("factuuritems")
     .select(
-      "*, laatst_bewerkt_door_profiel:profiles!factuuritems_laatst_bewerkt_door_fkey(full_name), factuuritem_dossiers(dossiernummer, type_dienst, land, matter_naam, volgorde), klanten(id, naam, adres, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal)"
+      "*, laatst_bewerkt_door_profiel:profiles!factuuritems_laatst_bewerkt_door_fkey(full_name), factuuritem_dossiers(dossiernummer, type_dienst, land, matter_naam, volgorde), klanten(id, naam, adres, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal, valuta)"
     )
     .eq("id", id)
     .single();
@@ -72,22 +72,35 @@ export default async function FactuurItemBewerkenPage({
     redirect("/factuuritems");
   }
 
-  const [{ data: actieveKlanten }, { data: projecten }, medewerkers, landen, { data: wijzigingenRuw }] =
-    await Promise.all([
-      supabase
-        .from("klanten")
-        .select("id, naam, adres, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal")
-        .eq("status", "actief")
-        .order("naam"),
-      supabase.from("projecten").select("id, klant_id, naam, po_nummer").eq("actief", true).order("naam"),
-      magAllesBewerken ? haalHerToewijsbareMedewerkers(supabase, profile?.role, user.id) : Promise.resolve(null),
-      haalLandenMap(supabase),
-      supabase
-        .from("factuuritem_wijzigingen")
-        .select("veld, oude_waarde, nieuwe_waarde, aangemaakt_op, profiles(full_name)")
-        .eq("factuuritem_id", item.id)
-        .order("aangemaakt_op", { ascending: false }),
-    ]);
+  const [
+    { data: actieveKlanten },
+    { data: projecten },
+    medewerkers,
+    landen,
+    { data: wijzigingenRuw },
+    { data: teamLidmaatschappen },
+  ] = await Promise.all([
+    supabase
+      .from("klanten")
+      .select("id, naam, adres, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal, valuta")
+      .eq("status", "actief")
+      .order("naam"),
+    supabase.from("projecten").select("id, klant_id, naam, po_nummer").eq("actief", true).order("naam"),
+    magAllesBewerken ? haalHerToewijsbareMedewerkers(supabase, profile?.role, user.id) : Promise.resolve(null),
+    haalLandenMap(supabase),
+    supabase
+      .from("factuuritem_wijzigingen")
+      .select("veld, oude_waarde, nieuwe_waarde, aangemaakt_op, profiles(full_name)")
+      .eq("factuuritem_id", item.id)
+      .order("aangemaakt_op", { ascending: false }),
+    // Teams van de huidige eigenaar van dit item (niet per se de inlogger, die
+    // kan een teamleider/beheerder zijn die dit item namens iemand anders bewerkt).
+    supabase.from("team_members").select("teams(id, naam)").eq("profile_id", item.medewerker_id),
+  ]);
+
+  const teams = (teamLidmaatschappen ?? [])
+    .map((tl) => tl.teams as unknown as { id: string; naam: string } | null)
+    .filter((t): t is { id: string; naam: string } => t !== null);
 
   const wijzigingenLog = (wijzigingenRuw ?? []).map((w) => ({
     veld: w.veld,
@@ -131,12 +144,14 @@ export default async function FactuurItemBewerkenPage({
         magMedewerkerWijzigen={magAllesBewerken}
         magKlantenVerwijderen={profile?.role === "beheerder"}
         wijzigingenLog={wijzigingenLog}
+        teams={teams}
         initial={{
           id: item.id,
           dossiernummers: dossiersOpItem.map((d) => d.dossiernummer),
           klant_id: item.klant_id,
           medewerker_id: item.medewerker_id,
           project_id: item.project_id,
+          team_id: item.team_id,
           datum: item.datum,
           omschrijving_klant: item.omschrijving_klant,
           interne_opmerking: item.interne_opmerking,

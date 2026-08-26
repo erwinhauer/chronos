@@ -4,7 +4,7 @@ import { useActionState, useEffect, useMemo, useState, useTransition } from "rea
 import { useRouter } from "next/navigation";
 import { ChevronDown, EyeOff, Plus } from "lucide-react";
 import type { FactuurItemFormState } from "@/actions/factuuritems";
-import { wisselKlantTaal } from "@/actions/klanten";
+import { wisselKlantTaal, wisselKlantValuta } from "@/actions/klanten";
 import { createClient } from "@/lib/supabase/client";
 import { DossiernummerTagInput } from "@/components/dossiernummer-tag-input";
 import { KlantCombobox } from "@/components/klant-combobox";
@@ -34,8 +34,10 @@ type Klant = {
   kantoorkosten_actief: boolean;
   kantoorkosten_percentage: number;
   specificatietaal: "nl" | "en";
+  valuta: string;
 };
 type Project = { id: string; naam: string; po_nummer: string | null };
+type Team = { id: string; naam: string };
 
 type Medewerker = { id: string; full_name: string };
 
@@ -47,6 +49,7 @@ type Initial = {
   klant_id: string;
   medewerker_id: string;
   project_id: string | null;
+  team_id: string | null;
   datum: string;
   omschrijving_klant: string;
   interne_opmerking: string | null;
@@ -82,6 +85,8 @@ export function FactuurItemForm({
   magHubspotImporteren = true,
   magKlantenVerwijderen = false,
   wijzigingenLog,
+  teams = [],
+  standaardTeamId,
 }: {
   klanten: Klant[];
   projectenPerKlant: Record<string, Project[]>;
@@ -96,6 +101,8 @@ export function FactuurItemForm({
   magHubspotImporteren?: boolean;
   magKlantenVerwijderen?: boolean;
   wijzigingenLog?: Wijziging[];
+  teams?: Team[];
+  standaardTeamId?: string | null;
 }) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(action, initialState);
@@ -126,6 +133,9 @@ export function FactuurItemForm({
   const [dossierSelectie, setDossierSelectie] = useState<string[]>(initial?.dossiernummers ?? []);
   const [klantId, setKlantId] = useState(initial?.klant_id ?? voorgeselecteerdeKlantId ?? "");
   const [medewerkerIdVeld, setMedewerkerIdVeld] = useState(initial?.medewerker_id ?? medewerkerId);
+  const [teamId, setTeamId] = useState(
+    initial?.team_id ?? standaardTeamId ?? (teams.length === 1 ? teams[0].id : "")
+  );
   const [datum, setDatum] = useState(initial?.datum ?? new Date().toISOString().slice(0, 10));
   const [omschrijvingKlant, setOmschrijvingKlant] = useState(initial?.omschrijving_klant ?? "");
   const [interneOpmerking, setInterneOpmerking] = useState(initial?.interne_opmerking ?? "");
@@ -239,6 +249,7 @@ export function FactuurItemForm({
       ))}
       <input type="hidden" name="klant_id" value={klantId} />
       <input type="hidden" name="medewerker_id" value={medewerkerIdVeld} />
+      <input type="hidden" name="team_id" value={teamId} />
       <input type="hidden" name="project_id" value={projectId} />
       <input type="hidden" name="datum" value={datum} />
       <input type="hidden" name="qty" value={qty} />
@@ -279,6 +290,26 @@ export function FactuurItemForm({
                   )}
                 </div>
               </div>
+
+              {teams.length > 1 && (
+                <div className="flex flex-col gap-2">
+                  <Label>Team</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {teams.map((t) => (
+                      <Button
+                        key={t.id}
+                        type="button"
+                        size="sm"
+                        variant={teamId === t.id ? "default" : "outline"}
+                        onClick={() => setTeamId(t.id)}
+                      >
+                        {t.naam}
+                      </Button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Voor welk team maak je dit factuuritem aan?</p>
+                </div>
+              )}
 
               <div className="grid gap-4 sm:grid-cols-2">
                 {initial && magMedewerkerWijzigen && medewerkers && (
@@ -393,6 +424,7 @@ export function FactuurItemForm({
                   />
                 </div>
                 {klant && <TaalVeld klant={klant} />}
+                {klant && <ValutaVeld klant={klant} />}
               </div>
             </CardContent>
           </Card>
@@ -640,6 +672,31 @@ function TaalVeld({ klant }: { klant: Klant }) {
       >
         <option value="nl">Nederlands</option>
         <option value="en">Engels</option>
+      </NativeSelect>
+    </div>
+  );
+}
+
+function ValutaVeld({ klant }: { klant: Klant }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+
+  return (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor="klant_valuta">Valuta</Label>
+      <NativeSelect
+        id="klant_valuta"
+        value={klant.valuta}
+        disabled={pending}
+        onChange={(valuta) => {
+          startTransition(async () => {
+            await wisselKlantValuta(klant.id, valuta);
+            router.refresh();
+          });
+        }}
+      >
+        <option value="EUR">Euro (EUR)</option>
+        <option value="USD">US dollar (USD)</option>
       </NativeSelect>
     </div>
   );

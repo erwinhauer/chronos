@@ -289,6 +289,7 @@ const LANDNAMEN: Record<string, string> = {
   EU: "Europese Unie",
   BX: "Benelux",
   UK: "Verenigd Koninkrijk",
+  MI: "Multisearch",
 };
 
 // `type_dienst` wordt bij aanmaken vastgelegd als het Nederlandse label (zie

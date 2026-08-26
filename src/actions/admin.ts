@@ -1,6 +1,5 @@
 "use server";
 
-import crypto from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
@@ -16,10 +15,6 @@ export async function assertBeheerder() {
     throw new Error("Alleen beheerders kunnen dit beheren.");
   }
   return profile;
-}
-
-function genereerTijdelijkWachtwoord() {
-  return `Chronos-${crypto.randomBytes(9).toString("base64url")}`;
 }
 
 function lijstVanTekst(value: FormDataEntryValue | null): string[] {
@@ -91,7 +86,6 @@ export async function setTeamLeden(teamId: string, profileIds: string[]) {
 export type GebruikerFormState = {
   error: string | null;
   success: boolean;
-  tempWachtwoord?: string;
   email?: string;
 };
 
@@ -113,11 +107,10 @@ export async function createGebruiker(
   }
 
   const actieveRol = roles[0];
-  const tempWachtwoord = genereerTijdelijkWachtwoord();
+  // Geen wachtwoord — gebruikers loggen uitsluitend in via magic link.
   const admin = createAdminClient();
   const { data, error } = await admin.auth.admin.createUser({
     email,
-    password: tempWachtwoord,
     email_confirm: true,
     user_metadata: { voornaam, achternaam, role: actieveRol },
   });
@@ -147,7 +140,7 @@ export async function createGebruiker(
   }
 
   revalidatePath("/instellingen");
-  return { error: null, success: true, tempWachtwoord, email };
+  return { error: null, success: true, email };
 }
 
 export type UpdateGebruikerFormState = { error: string | null; success: boolean };
@@ -258,6 +251,52 @@ export async function deactiveerGebruiker(profileId: string): Promise<Deactiveer
   revalidatePath("/profiel");
   revalidatePath("/dashboard");
   return { error: null, success: true };
+}
+
+// Ruimt inactieve gebruikers op die nergens meer naar verwezen worden — in de
+// praktijk vrijwel alleen gebruikers die nooit een factuuritem of iets anders
+// hebben aangemaakt, want factuuritems.medewerker_id raakt (in tegenstelling
+// tot factuuritem_wijzigingen, dat een lazy 6-maanden-purge kent) nooit
+// vanzelf leeg. Bewust een opportunistische sweep bij het openen van dit
+// scherm i.p.v. een cron/Edge Function — die infrastructuur bestaat nergens
+// in dit project en is hier niet gevraagd.
+export async function purgeVerweesGebruikers(): Promise<void> {
+  await assertBeheerder();
+  const admin = createAdminClient();
+
+  const { data: inactief } = await admin.from("profiles").select("id").eq("actief", false);
+  if (!inactief || inactief.length === 0) return;
+
+  for (const { id } of inactief) {
+    const [auditlog, wijzigingen, factuuritemsMedewerker, factuuritemsBewerkt, tarieven, batches, specificaties, klanten] =
+      await Promise.all([
+        admin.from("auditlog").select("id", { count: "exact", head: true }).eq("gebruiker_id", id),
+        admin.from("factuuritem_wijzigingen").select("id", { count: "exact", head: true }).eq("gewijzigd_door", id),
+        admin.from("factuuritems").select("id", { count: "exact", head: true }).eq("medewerker_id", id),
+        admin.from("factuuritems").select("id", { count: "exact", head: true }).eq("laatst_bewerkt_door", id),
+        admin.from("tarieven").select("id", { count: "exact", head: true }).eq("created_by", id),
+        admin.from("facturatiebatches").select("id", { count: "exact", head: true }).eq("goedgekeurd_door", id),
+        admin.from("specificaties").select("id", { count: "exact", head: true }).eq("created_by", id),
+        admin.from("klanten").select("id", { count: "exact", head: true }).eq("standaard_teamleider_id", id),
+      ]);
+
+    const heeftVerwijzingen = [
+      auditlog,
+      wijzigingen,
+      factuuritemsMedewerker,
+      factuuritemsBewerkt,
+      tarieven,
+      batches,
+      specificaties,
+      klanten,
+    ].some((r) => (r.count ?? 0) > 0);
+
+    if (!heeftVerwijzingen) {
+      // profiles.id references auth.users(id) on delete cascade — dit ruimt de
+      // profielrij automatisch mee op.
+      await admin.auth.admin.deleteUser(id);
+    }
+  }
 }
 
 // ============================================================================

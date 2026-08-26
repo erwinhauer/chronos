@@ -56,14 +56,15 @@ function GebruikerDialogBody({ teams, onDone }: { teams: { id: string; naam: str
 
   const getoondeInitialen = initialenHandmatig ? initialen : suggestInitialen(`${voornaam} ${achternaam}`.trim());
 
-  if (state.success && state.tempWachtwoord) {
+  if (state.success) {
     return (
       <div className="flex flex-col gap-4">
         <DialogHeader>
           <DialogTitle>Gebruiker aangemaakt</DialogTitle>
-          <DialogDescription>Geef dit tijdelijke wachtwoord door aan {state.email}.</DialogDescription>
+          <DialogDescription>
+            {state.email} kan direct inloggen via een magic link op het loginscherm — een wachtwoord is niet nodig.
+          </DialogDescription>
         </DialogHeader>
-        <div className="rounded-lg border border-border bg-muted p-3 text-sm">{state.tempWachtwoord}</div>
         <DialogFooter>
           <Button onClick={onDone}>Klaar</Button>
         </DialogFooter>
@@ -75,7 +76,7 @@ function GebruikerDialogBody({ teams, onDone }: { teams: { id: string; naam: str
     <form action={formAction} className="flex flex-col gap-5">
       <DialogHeader>
         <DialogTitle>Nieuwe gebruiker aanmaken</DialogTitle>
-        <DialogDescription>Er wordt direct een account aangemaakt met een tijdelijk wachtwoord.</DialogDescription>
+        <DialogDescription>Er wordt direct een account aangemaakt. Inloggen gaat via magic link.</DialogDescription>
       </DialogHeader>
 
       <div className="grid grid-cols-2 gap-4">
