@@ -12,6 +12,7 @@ type HubspotCompanyProperties = {
   city?: string | null;
   zip?: string | null;
   country?: string | null;
+  patriciaid?: string | null;
 };
 type HubspotCompany = { id: string; properties: HubspotCompanyProperties };
 
@@ -19,6 +20,7 @@ export type HubspotZoekresultaat = {
   hubspotId: string;
   naam: string;
   adres: string | null;
+  patriciaId: string | null;
   bestaatAl: boolean;
 };
 export type HubspotZoekResponse = { resultaten: HubspotZoekresultaat[]; fout: string | null };
@@ -39,7 +41,7 @@ function magHubspotImporteren(profile: { actief: boolean } | null) {
   return profile?.actief === true;
 }
 
-const PROPERTIES = "name,address,address2,city,zip,country";
+const PROPERTIES = "name,address,address2,city,zip,country,patriciaid";
 
 async function hubspotFetch(token: string, path: string, init?: RequestInit) {
   const response = await fetch(`https://api.hubapi.com${path}`, {
@@ -102,6 +104,7 @@ export async function zoekHubspotKlanten(zoekterm: string): Promise<HubspotZoekR
       hubspotId: c.id,
       naam: c.properties.name!.trim(),
       adres: bouwAdres(c.properties),
+      patriciaId: c.properties.patriciaid?.trim() || null,
       bestaatAl: bestaandeIds.has(c.id),
     }));
 
@@ -137,8 +140,9 @@ export async function importeerHubspotKlant(hubspotId: string): Promise<HubspotI
     return { success: false, fout: "Dit HubSpot-bedrijf heeft geen naam.", klant: null };
   }
   const adres = bouwAdres(company.properties);
+  const patriciaId = company.properties.patriciaid?.trim() || null;
 
-  const KLANT_VELDEN = "id, naam, adres, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal";
+  const KLANT_VELDEN = "id, naam, adres, patricia_id, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal";
   const supabase = await createClient();
   const { data: bestaandeKlant } = await supabase
     .from("klanten")
@@ -150,26 +154,32 @@ export async function importeerHubspotKlant(hubspotId: string): Promise<HubspotI
   if (!bestaandeKlant) {
     const { data, error } = await supabase
       .from("klanten")
-      .insert({ hubspot_id: hubspotId, naam, adres, status: "actief" })
+      .insert({ hubspot_id: hubspotId, naam, adres, patricia_id: patriciaId, status: "actief" })
       .select(KLANT_VELDEN)
       .single();
     if (error || !data) {
       return { success: false, fout: "Aanmaken van de klant is mislukt.", klant: null };
     }
     klant = data;
-  } else if (!bestaandeKlant.adres && adres) {
-    const { data, error } = await supabase
-      .from("klanten")
-      .update({ adres })
-      .eq("id", bestaandeKlant.id)
-      .select(KLANT_VELDEN)
-      .single();
-    if (error || !data) {
-      return { success: false, fout: "Bijwerken van de klant is mislukt.", klant: null };
-    }
-    klant = data;
   } else {
-    klant = bestaandeKlant;
+    const aanvulling: { adres?: string; patricia_id?: string } = {};
+    if (!bestaandeKlant.adres && adres) aanvulling.adres = adres;
+    if (!bestaandeKlant.patricia_id && patriciaId) aanvulling.patricia_id = patriciaId;
+
+    if (Object.keys(aanvulling).length > 0) {
+      const { data, error } = await supabase
+        .from("klanten")
+        .update(aanvulling)
+        .eq("id", bestaandeKlant.id)
+        .select(KLANT_VELDEN)
+        .single();
+      if (error || !data) {
+        return { success: false, fout: "Bijwerken van de klant is mislukt.", klant: null };
+      }
+      klant = data;
+    } else {
+      klant = bestaandeKlant;
+    }
   }
 
   revalidatePath("/factuuritems");

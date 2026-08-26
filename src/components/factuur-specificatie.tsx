@@ -1,4 +1,4 @@
-import { landNaamVoorIso, typeDienstLabel } from "@/lib/dossiernummer";
+import { landNaamVoorIso } from "@/lib/dossiernummer";
 import type { LandenMap } from "@/lib/landen";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -7,9 +7,8 @@ const LABELS = {
     titel: "Specificatie factuur",
     periode: "Periode",
     datum: "Datum",
-    knijffRef: "Knijff ref.",
-    matter: "Matter",
-    matterType: "Matter type",
+    aangemaaktOp: "Datum specificatie",
+    knijffRefMatter: "Knijff ref. / Matter",
     land: "Land",
     omschrijving: "Omschrijving",
     aantal: "Aantal",
@@ -27,9 +26,8 @@ const LABELS = {
     titel: "Specification invoice",
     periode: "Period",
     datum: "Date",
-    knijffRef: "Knijff ref.",
-    matter: "Matter",
-    matterType: "Matter type",
+    aangemaaktOp: "Specification date",
+    knijffRefMatter: "Knijff ref. / Matter",
     land: "Country",
     omschrijving: "Description",
     aantal: "Qty",
@@ -84,13 +82,16 @@ function formatDatum(datum: string, taal: "nl" | "en") {
   return new Date(datum).toLocaleDateString(taal === "nl" ? "nl-NL" : "en-GB");
 }
 
+function capitaliseer(label: string) {
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
 function formatMaandJaar(periodeStart: string, periodeEind: string, taal: "nl" | "en") {
   const start = new Date(periodeStart);
   const eind = new Date(periodeEind);
   const locale = taal === "nl" ? "nl-NL" : "en-GB";
   if (start.getFullYear() === eind.getFullYear() && start.getMonth() === eind.getMonth()) {
-    const label = start.toLocaleDateString(locale, { month: "long", year: "numeric" });
-    return taal === "nl" ? label : label.charAt(0).toUpperCase() + label.slice(1);
+    return capitaliseer(start.toLocaleDateString(locale, { month: "long", year: "numeric" }));
   }
   return `${formatDatum(periodeStart, taal)} – ${formatDatum(periodeEind, taal)}`;
 }
@@ -99,6 +100,7 @@ export function FactuurSpecificatie({
   klant,
   periodeStart,
   periodeEind,
+  aangemaaktOp,
   items,
   totalen,
   valuta,
@@ -107,6 +109,7 @@ export function FactuurSpecificatie({
   klant: FactuurSpecificatieKlant;
   periodeStart: string;
   periodeEind: string;
+  aangemaaktOp: string;
   items: FactuurSpecificatieItem[];
   totalen: FactuurSpecificatieTotalen;
   valuta: string;
@@ -121,25 +124,27 @@ export function FactuurSpecificatie({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between rounded-lg bg-[#f1ece0] px-5 py-4">
+      <div className="flex items-center justify-between">
         <p className="text-base font-medium">
           {klant.naam} <span className="text-muted-foreground">| {t.titel}</span>
         </p>
-        <p className="text-lg font-bold tracking-wide">KNIJFF</p>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/knijff%20trademark%20attorneys%20-%20dark%20navy.svg" alt="Knijff" className="h-8 w-auto" />
       </div>
-      <p className="text-sm font-semibold">{formatMaandJaar(periodeStart, periodeEind, taal)}</p>
+      <div>
+        <p className="text-sm font-semibold">{formatMaandJaar(periodeStart, periodeEind, taal)}</p>
+        <p className="text-xs text-muted-foreground">
+          {t.aangemaaktOp}: {formatDatum(aangemaaktOp, taal)}
+        </p>
+      </div>
 
       <Table className="[&_td]:px-1.5 [&_th]:px-1.5 [&_td]:text-xs [&_th]:text-xs">
         <TableHeader>
           <TableRow>
             <TableHead className="whitespace-normal">{t.datum}</TableHead>
-            <TableHead className="whitespace-normal">{t.knijffRef}</TableHead>
-            <TableHead className="whitespace-normal">{t.matter}</TableHead>
+            <TableHead className="whitespace-normal">{t.knijffRefMatter}</TableHead>
             {klant.kolom_matter_type_land_zichtbaar && (
-              <>
-                <TableHead className="whitespace-normal">{t.matterType}</TableHead>
-                <TableHead className="whitespace-normal">{t.land}</TableHead>
-              </>
+              <TableHead className="whitespace-normal">{t.land}</TableHead>
             )}
             <TableHead className="whitespace-normal">{t.omschrijving}</TableHead>
             {klant.kolom_uren_zichtbaar && <TableHead className="whitespace-normal text-right">{t.aantal}</TableHead>}
@@ -159,13 +164,12 @@ export function FactuurSpecificatie({
             return (
               <TableRow key={item.id}>
                 <TableCell className="whitespace-nowrap">{formatDatum(item.datum, taal)}</TableCell>
-                <TableCell className="whitespace-normal">{dossiers.map((d) => d.dossiernummer).join("; ")}</TableCell>
-                <TableCell className="whitespace-normal break-words">{matterNamen.join(", ")}</TableCell>
+                <TableCell className="whitespace-normal break-words">
+                  <div>{dossiers.map((d) => d.dossiernummer).join("; ")}</div>
+                  <div className="text-muted-foreground">{matterNamen.join(", ")}</div>
+                </TableCell>
                 {klant.kolom_matter_type_land_zichtbaar && (
-                  <>
-                    <TableCell className="whitespace-normal">{typeDienstLabel(eerste?.type_dienst ?? null, taal)}</TableCell>
-                    <TableCell className="whitespace-normal">{landNaamVoorIso(eerste?.land ?? null, landen)}</TableCell>
-                  </>
+                  <TableCell className="whitespace-normal">{landNaamVoorIso(eerste?.land ?? null, landen)}</TableCell>
                 )}
                 <TableCell className="whitespace-normal break-words">{item.omschrijving_klant}</TableCell>
                 {klant.kolom_uren_zichtbaar && (

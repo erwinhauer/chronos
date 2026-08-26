@@ -80,6 +80,7 @@ export function FactuurItemForm({
   medewerkers,
   magMedewerkerWijzigen = false,
   magHubspotImporteren = true,
+  magKlantenVerwijderen = false,
   wijzigingenLog,
 }: {
   klanten: Klant[];
@@ -93,6 +94,7 @@ export function FactuurItemForm({
   medewerkers?: Medewerker[];
   magMedewerkerWijzigen?: boolean;
   magHubspotImporteren?: boolean;
+  magKlantenVerwijderen?: boolean;
   wijzigingenLog?: Wijziging[];
 }) {
   const router = useRouter();
@@ -270,6 +272,7 @@ export function FactuurItemForm({
                     onChange={setKlantId}
                     onKlantAangemaakt={(nieuw) => setExtraKlanten((prev) => [...prev, nieuw])}
                     magHubspotImporteren={magHubspotImporteren}
+                    magKlantenVerwijderen={magKlantenVerwijderen}
                   />
                   {klant?.adres && (
                     <p className="text-xs whitespace-pre-line text-muted-foreground">{klant.adres}</p>
@@ -605,7 +608,7 @@ export function FactuurItemForm({
           </DialogHeader>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setToonSluitenBevestiging(false)}>
-              Terug naar het formulier
+              Annuleren
             </Button>
             <Button type="button" variant="destructive" onClick={() => router.push(terugUrl)}>
               Sluiten zonder opslaan

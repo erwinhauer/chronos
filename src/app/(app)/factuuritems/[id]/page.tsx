@@ -129,6 +129,7 @@ export default async function FactuurItemBewerkenPage({
         landen={landen}
         medewerkers={medewerkers ?? undefined}
         magMedewerkerWijzigen={magAllesBewerken}
+        magKlantenVerwijderen={profile?.role === "beheerder"}
         wijzigingenLog={wijzigingenLog}
         initial={{
           id: item.id,

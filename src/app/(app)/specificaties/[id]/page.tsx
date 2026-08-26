@@ -70,6 +70,7 @@ export default async function SpecificatiePagina({ params }: { params: Promise<{
             klant={klant}
             periodeStart={batch.periode_start}
             periodeEind={batch.periode_eind}
+            aangemaaktOp={batch.created_at}
             valuta={batch.valuta}
             landen={landen}
             items={(items ?? []).map((item) => ({

@@ -72,6 +72,7 @@ export default async function NieuweSpecificatiePagina({
         itemIds={items.map((i) => i.id)}
         periodeStart={periodeStart}
         periodeEind={periodeEind}
+        aangemaaktOp={new Date().toISOString()}
         landen={landen}
         items={items.map((item) => ({
           id: item.id,

@@ -42,6 +42,7 @@ export function NieuweSpecificatieForm({
   itemIds,
   periodeStart,
   periodeEind,
+  aangemaaktOp,
   items,
   basisTotalen,
   landen,
@@ -51,6 +52,7 @@ export function NieuweSpecificatieForm({
   itemIds: string[];
   periodeStart: string;
   periodeEind: string;
+  aangemaaktOp: string;
   items: FactuurSpecificatieItem[];
   basisTotalen: BasisTotalen;
   landen: LandenMap;
@@ -139,6 +141,7 @@ export function NieuweSpecificatieForm({
               valuta={klant.valuta}
               periodeStart={periodeStart}
               periodeEind={periodeEind}
+              aangemaaktOp={aangemaaktOp}
               items={items}
               totalen={totalen}
               landen={landen}

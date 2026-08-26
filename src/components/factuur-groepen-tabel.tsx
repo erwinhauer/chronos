@@ -14,6 +14,7 @@ import { sortRows, type SortRichting } from "@/lib/table-utils";
 export type FactuurGroepSamenvatting = {
   klantId: string;
   klantNaam: string;
+  patriciaId: string | null;
   aantalItems: number;
   oudsteDatum: string;
   bedrag: number;
@@ -92,9 +93,16 @@ export function FactuurGroepenTabel({ groepen }: { groepen: FactuurGroepSamenvat
                 zichtbaar.map((g) => (
                   <TableRow key={g.klantId}>
                     <TableCell className="font-medium">
-                      <Link href={`/factuuritems/klant/${g.klantId}`} className="hover:underline">
-                        {g.klantNaam}
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Link href={`/factuuritems/klant/${g.klantId}`} className="hover:underline">
+                          {g.klantNaam}
+                        </Link>
+                        {g.patriciaId && (
+                          <Badge variant="outline" className="text-xs font-normal text-muted-foreground">
+                            PNN {g.patriciaId}
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant="secondary">{g.aantalItems}</Badge>

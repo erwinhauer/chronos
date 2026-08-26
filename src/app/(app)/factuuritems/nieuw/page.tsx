@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { createFactuurItem } from "@/actions/factuuritems";
 import { FactuurItemForm } from "@/components/factuuritem-form";
 import { SetBreadcrumb } from "@/lib/breadcrumb-context";
@@ -12,9 +13,12 @@ export default async function NieuwFactuurItemPage({
 }) {
   const { klant_id } = await searchParams;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [
+    {
+      data: { user },
+    },
+    profile,
+  ] = await Promise.all([supabase.auth.getUser(), getCurrentProfile()]);
   if (!user) redirect("/login");
 
   const [{ data: klanten }, { data: projecten }, landen] = await Promise.all([
@@ -46,6 +50,7 @@ export default async function NieuwFactuurItemPage({
         medewerkerId={user.id}
         voorgeselecteerdeKlantId={klant_id}
         landen={landen}
+        magKlantenVerwijderen={profile?.role === "beheerder"}
       />
     </div>
   );

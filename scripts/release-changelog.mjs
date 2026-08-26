@@ -6,29 +6,29 @@ import { createClient } from "@supabase/supabase-js";
 
 // Vóór elke commit bijwerken met de wijzigingen van die release.
 const CHANGELOG_ENTRY = {
-  versienummer: "0.23.0",
+  versienummer: "0.24.0",
   releasedatum: "2026-08-26",
-  titel: "Inloggen als (testfase), fuzzy klantzoeken, Teams in tabs, wijzigingslog op factuuritems",
+  titel: "PNN uit HubSpot, dossiertype Onderzoeken, specificatie-opmaak met Knijff-logo",
   nieuwe_functies: [
-    "Instellingen > Gebruikers: een beheerder kan nu 'Inloggen als' een andere gebruiker gebruiken om tijdens de testfase testdata aan te maken en te zien hoe verschillende rollen Chronos ervaren — dit wordt altijd gelogd in de auditlog en toont een banner tot je uitlogt",
-    "Factuuritems bewerken: een uitklapbare 'Log'-sectie onder Honorarium en kosten houdt per wijziging bij wie wat heeft aangepast (klant, medewerker, project, bedragen, etc.); logregels ouder dan 6 maanden worden automatisch opgeruimd",
-    "Dashboard (beheerder/directie): een nieuwe kaart 'Omzet buiten een team' toont omzet van medewerkers die (nog) geen lid zijn van een team, zodat die niet langer onzichtbaar wegvalt uit de teamkaarten",
+    "Nieuw/bewerk factuuritem: het HubSpot-klantzoekveld toont nu ook het PNN (Patricia Name Number) per bedrijf, en het opgehaalde PNN wordt bij import in Chronos opgeslagen",
+    "Factuuritems > klant en de factuuritems-lijst tonen het PNN nu direct bij de klantnaam (als tag in de lijst, als regel onder de naam op de klantpagina, samen met het adres)",
+    "Nieuw/bewerk factuuritem: een beheerder kan een verouderde of foutief aangemaakte klant nu rechtstreeks uit het klant-zoekveld verwijderen (zachte verwijdering — bestaande factuuritems/projecten blijven intact)",
+    "Dossiernummerformat: 'S' is toegevoegd als prefix voor 'Onderzoeken'",
   ],
   wijzigingen: [
-    "Nieuw factuuritem / bewerken: het klant-zoekveld matcht nu ook op een niet-exacte (fuzzy) naam, inclusief typefouten en afwijkende diakritische tekens",
-    "Dashboard (beheerder/directie): de Teams-sectie staat nu achter horizontale tabs in plaats van naast elkaar, voor een rustiger overzicht bij veel teams",
-    "Landcode 'WW' (wereldwijd) toont nu overal 'Wereldwijd' in plaats van de kale code, met dezelfde vlagloze weergave als 'WO'",
-    "De 'Klanten'-sectie (menu-item, overzicht en detailpagina) is verwijderd nu klanten via HubSpot doorzocht en aangemaakt worden vanuit Nieuw factuuritem — klantgegevens bewerken, projecten bewerken/deactiveren en het financiële klantoverzicht zijn daarmee voorlopig nergens meer te doen",
+    "Dashboard: de jaar-kiezer gaat nu 5 kalenderjaren terug in plaats van 4, zodat meerjarige analyses (bv. per land/product) mogelijk blijven",
+    "Specificatie: de beige kopbalk is vervangen door het officiële Knijff-logo, de maandnaam begint nu met een hoofdletter, en de aanmaakdatum van de specificatie staat er nu bij",
+    "Specificatie: 'Knijff ref.' en 'Matter' staan nu samen in één kolom (onder elkaar) en de losse 'Matter type'-kolom is verwijderd",
   ],
   bugfixes: [
-    "Dashboard: omzet van een medewerker die (nog) geen lid is van een team viel stil weg uit alle teamkaarten, ook als de bijbehorende factuuritems wel degelijk op naam stonden — zie 'Omzet buiten een team' hierboven",
+    "Nieuw factuuritem: de bevestigingsdialoog bij 'Sluiten zonder opslaan' liep aan de rechterkant over de rand van het venster heen",
   ],
   bekende_beperkingen: [
     "Netto-omzet is nog een tijdelijke placeholder (67% van de bruto-omzet) — de echte netto-omzet per regel kan nog niet uit Chronos worden afgeleid, dat rekent Finance vooralsnog zelf maandelijks uit",
     "'Diensten per land/regio' is afgeleid van de landcode in het dossiernummer; factuuritems zonder (herkenbare) landcode in het dossiernummer tellen niet mee in die tegel",
     "Matter (dossieromschrijving) staat nog niet op nieuwe factuuritems — dat komt pas mee zodra de echte Patricia-koppeling er is; op de specificatie staat dan tijdelijk een '—'",
     "Matter type wordt nog steeds afgeleid uit het dossiernummer; in de praktijk kan hetzelfde dossier bij verschillende werkzaamheden een andere matter type hebben — dat is nog niet per factuurregel instelbaar",
-    "HubSpot-import haalt alleen naam en adres op; er is nu geen scherm meer om overige klantgegevens (adres, kantoorkosten, btw-instellingen, opmerkingen) aan te vullen of te wijzigen, en ook niet om een bestaand project te bewerken of te deactiveren",
+    "HubSpot-import haalt alleen naam, adres en PNN op — overige klantgegevens vul je zelf aan, er is nu geen scherm meer om die te bewerken",
     "'Inloggen als' is eenrichtingsverkeer: terug naar je eigen account gaat via uitloggen en opnieuw inloggen, er is geen 'terug naar beheerder'-snelkoppeling",
   ],
   gebruikersactie: null,

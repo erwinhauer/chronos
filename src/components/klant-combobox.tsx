@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Building2, Plus, Search } from "lucide-react";
+import { Building2, Plus, Search, Trash2 } from "lucide-react";
 import { NewKlantDialog } from "@/components/new-klant-dialog";
 import { zoekHubspotKlanten, importeerHubspotKlant, type HubspotZoekresultaat } from "@/actions/hubspot";
-import type { NieuweKlant } from "@/actions/klanten";
+import { deactiveerKlant, type NieuweKlant } from "@/actions/klanten";
 import { fuzzyFilter } from "@/lib/fuzzy-match";
 import { Input } from "@/components/ui/input";
 
@@ -16,12 +16,14 @@ export function KlantCombobox({
   onChange,
   onKlantAangemaakt,
   magHubspotImporteren = false,
+  magKlantenVerwijderen = false,
 }: {
   klanten: Klant[];
   value: string;
   onChange: (klantId: string) => void;
   onKlantAangemaakt: (klant: NieuweKlant) => void;
   magHubspotImporteren?: boolean;
+  magKlantenVerwijderen?: boolean;
 }) {
   const [invoer, setInvoer] = useState("");
   const [open, setOpen] = useState(false);
@@ -33,12 +35,31 @@ export function KlantCombobox({
   const [importFout, setImportFout] = useState<Record<string, string>>({});
   const zoekTokenRef = useRef(0);
 
+  const [verwijderdeIds, setVerwijderdeIds] = useState<Set<string>>(new Set());
+  const [bevestigVerwijderId, setBevestigVerwijderId] = useState<string | null>(null);
+  const [verwijderenBezigId, setVerwijderenBezigId] = useState<string | null>(null);
+
   const geselecteerd = klanten.find((k) => k.id === value);
 
+  const zichtbareKlanten = useMemo(
+    () => klanten.filter((k) => !verwijderdeIds.has(k.id)),
+    [klanten, verwijderdeIds]
+  );
+
   const matches = useMemo(() => {
-    if (!invoer.trim()) return klanten.slice(0, 8);
-    return fuzzyFilter(klanten, invoer, (k) => k.naam).slice(0, 8);
-  }, [klanten, invoer]);
+    if (!invoer.trim()) return zichtbareKlanten.slice(0, 8);
+    return fuzzyFilter(zichtbareKlanten, invoer, (k) => k.naam).slice(0, 8);
+  }, [zichtbareKlanten, invoer]);
+
+  async function verwijderKlant(klantId: string) {
+    setVerwijderenBezigId(klantId);
+    const res = await deactiveerKlant(klantId);
+    setVerwijderenBezigId(null);
+    setBevestigVerwijderId(null);
+    if (res.success) {
+      setVerwijderdeIds((prev) => new Set(prev).add(klantId));
+    }
+  }
 
   // Live meezoeken in HubSpot terwijl je typt — geen apart "importeren"-scherm
   // meer, gewoon één doorzoekbare lijst met bedrijven om uit te kiezen.
@@ -118,17 +139,56 @@ export function KlantCombobox({
         <div className="absolute top-full z-10 mt-1 w-full rounded-lg border border-border bg-popover p-1 shadow-md">
           {matches.length > 0 && (
             <div className="flex flex-col">
-              {matches.map((k) => (
-                <button
-                  key={k.id}
-                  type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => kiesKlant(k)}
-                  className="rounded-md px-2.5 py-1.5 text-left text-sm hover:bg-accent"
-                >
-                  {k.naam}
-                </button>
-              ))}
+              {matches.map((k) => {
+                if (magKlantenVerwijderen && bevestigVerwijderId === k.id) {
+                  const bezig = verwijderenBezigId === k.id;
+                  return (
+                    <div key={k.id} className="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm">
+                      <span className="flex-1 truncate text-muted-foreground">Verwijderen als klant?</span>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => setBevestigVerwijderId(null)}
+                        className="rounded-md px-1.5 py-0.5 text-xs hover:bg-accent"
+                      >
+                        Nee
+                      </button>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => verwijderKlant(k.id)}
+                        disabled={bezig}
+                        className="rounded-md px-1.5 py-0.5 text-xs text-destructive hover:bg-destructive/10 disabled:opacity-50"
+                      >
+                        {bezig ? "Bezig…" : "Ja, verwijderen"}
+                      </button>
+                    </div>
+                  );
+                }
+                return (
+                  <div key={k.id} className="flex items-center rounded-md hover:bg-accent">
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => kiesKlant(k)}
+                      className="flex-1 px-2.5 py-1.5 text-left text-sm"
+                    >
+                      {k.naam}
+                    </button>
+                    {magKlantenVerwijderen && (
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => setBevestigVerwijderId(k.id)}
+                        className="px-2 py-1.5 text-muted-foreground hover:text-destructive"
+                        title="Klant verwijderen"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -158,6 +218,9 @@ export function KlantCombobox({
                       >
                         <Building2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                         <span className="flex-1 truncate">{r.naam}</span>
+                        {r.patriciaId && (
+                          <span className="shrink-0 text-xs text-muted-foreground">PNN {r.patriciaId}</span>
+                        )}
                         {bezig && <span className="text-xs text-muted-foreground">Bezig…</span>}
                       </button>
                       {fout && <p className="px-2.5 pb-1 text-xs text-destructive">{fout}</p>}

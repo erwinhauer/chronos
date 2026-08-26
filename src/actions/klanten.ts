@@ -7,6 +7,7 @@ export type NieuweKlant = {
   id: string;
   naam: string;
   adres: string | null;
+  patricia_id: string | null;
   kantoorkosten_actief: boolean;
   kantoorkosten_percentage: number;
   specificatietaal: "nl" | "en";
@@ -49,7 +50,7 @@ export async function createKlant(_prevState: KlantFormState, formData: FormData
       opmerkingen: opmerkingen || null,
       status: "actief",
     })
-    .select("id, naam, adres, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal")
+    .select("id, naam, adres, patricia_id, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal")
     .single();
 
   if (error || !klant) {
@@ -61,6 +62,28 @@ export async function createKlant(_prevState: KlantFormState, formData: FormData
   }
 
   return { error: null, success: true, klant };
+}
+
+export type DeactiveerKlantResultaat = { error: string | null; success: boolean };
+
+// Zonder een aparte klantenbeheerpagina is dit de enige plek waar een
+// verouderde/foutief geïmporteerde klant nog uit de zoeksuggesties (o.a. de
+// HubSpot-tracklist) verwijderd kan worden — een zachte verwijdering
+// (status inactief), zodat bestaande factuuritems/projecten die ernaar
+// verwijzen intact blijven. RLS staat dit alleen aan beheerders toe.
+export async function deactiveerKlant(klantId: string): Promise<DeactiveerKlantResultaat> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("klanten").update({ status: "inactief" }).eq("id", klantId);
+
+  if (error) {
+    return {
+      error: error.code === "42501" ? "Alleen beheerders kunnen klanten verwijderen." : "Verwijderen is mislukt.",
+      success: false,
+    };
+  }
+
+  revalidatePath("/factuuritems");
+  return { error: null, success: true };
 }
 
 export async function wisselKlantTaal(klantId: string, taal: "nl" | "en") {

@@ -9,6 +9,7 @@ import {
   RefreshCw,
   Eye,
   Ban,
+  Search,
   HelpCircle,
   type LucideIcon,
 } from "lucide-react";
@@ -27,6 +28,7 @@ const ICONEN: Record<string, LucideIcon> = {
   Algemeen: FileText,
   Mutaties: RefreshCw,
   Bewaking: Eye,
+  Onderzoeken: Search,
 };
 
 export function DienstIcon({ dienst, className }: { dienst: string; className?: string }) {

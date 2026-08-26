@@ -84,6 +84,7 @@ export async function genereerSpecificatiePdfBase64(specificatieId: string): Pro
       klant,
       periodeStart: batch.periode_start,
       periodeEind: batch.periode_eind,
+      aangemaaktOp: batch.created_at,
       landen,
       items: specificatieItems,
       totalen,

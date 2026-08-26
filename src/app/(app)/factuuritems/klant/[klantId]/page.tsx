@@ -22,7 +22,7 @@ export default async function FactuuritemsPerKlantPagina({
       (await supabase.rpc("team_services_klant", { target_klant_id: klantId })).data === true);
 
   const [{ data: klant }, { data: items }, { data: projecten }, landen] = await Promise.all([
-    supabase.from("klanten").select("naam").eq("id", klantId).single(),
+    supabase.from("klanten").select("naam, patricia_id, adres").eq("id", klantId).single(),
     supabase
       .from("factuuritems")
       .select(
@@ -80,6 +80,13 @@ export default async function FactuuritemsPerKlantPagina({
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">{klant.naam}</h2>
+          {(klant.patricia_id || klant.adres) && (
+            <p className="text-xs text-muted-foreground">
+              {[klant.patricia_id ? `PNN ${klant.patricia_id}` : null, klant.adres?.replace(/\n/g, ", ")]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          )}
           <p className="text-sm text-muted-foreground">Openstaande factuuritems voor deze klant.</p>
         </div>
         <LinkButton href={`/factuuritems/nieuw?klant_id=${klantId}`}>

@@ -6,7 +6,13 @@ export function JaarSelect({ huidigJaar }: { huidigJaar: number }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const echtHuidigJaar = new Date().getFullYear();
-  const jaren = [echtHuidigJaar, echtHuidigJaar - 1, echtHuidigJaar - 2, echtHuidigJaar - 3];
+  const jaren = [
+    echtHuidigJaar,
+    echtHuidigJaar - 1,
+    echtHuidigJaar - 2,
+    echtHuidigJaar - 3,
+    echtHuidigJaar - 4,
+  ];
 
   function onChange(waarde: string) {
     const params = new URLSearchParams(searchParams);

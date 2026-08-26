@@ -25,6 +25,7 @@ const TYPE_PREFIXES: { code: string; label: string }[] = [
   { code: "G", label: "Algemeen" },
   { code: "C", label: "Mutaties" },
   { code: "W", label: "Bewaking" },
+  { code: "S", label: "Onderzoeken" },
 ];
 
 // ISO 3166-1 alpha-2 → Nederlandse landnaam, plus praktijk-uitzonderingen (WIPO/EUIPO)
@@ -304,6 +305,7 @@ const TYPE_LABEL_EN: Record<string, string> = {
   Algemeen: "General",
   Mutaties: "Recordals",
   Bewaking: "Watch services",
+  Onderzoeken: "Searches",
 };
 
 export function typeDienstLabel(typeDienst: string | null, taal: "nl" | "en"): string {
