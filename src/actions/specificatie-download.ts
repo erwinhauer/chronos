@@ -36,7 +36,9 @@ export async function genereerSpecificatiePdfBase64(specificatieId: string): Pro
 
   const { data: batch } = await supabase
     .from("facturatiebatches")
-    .select("*, klanten(*)")
+    .select(
+      "*, klanten(*), projecten(naam, po_nummer), profiles!facturatiebatches_goedgekeurd_door_fkey(full_name)"
+    )
     .eq("id", specificatieId)
     .single();
   if (!batch) {
@@ -46,6 +48,8 @@ export async function genereerSpecificatiePdfBase64(specificatieId: string): Pro
   if (!klant) {
     return { base64: null, filename: null, error: "Klant niet gevonden." };
   }
+  const project = batch.projecten as unknown as { naam: string; po_nummer: string | null } | null;
+  const voorbereidDoor = (batch.profiles as unknown as { full_name: string } | null)?.full_name ?? "—";
 
   const [{ data: items }, landen] = await Promise.all([
     supabase
@@ -83,6 +87,8 @@ export async function genereerSpecificatiePdfBase64(specificatieId: string): Pro
   try {
     const buffer = await genereerSpecificatiePdf({
       klant,
+      project,
+      voorbereidDoor,
       periodeStart: batch.periode_start,
       periodeEind: batch.periode_eind,
       aangemaaktOp: batch.created_at,
@@ -129,7 +135,7 @@ export async function genereerConceptSpecificatiePdfBase64(input: {
     supabase
       .from("factuuritems")
       .select(
-        "id, datum, omschrijving_klant, eenheidstype, qty, tarief, honorarium, externe_kosten, korting, kantoorkosten_van_toepassing, profiles!factuuritems_medewerker_id_fkey(full_name), factuuritem_dossiers(dossiernummer, type_dienst, land, matter_naam, volgorde)"
+        "id, datum, omschrijving_klant, eenheidstype, qty, tarief, honorarium, externe_kosten, korting, kantoorkosten_van_toepassing, project_id, profiles!factuuritems_medewerker_id_fkey(full_name), factuuritem_dossiers(dossiernummer, type_dienst, land, matter_naam, volgorde)"
       )
       .eq("klant_id", input.klant_id)
       .eq("status", "aangemaakt")
@@ -145,6 +151,11 @@ export async function genereerConceptSpecificatiePdfBase64(input: {
       error: "Een of meer geselecteerde items zijn niet meer beschikbaar.",
     };
   }
+
+  const projectId = items[0]?.project_id ?? null;
+  const { data: project } = projectId
+    ? await supabase.from("projecten").select("naam, po_nummer").eq("id", projectId).maybeSingle()
+    : { data: null };
 
   const ruw = berekenFactuurtotalen(items, klant.kantoorkosten_percentage);
   const extraKorting = round2(input.extra_korting) || 0;
@@ -178,6 +189,8 @@ export async function genereerConceptSpecificatiePdfBase64(input: {
     const aangemaaktOp = new Date().toISOString();
     const buffer = await genereerSpecificatiePdf({
       klant,
+      project,
+      voorbereidDoor: profile?.full_name ?? "—",
       periodeStart: input.periode_start,
       periodeEind: input.periode_eind,
       aangemaaktOp,

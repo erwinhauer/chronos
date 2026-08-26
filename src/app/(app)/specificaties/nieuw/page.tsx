@@ -69,6 +69,7 @@ export default async function NieuweSpecificatiePagina({
       <NieuweSpecificatieForm
         klant={klant}
         project={project}
+        voorbereidDoor={profile?.full_name ?? "—"}
         itemIds={items.map((i) => i.id)}
         periodeStart={periodeStart}
         periodeEind={periodeEind}

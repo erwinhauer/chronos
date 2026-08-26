@@ -7,7 +7,8 @@ const LABELS = {
     titel: "Specificatie factuur",
     periode: "Periode",
     datum: "Datum",
-    aangemaaktOp: "Datum specificatie",
+    aangemaaktOp: "Specificatiedatum",
+    opgesteldDoor: "Opgesteld door",
     knijffRefMatter: "Knijff ref. / Matter",
     land: "Land",
     omschrijving: "Omschrijving",
@@ -27,6 +28,7 @@ const LABELS = {
     periode: "Period",
     datum: "Date",
     aangemaaktOp: "Specification date",
+    opgesteldDoor: "Prepared by",
     knijffRefMatter: "Knijff ref. / Matter",
     land: "Country",
     omschrijving: "Description",
@@ -96,8 +98,19 @@ function formatMaandJaar(periodeStart: string, periodeEind: string, taal: "nl" |
   return `${formatDatum(periodeStart, taal)} – ${formatDatum(periodeEind, taal)}`;
 }
 
+// "PO-nummer and/or Project name" — toont wat er is, gecombineerd als beide er zijn.
+function poEnProjectRegel(project?: { naam: string; po_nummer: string | null } | null): string | null {
+  if (!project) return null;
+  const delen: string[] = [];
+  if (project.naam) delen.push(project.naam);
+  if (project.po_nummer) delen.push(`PO ${project.po_nummer}`);
+  return delen.length > 0 ? delen.join(" - ") : null;
+}
+
 export function FactuurSpecificatie({
   klant,
+  project,
+  voorbereidDoor,
   periodeStart,
   periodeEind,
   aangemaaktOp,
@@ -107,6 +120,8 @@ export function FactuurSpecificatie({
   landen,
 }: {
   klant: FactuurSpecificatieKlant;
+  project?: { naam: string; po_nummer: string | null } | null;
+  voorbereidDoor: string;
   periodeStart: string;
   periodeEind: string;
   aangemaaktOp: string;
@@ -117,25 +132,42 @@ export function FactuurSpecificatie({
 }) {
   const taal = klant.specificatietaal;
   const t = LABELS[taal];
-  const euro = (n: number) =>
-    new Intl.NumberFormat(taal === "nl" ? "nl-NL" : "en-GB", { style: "currency", currency: valuta }).format(n);
+  const euro = (n: number) => {
+    const locale = taal === "nl" ? "nl-NL" : "en-GB";
+    const parts = new Intl.NumberFormat(locale, { style: "currency", currency: valuta }).formatToParts(n);
+    return parts
+      .map((p) => (p.type === "currency" ? `${p.value} ` : p.value))
+      .join("")
+      .replace(/ {2,}/g, " ");
+  };
 
   const totaalExBtw = totalen.totaal_honorarium + totalen.totaal_externe_kosten - totalen.totaal_korting;
+  const toontKortingKolom = klant.kolom_korting_zichtbaar && items.some((i) => i.korting > 0);
+  const projectRegel = poEnProjectRegel(project);
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <p className="text-base font-medium">
-          {klant.naam} <span className="text-muted-foreground">| {t.titel}</span>
-        </p>
+      <div className="flex items-start justify-between gap-8">
+        <div className="flex flex-col gap-1.5">
+          <h1 className="text-2xl font-bold tracking-tight">{t.titel}</h1>
+          <h2 className="text-lg font-semibold text-muted-foreground">{klant.naam}</h2>
+          {projectRegel && <h4 className="text-sm font-bold">{projectRegel}</h4>}
+          <div className="mt-2 flex flex-col gap-0.5 text-sm text-muted-foreground">
+            <p className="font-medium text-foreground">{formatMaandJaar(periodeStart, periodeEind, taal)}</p>
+            <p>
+              {t.aangemaaktOp}: {formatDatum(aangemaaktOp, taal)}
+            </p>
+            <p>
+              {t.opgesteldDoor}: {voorbereidDoor}
+            </p>
+          </div>
+        </div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/knijff%20trademark%20attorneys%20-%20dark%20navy.svg" alt="Knijff" className="h-8 w-auto" />
-      </div>
-      <div>
-        <p className="text-sm font-semibold">{formatMaandJaar(periodeStart, periodeEind, taal)}</p>
-        <p className="text-xs text-muted-foreground">
-          {t.aangemaaktOp}: {formatDatum(aangemaaktOp, taal)}
-        </p>
+        <img
+          src="/knijff%20trademark%20attorneys%20-%20dark%20navy.svg"
+          alt="Knijff"
+          className="h-16 w-auto shrink-0"
+        />
       </div>
 
       <Table className="[&_td]:px-1.5 [&_th]:px-1.5 [&_td]:text-xs [&_th]:text-xs">
@@ -152,7 +184,7 @@ export function FactuurSpecificatie({
             {klant.kolom_externe_kosten_zichtbaar && (
               <TableHead className="whitespace-normal text-right">{t.kostenVanDerden}</TableHead>
             )}
-            {klant.kolom_korting_zichtbaar && <TableHead className="whitespace-normal text-right">{t.korting}</TableHead>}
+            {toontKortingKolom && <TableHead className="whitespace-normal text-right">{t.korting}</TableHead>}
             <TableHead className="whitespace-normal text-right">{t.totaalExBtw}</TableHead>
           </TableRow>
         </TableHeader>

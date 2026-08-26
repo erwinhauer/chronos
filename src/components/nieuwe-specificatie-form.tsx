@@ -41,6 +41,7 @@ const initialState: SpecificatieFormState = { error: null, success: false };
 export function NieuweSpecificatieForm({
   klant,
   project,
+  voorbereidDoor,
   itemIds,
   periodeStart,
   periodeEind,
@@ -51,6 +52,7 @@ export function NieuweSpecificatieForm({
 }: {
   klant: Klant;
   project: Project;
+  voorbereidDoor: string;
   itemIds: string[];
   periodeStart: string;
   periodeEind: string;
@@ -167,6 +169,8 @@ export function NieuweSpecificatieForm({
           <FactuurVoorbeeldKaart>
             <FactuurSpecificatie
               klant={klant}
+              project={project}
+              voorbereidDoor={voorbereidDoor}
               valuta={klant.valuta}
               periodeStart={periodeStart}
               periodeEind={periodeEind}

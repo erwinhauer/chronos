@@ -12,7 +12,13 @@ export default async function SpecificatiePagina({ params }: { params: Promise<{
   const supabase = await createClient();
   const profile = await getCurrentProfile();
 
-  const { data: batch } = await supabase.from("facturatiebatches").select("*, klanten(*)").eq("id", id).single();
+  const { data: batch } = await supabase
+    .from("facturatiebatches")
+    .select(
+      "*, klanten(*), projecten(naam, po_nummer), profiles!facturatiebatches_goedgekeurd_door_fkey(full_name)"
+    )
+    .eq("id", id)
+    .single();
   if (!batch) notFound();
 
   const klant = batch.klanten;
@@ -68,6 +74,10 @@ export default async function SpecificatiePagina({ params }: { params: Promise<{
         <FactuurVoorbeeldKaart>
           <FactuurSpecificatie
             klant={klant}
+            project={batch.projecten as unknown as { naam: string; po_nummer: string | null } | null}
+            voorbereidDoor={
+              (batch.profiles as unknown as { full_name: string } | null)?.full_name ?? "—"
+            }
             periodeStart={batch.periode_start}
             periodeEind={batch.periode_eind}
             aangemaaktOp={batch.created_at}

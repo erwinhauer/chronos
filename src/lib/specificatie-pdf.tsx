@@ -20,7 +20,8 @@ const SPEC_LABELS = {
   nl: {
     titel: "Specificatie factuur",
     datum: "Datum",
-    aangemaaktOp: "Datum specificatie",
+    aangemaaktOp: "Specificatiedatum",
+    opgesteldDoor: "Opgesteld door",
     knijffRefMatter: "Knijff ref. / Matter",
     land: "Land",
     omschrijving: "Omschrijving",
@@ -34,6 +35,7 @@ const SPEC_LABELS = {
     titel: "Specification invoice",
     datum: "Date",
     aangemaaktOp: "Specification date",
+    opgesteldDoor: "Prepared by",
     knijffRefMatter: "Knijff ref. / Matter",
     land: "Country",
     omschrijving: "Description",
@@ -63,22 +65,34 @@ function formatMaandJaar(periodeStart: string, periodeEind: string, taal: "nl" |
   return `${formatDatum(periodeStart, taal)} – ${formatDatum(periodeEind, taal)}`;
 }
 
+// "PO-nummer and/or Project name" — toont wat er is, gecombineerd als beide er zijn.
+function poEnProjectRegel(project?: { naam: string; po_nummer: string | null } | null): string | null {
+  if (!project) return null;
+  const delen: string[] = [];
+  if (project.naam) delen.push(project.naam);
+  if (project.po_nummer) delen.push(`PO ${project.po_nummer}`);
+  return delen.length > 0 ? delen.join(" - ") : null;
+}
+
 // ============================================================================
 // Specificatie — landscape, itemized, kopregel + kolomkoppen herhalen per pagina.
 // ============================================================================
 
 const specStyles = StyleSheet.create({
-  page: { padding: 28, fontSize: 8, fontFamily: "Helvetica", color: "#171b24" },
+  page: { padding: 28, paddingBottom: 36, fontSize: 8, fontFamily: "Helvetica", color: "#171b24" },
   kopBalk: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    paddingBottom: 10,
+    alignItems: "flex-start",
+    paddingBottom: 14,
   },
-  kopTitel: { fontSize: 11 },
-  kopLogo: { height: 20, width: 50.5 },
-  maandJaar: { fontSize: 9, fontWeight: 700, marginTop: 10 },
-  aangemaaktOp: { fontSize: 7, color: "#5b6270", marginBottom: 6 },
+  kopH1: { fontSize: 17, fontWeight: 700 },
+  kopH2: { fontSize: 12, fontWeight: 600, color: "#5b6270", marginTop: 3 },
+  kopProjectRegel: { fontSize: 9, fontWeight: 700, marginTop: 6 },
+  kopMeta: { marginTop: 8 },
+  kopMaandJaar: { fontSize: 9, fontWeight: 700, marginBottom: 3 },
+  kopMetaRegel: { fontSize: 7, color: "#5b6270", marginTop: 1 },
+  kopLogo: { height: 34, width: 85.8, marginTop: 2 },
   tableHeaderRow: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#171b24", paddingBottom: 4 },
   totalenRow: { flexDirection: "row", paddingTop: 3, paddingBottom: 3 },
   tableRow: { flexDirection: "row", borderBottomWidth: 0.5, borderBottomColor: "#d9dbd5", paddingVertical: 4 },
@@ -86,6 +100,15 @@ const specStyles = StyleSheet.create({
   cellRight: { textAlign: "right" },
   cellSub: { color: "#5b6270", marginTop: 1 },
   totaalCel: { fontWeight: 700, fontStyle: "italic", fontSize: 8 },
+  paginaVoetnoot: {
+    position: "absolute",
+    bottom: 16,
+    left: 0,
+    right: 0,
+    textAlign: "center",
+    fontSize: 7,
+    color: "#5b6270",
+  },
   watermerk: {
     position: "absolute",
     top: "40%",
@@ -112,6 +135,8 @@ const KOLOM_GEWICHT: Record<string, number> = {
 
 export async function genereerSpecificatiePdf({
   klant,
+  project,
+  voorbereidDoor,
   periodeStart,
   periodeEind,
   aangemaaktOp,
@@ -122,6 +147,8 @@ export async function genereerSpecificatiePdf({
   watermerk,
 }: {
   klant: FactuurSpecificatieKlant;
+  project?: { naam: string; po_nummer: string | null } | null;
+  voorbereidDoor: string;
   periodeStart: string;
   periodeEind: string;
   aangemaaktOp: string;
@@ -133,9 +160,17 @@ export async function genereerSpecificatiePdf({
 }): Promise<Buffer> {
   const taal = klant.specificatietaal;
   const t = SPEC_LABELS[taal];
-  const euro = (n: number) =>
-    new Intl.NumberFormat(taal === "nl" ? "nl-NL" : "en-GB", { style: "currency", currency: valuta }).format(n);
+  const euro = (n: number) => {
+    const locale = taal === "nl" ? "nl-NL" : "en-GB";
+    const parts = new Intl.NumberFormat(locale, { style: "currency", currency: valuta }).formatToParts(n);
+    return parts
+      .map((p) => (p.type === "currency" ? `${p.value} ` : p.value))
+      .join("")
+      .replace(/ {2,}/g, " ");
+  };
   const totaalExBtw = totalen.totaal_honorarium + totalen.totaal_externe_kosten - totalen.totaal_korting;
+  const toontKortingKolom = klant.kolom_korting_zichtbaar && items.some((i) => i.korting > 0);
+  const projectRegel = poEnProjectRegel(project);
 
   const kolommen: { key: string; label: string; rechts?: boolean }[] = [
     { key: "datum", label: t.datum },
@@ -147,7 +182,7 @@ export async function genereerSpecificatiePdf({
     ...(klant.kolom_externe_kosten_zichtbaar
       ? [{ key: "kostenVanDerden", label: t.kostenVanDerden, rechts: true }]
       : []),
-    ...(klant.kolom_korting_zichtbaar ? [{ key: "korting", label: t.korting, rechts: true }] : []),
+    ...(toontKortingKolom ? [{ key: "korting", label: t.korting, rechts: true }] : []),
     { key: "totaal", label: t.totaalExBtw, rechts: true },
   ];
   const totaalGewicht = kolommen.reduce((som, k) => som + (KOLOM_GEWICHT[k.key] ?? 8), 0);
@@ -156,16 +191,23 @@ export async function genereerSpecificatiePdf({
   const kopEnKoppen = (
     <View fixed>
       <View style={specStyles.kopBalk}>
-        <Text style={specStyles.kopTitel}>
-          {klant.naam} | {t.titel}
-        </Text>
+        <View>
+          <Text style={specStyles.kopH1}>{t.titel}</Text>
+          <Text style={specStyles.kopH2}>{klant.naam}</Text>
+          {projectRegel && <Text style={specStyles.kopProjectRegel}>{projectRegel}</Text>}
+          <View style={specStyles.kopMeta}>
+            <Text style={specStyles.kopMaandJaar}>{formatMaandJaar(periodeStart, periodeEind, taal)}</Text>
+            <Text style={specStyles.kopMetaRegel}>
+              {t.aangemaaktOp}: {formatDatum(aangemaaktOp, taal)}
+            </Text>
+            <Text style={specStyles.kopMetaRegel}>
+              {t.opgesteldDoor}: {voorbereidDoor}
+            </Text>
+          </View>
+        </View>
         {/* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf's Image, not a DOM <img>; no alt prop exists */}
         <Image src={LOGO_PATH} style={specStyles.kopLogo} />
       </View>
-      <Text style={specStyles.maandJaar}>{formatMaandJaar(periodeStart, periodeEind, taal)}</Text>
-      <Text style={specStyles.aangemaaktOp}>
-        {t.aangemaaktOp}: {formatDatum(aangemaaktOp, taal)}
-      </Text>
       <View style={specStyles.tableHeaderRow}>
         {kolommen.map((k) => (
           <Text key={k.key} style={[specStyles.th, { width: breedte(k.key) }, k.rechts ? specStyles.cellRight : undefined]}>
@@ -175,7 +217,7 @@ export async function genereerSpecificatiePdf({
       </View>
       <View style={specStyles.totalenRow}>
         {kolommen.map((k) => {
-          if (k.key === "korting" && klant.kolom_korting_zichtbaar) {
+          if (k.key === "korting" && toontKortingKolom) {
             return (
               <Text key={k.key} style={[specStyles.totaalCel, specStyles.cellRight, { width: breedte(k.key) }]}>
                 {euro(totalen.totaal_korting)}
@@ -199,6 +241,11 @@ export async function genereerSpecificatiePdf({
     <Document>
       <Page size="A4" orientation="landscape" style={specStyles.page}>
         {watermerk && <Text fixed style={specStyles.watermerk}>{watermerk}</Text>}
+        <Text
+          fixed
+          style={specStyles.paginaVoetnoot}
+          render={({ pageNumber, totalPages }) => `${pageNumber}/${totalPages}`}
+        />
         {kopEnKoppen}
         {items.map((item) => {
           const dossiers = item.dossiers.slice().sort((a, b) => a.volgorde - b.volgorde);
