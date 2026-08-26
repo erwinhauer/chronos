@@ -39,6 +39,8 @@ type Project = { id: string; naam: string; po_nummer: string | null };
 
 type Medewerker = { id: string; full_name: string };
 
+type Wijziging = { veld: string; oud: string | null; nieuw: string | null; aangemaaktOp: string; gewijzigdDoor: string };
+
 type Initial = {
   id: string;
   dossiernummers: string[];
@@ -78,6 +80,7 @@ export function FactuurItemForm({
   medewerkers,
   magMedewerkerWijzigen = false,
   magHubspotImporteren = true,
+  wijzigingenLog,
 }: {
   klanten: Klant[];
   projectenPerKlant: Record<string, Project[]>;
@@ -90,6 +93,7 @@ export function FactuurItemForm({
   medewerkers?: Medewerker[];
   magMedewerkerWijzigen?: boolean;
   magHubspotImporteren?: boolean;
+  wijzigingenLog?: Wijziging[];
 }) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(action, initialState);
@@ -547,6 +551,8 @@ export function FactuurItemForm({
               </div>
             </CardContent>
           </Card>
+
+          {initial && wijzigingenLog && <LogSectie wijzigingen={wijzigingenLog} />}
         </div>
 
         <div className="flex flex-col gap-5">
@@ -633,6 +639,48 @@ function TaalVeld({ klant }: { klant: Klant }) {
         <option value="en">Engels</option>
       </NativeSelect>
     </div>
+  );
+}
+
+function formatDatumTijd(iso: string) {
+  return new Date(iso).toLocaleString("nl-NL", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+function LogSectie({ wijzigingen }: { wijzigingen: Wijziging[] }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Card>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-2 p-4 text-left"
+      >
+        <span className="text-base font-semibold">Log ({wijzigingen.length})</span>
+        <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <CardContent className="flex flex-col gap-3 pt-0">
+          {wijzigingen.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nog geen wijzigingen vastgelegd.</p>
+          ) : (
+            wijzigingen.map((w, i) => (
+              <div key={i} className="flex flex-col gap-0.5 border-t border-border pt-3 text-sm first:border-t-0 first:pt-0">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium">{w.veld}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {w.gewijzigdDoor} · {formatDatumTijd(w.aangemaaktOp)}
+                  </span>
+                </div>
+                <p className="text-muted-foreground">
+                  {w.oud ?? "—"} <span className="mx-1">→</span> {w.nieuw ?? "—"}
+                </p>
+              </div>
+            ))
+          )}
+        </CardContent>
+      )}
+    </Card>
   );
 }
 

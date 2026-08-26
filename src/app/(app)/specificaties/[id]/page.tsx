@@ -49,8 +49,8 @@ export default async function SpecificatiePagina({ params }: { params: Promise<{
     <div className="mx-auto flex max-w-7xl flex-col gap-6 print:max-w-none">
       <SetBreadcrumb
         segments={[
-          { label: "Klanten", href: "/klanten" },
-          { label: klant.naam, href: `/klanten/${klant.id}` },
+          { label: "Factuuritems", href: "/factuuritems" },
+          { label: klant.naam, href: `/factuuritems/klant/${klant.id}` },
           { label: titel },
         ]}
       />

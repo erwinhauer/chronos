@@ -284,6 +284,7 @@ const LANDNAMEN: Record<string, string> = {
   ZM: "Zambia",
   ZW: "Zimbabwe",
   WO: "Internationale registratie",
+  WW: "Wereldwijd",
   EU: "Europese Unie",
   BX: "Benelux",
   UK: "Verenigd Koninkrijk",

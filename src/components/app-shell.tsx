@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Menu, LogOut, ChevronRight } from "lucide-react";
+import { Menu, LogOut, ChevronRight, UserRoundCog } from "lucide-react";
 import { ChronosLogo } from "@/components/chronos-logo";
 import { NavLinks } from "@/components/nav-links";
 import { Button } from "@/components/ui/button";
@@ -27,15 +27,17 @@ import type { Profile, UserRole } from "@/lib/supabase/types";
 export function AppShell({
   profile,
   toegekendeRollen,
+  impersonatieDoor,
   children,
 }: {
   profile: Profile;
   toegekendeRollen: UserRole[];
+  impersonatieDoor?: string | null;
   children: React.ReactNode;
 }) {
   return (
     <BreadcrumbProvider>
-      <AppShellContent profile={profile} toegekendeRollen={toegekendeRollen}>
+      <AppShellContent profile={profile} toegekendeRollen={toegekendeRollen} impersonatieDoor={impersonatieDoor}>
         {children}
       </AppShellContent>
     </BreadcrumbProvider>
@@ -107,10 +109,12 @@ function HeaderTitle({ fallback }: { fallback: string }) {
 function AppShellContent({
   profile,
   toegekendeRollen,
+  impersonatieDoor,
   children,
 }: {
   profile: Profile;
   toegekendeRollen: UserRole[];
+  impersonatieDoor?: string | null;
   children: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -120,7 +124,15 @@ function AppShellContent({
   )?.label;
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen flex-col">
+      {impersonatieDoor && (
+        <div className="flex shrink-0 items-center justify-center gap-2 border-b border-warning/30 bg-warning/10 px-4 py-1.5 text-center text-xs font-medium text-warning print:hidden">
+          <UserRoundCog className="h-3.5 w-3.5" />
+          Je bekijkt Chronos als {profile.full_name} — ingelogd door {impersonatieDoor} (testfase). Uitloggen en
+          opnieuw inloggen om terug te gaan naar je eigen account.
+        </div>
+      )}
+      <div className="flex min-h-0 flex-1">
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground lg:flex print:hidden">
         <div className="flex h-16 items-center px-5">
           <ChronosLogo className="text-sidebar-foreground" />
@@ -195,6 +207,7 @@ function AppShellContent({
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 lg:p-6 print:overflow-visible print:p-0">{children}</main>
+      </div>
       </div>
     </div>
   );

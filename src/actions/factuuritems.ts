@@ -126,6 +126,67 @@ async function medewerkerBestaat(
   return Boolean(data);
 }
 
+async function klantNaam(supabase: Awaited<ReturnType<typeof createClient>>, klant_id: string): Promise<string> {
+  if (!klant_id) return "—";
+  const { data } = await supabase.from("klanten").select("naam").eq("id", klant_id).single();
+  return data?.naam ?? "Onbekend";
+}
+
+async function projectNaam(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  project_id: string | null
+): Promise<string> {
+  if (!project_id) return "Geen project";
+  const { data } = await supabase.from("projecten").select("naam").eq("id", project_id).single();
+  return data?.naam ?? "Onbekend";
+}
+
+async function medewerkerNaam(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  medewerker_id: string
+): Promise<string> {
+  if (!medewerker_id) return "—";
+  const { data } = await supabase.from("profiles").select("full_name").eq("id", medewerker_id).single();
+  return data?.full_name ?? "Onbekend";
+}
+
+type VeldWijziging = { veld: string; oud: string | null; nieuw: string | null };
+
+function vergelijkVeld(wijzigingen: VeldWijziging[], veld: string, oud: unknown, nieuw: unknown) {
+  const oudStr = oud === null || oud === undefined ? null : String(oud);
+  const nieuwStr = nieuw === null || nieuw === undefined ? null : String(nieuw);
+  if (oudStr !== nieuwStr) wijzigingen.push({ veld, oud: oudStr, nieuw: nieuwStr });
+}
+
+// Logt op veldniveau wie wat heeft gewijzigd (zie "Log" op het bewerkscherm).
+// Faalt bewust stil door — een logfout mag een geslaagde opslag niet blokkeren.
+async function logWijzigingen(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  factuuritemId: string,
+  gebruikerId: string,
+  wijzigingen: VeldWijziging[]
+) {
+  if (wijzigingen.length === 0) return;
+  try {
+    await supabase.from("factuuritem_wijzigingen").insert(
+      wijzigingen.map((w) => ({
+        factuuritem_id: factuuritemId,
+        gewijzigd_door: gebruikerId,
+        veld: w.veld,
+        oude_waarde: w.oud,
+        nieuwe_waarde: w.nieuw,
+      }))
+    );
+    // Lazy opruiming van verlopen logregels (systeembreed, niet per item) —
+    // lift mee op elke bewerking, geen losse cron nodig. De RLS-policy staat
+    // alleen verwijderen van rijen ouder dan 6 maanden toe, dus dit filter
+    // ("ouder dan nu") is puur om PostgREST een where-clause te geven.
+    await supabase.from("factuuritem_wijzigingen").delete().lt("aangemaakt_op", new Date().toISOString());
+  } catch {
+    // best-effort, zie comment hierboven
+  }
+}
+
 function valideerGedeeld(input: ReturnType<typeof parseInput>): string | null {
   if (!input.datum || !input.omschrijving_klant || input.qty <= 0) {
     return "Datum, omschrijving en aantal (groter dan 0) zijn verplicht.";
@@ -279,6 +340,15 @@ export async function updateFactuurItem(
     return { error: "Je sessie is verlopen. Log opnieuw in.", success: false };
   }
 
+  // Momentopname vóór de update, voor de wijzigingenlog.
+  const { data: voor } = await supabase
+    .from("factuuritems")
+    .select(
+      "klant_id, project_id, medewerker_id, datum, omschrijving_klant, interne_opmerking, qty, prijstype, tarief, externe_kosten, korting, kantoorkosten_van_toepassing, declarabel, klanten(naam), projecten(naam), profiles!factuuritems_medewerker_id_fkey(full_name), factuuritem_dossiers(dossiernummer)"
+    )
+    .eq("id", id)
+    .single();
+
   const { data: voorgesteldTarief } = await supabase.rpc("resolve_tarief", {
     p_klant_id: input.klant_id,
     p_medewerker_id: user.id,
@@ -346,6 +416,55 @@ export async function updateFactuurItem(
     .insert(dossiers.rijen.map((d) => ({ ...d, factuuritem_id: id })));
   if (dossierError) {
     return { error: "Bijwerken van de dossiernummers is mislukt.", success: false };
+  }
+
+  if (voor) {
+    const oudeKlantNaam = (voor.klanten as unknown as { naam: string } | null)?.naam ?? "Onbekend";
+    const oudeProjectNaam = (voor.projecten as unknown as { naam: string } | null)?.naam ?? "Geen project";
+    const oudeMedewerkerNaam = (voor.profiles as unknown as { full_name: string } | null)?.full_name ?? "Onbekend";
+    const nieuweMedewerkerId = medewerkerUpdate.medewerker_id ?? voor.medewerker_id;
+
+    const [nieuweKlantNaamVal, nieuweProjectNaamVal, nieuweMedewerkerNaamVal] = await Promise.all([
+      voor.klant_id === input.klant_id ? Promise.resolve(oudeKlantNaam) : klantNaam(supabase, input.klant_id),
+      voor.project_id === input.project_id
+        ? Promise.resolve(oudeProjectNaam)
+        : projectNaam(supabase, input.project_id),
+      nieuweMedewerkerId === voor.medewerker_id
+        ? Promise.resolve(oudeMedewerkerNaam)
+        : medewerkerNaam(supabase, nieuweMedewerkerId),
+    ]);
+
+    const oudeDossiers = (voor.factuuritem_dossiers ?? [])
+      .map((d) => d.dossiernummer)
+      .sort()
+      .join(", ");
+    const nieuweDossiers = dossiers.rijen
+      .map((d) => d.dossiernummer)
+      .sort()
+      .join(", ");
+
+    const wijzigingen: VeldWijziging[] = [];
+    vergelijkVeld(wijzigingen, "Klant", oudeKlantNaam, nieuweKlantNaamVal);
+    vergelijkVeld(wijzigingen, "Project", oudeProjectNaam, nieuweProjectNaamVal);
+    vergelijkVeld(wijzigingen, "Medewerker", oudeMedewerkerNaam, nieuweMedewerkerNaamVal);
+    vergelijkVeld(wijzigingen, "Dossier(s)", oudeDossiers, nieuweDossiers);
+    vergelijkVeld(wijzigingen, "Datum", voor.datum, input.datum);
+    vergelijkVeld(wijzigingen, "Omschrijving voor klant", voor.omschrijving_klant, input.omschrijving_klant);
+    vergelijkVeld(wijzigingen, "Interne opmerking", voor.interne_opmerking, input.interne_opmerking);
+    vergelijkVeld(wijzigingen, "Aantal (Qty)", voor.qty, input.qty);
+    vergelijkVeld(wijzigingen, "Prijstype", voor.prijstype, input.prijstype);
+    vergelijkVeld(wijzigingen, "Prijs per uur / vast honorarium", voor.tarief, input.tarief);
+    vergelijkVeld(wijzigingen, "Kosten van derden", voor.externe_kosten, input.externe_kosten);
+    vergelijkVeld(wijzigingen, "Korting", voor.korting, korting);
+    vergelijkVeld(
+      wijzigingen,
+      "Kantoorkosten van toepassing",
+      voor.kantoorkosten_van_toepassing,
+      input.kantoorkosten_van_toepassing
+    );
+    vergelijkVeld(wijzigingen, "Declarabel", voor.declarabel, input.declarabel);
+
+    await logWijzigingen(supabase, id, user.id, wijzigingen);
   }
 
   revalidatePath("/factuuritems");

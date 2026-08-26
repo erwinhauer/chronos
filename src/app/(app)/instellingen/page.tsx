@@ -68,6 +68,7 @@ export default async function InstellingenPage() {
             teams={teams ?? []}
             teamIdsPerProfile={teamIdsPerProfile}
             rolIdsPerProfile={rolIdsPerProfile}
+            eigenProfielId={profile.id}
           />
         </TabsContent>
         <TabsContent value="teams">

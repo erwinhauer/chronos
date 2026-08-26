@@ -1,8 +1,9 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { IMPERSONATIE_COOKIE } from "@/lib/impersonatie";
 
 export type LoginState = { error: string | null };
 
@@ -22,12 +23,14 @@ export async function signIn(_prevState: LoginState, formData: FormData): Promis
     return { error: "E-mailadres of wachtwoord onjuist." };
   }
 
+  (await cookies()).delete(IMPERSONATIE_COOKIE);
   redirect(next);
 }
 
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();
+  (await cookies()).delete(IMPERSONATIE_COOKIE);
   redirect("/login");
 }
 

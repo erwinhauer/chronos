@@ -5,9 +5,10 @@ import { cn } from "@/lib/utils";
 // alias van een bestaande zijn) — zie ook de LANDNAMEN-uitzonderingen in
 // src/lib/dossiernummer.ts.
 const FLAG_ALIAS: Record<string, string> = { UK: "gb" };
-// "WO" (internationale/WIPO-registratie) heeft geen vlag — Benelux (BX) wel,
-// via een lokaal SVG-bestand (flag-icons kent geen ISO-code voor Benelux).
-const GEEN_VLAG = new Set(["WO"]);
+// "WO" (internationale/WIPO-registratie) en "WW" (wereldwijd) hebben geen vlag
+// — Benelux (BX) wel, via een lokaal SVG-bestand (flag-icons kent geen
+// ISO-code voor Benelux).
+const GEEN_VLAG = new Set(["WO", "WW"]);
 const LOKALE_VLAG: Record<string, string> = { BX: "/flags/bx.svg" };
 
 function flagCode(iso: string | null): string | null {

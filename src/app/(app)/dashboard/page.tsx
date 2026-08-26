@@ -19,6 +19,7 @@ import { CountryFlag } from "@/components/ui/country-flag";
 import { DienstIcon } from "@/components/ui/dienst-icon";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 const MAANDEN = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
 const MAX_SERIES = 5;
@@ -210,6 +211,30 @@ export default async function DashboardPage({
     })
     .filter((v): v is NonNullable<typeof v> => v !== null)
     .sort((a, b) => a.teamNaam.localeCompare(b.teamNaam));
+
+  // Omzet die niet op een teamkaart terechtkomt omdat de medewerker (nog) geen
+  // lid is van een team — anders verdwijnt die omzet daar stilletjes uit beeld
+  // (de teamkaarten filteren strikt op team_members), terwijl de factuuritems
+  // zelf wel degelijk op haar/zijn naam staan. Alleen zinvol voor rollen die
+  // toch al alle teams zien.
+  const alleTeamLeden = new Set<string>();
+  for (const set of ledenPerTeam.values()) {
+    for (const id of set) alleTeamLeden.add(id);
+  }
+  const nietInTeamMap = new Map<string, { naam: string; bruto: number; uren: number }>();
+  for (const r of inGekozenPeriode) {
+    if (alleTeamLeden.has(r.medewerker_id)) continue;
+    const naam = namenPerId.get(r.medewerker_id) ?? "Onbekend";
+    const bestaand = nietInTeamMap.get(r.medewerker_id) ?? { naam, bruto: 0, uren: 0 };
+    bestaand.bruto += regelbedrag(r);
+    nietInTeamMap.set(r.medewerker_id, bestaand);
+  }
+  for (const r of inGekozenPeriodeUren) {
+    if (alleTeamLeden.has(r.medewerker_id)) continue;
+    const rij = nietInTeamMap.get(r.medewerker_id);
+    if (rij) rij.uren += regelbedrag(r);
+  }
+  const nietInTeamRijen = Array.from(nietInTeamMap.values()).sort((a, b) => b.bruto - a.bruto);
 
   // Omzet per medewerker, over alle teams heen — alleen zinvol voor rollen die
   // meer dan hun eigen team zien; anders is dit hetzelfde als de teamkaart. Deze
@@ -537,16 +562,21 @@ export default async function DashboardPage({
       )}
 
       {teamKaarten.length > 0 && (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4">
           <h3 className="text-lg font-semibold tracking-tight">Teams</h3>
 
-          <div className="grid gap-6 lg:grid-cols-2">
-          {teamKaarten.map((t) => (
-            <Card key={t.teamId} className="rounded-2xl">
-              <CardHeader>
-                <CardTitle className="text-base">{t.teamNaam}</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-6">
+          <Tabs defaultValue={teamKaarten[0].teamId}>
+            <TabsList>
+              {teamKaarten.map((t) => (
+                <TabsTrigger key={t.teamId} value={t.teamId}>
+                  {t.teamNaam}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {teamKaarten.map((t) => (
+              <TabsContent key={t.teamId} value={t.teamId}>
+                <Card className="rounded-2xl">
+              <CardContent className="flex flex-col gap-6 pt-6">
                 <div className="flex flex-col gap-1.5">
                   <div className="flex items-center justify-between text-sm">
                     <span className="font-medium">Brutotarget {gekozenJaar}</span>
@@ -623,11 +653,36 @@ export default async function DashboardPage({
                     </p>
                   )}
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-          </div>
+                </CardContent>
+                </Card>
+              </TabsContent>
+            ))}
+          </Tabs>
         </div>
+      )}
+
+      {zietAlleTeams && nietInTeamRijen.length > 0 && (
+        <Card className="rounded-2xl">
+          <CardHeader>
+            <CardTitle className="text-base">Omzet buiten een team · {periodeLabel(periode)}</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Deze medewerkers zijn nog geen lid van een team, dus hun omzet staat niet op een teamkaart —
+              voeg ze toe bij Instellingen &gt; Teams als dat wel zou moeten.
+            </p>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-1">
+            {nietInTeamRijen.map((lid) => (
+              <div key={lid.naam} className="flex items-center gap-3 rounded-md p-2">
+                <AvatarInitials naam={lid.naam} />
+                <span className="flex-1 text-sm font-medium">{lid.naam}</span>
+                <div className="text-right">
+                  <p className="text-sm font-medium tabular-figures">{euro(lid.bruto)}</p>
+                  <p className="text-xs text-muted-foreground tabular-figures">{euro(lid.uren)} uren</p>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       )}
 
       <div className="grid gap-6 lg:grid-cols-3">

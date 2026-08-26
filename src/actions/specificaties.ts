@@ -129,6 +129,5 @@ export async function genereerSpecificatie(
 
   revalidatePath("/factuuritems");
   revalidatePath("/dashboard");
-  revalidatePath(`/klanten/${klant_id}`);
   redirect(`/specificaties/${batch.id}`);
 }

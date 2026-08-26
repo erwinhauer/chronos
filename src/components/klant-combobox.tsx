@@ -5,6 +5,7 @@ import { Building2, Plus, Search } from "lucide-react";
 import { NewKlantDialog } from "@/components/new-klant-dialog";
 import { zoekHubspotKlanten, importeerHubspotKlant, type HubspotZoekresultaat } from "@/actions/hubspot";
 import type { NieuweKlant } from "@/actions/klanten";
+import { fuzzyFilter } from "@/lib/fuzzy-match";
 import { Input } from "@/components/ui/input";
 
 type Klant = { id: string; naam: string };
@@ -35,9 +36,8 @@ export function KlantCombobox({
   const geselecteerd = klanten.find((k) => k.id === value);
 
   const matches = useMemo(() => {
-    const q = invoer.trim().toLowerCase();
-    if (!q) return klanten.slice(0, 8);
-    return klanten.filter((k) => k.naam.toLowerCase().includes(q)).slice(0, 8);
+    if (!invoer.trim()) return klanten.slice(0, 8);
+    return fuzzyFilter(klanten, invoer, (k) => k.naam).slice(0, 8);
   }, [klanten, invoer]);
 
   // Live meezoeken in HubSpot terwijl je typt — geen apart "importeren"-scherm

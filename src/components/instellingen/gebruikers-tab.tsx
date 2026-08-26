@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
-import { Search, Pencil } from "lucide-react";
-import { updateGebruiker, type UpdateGebruikerFormState } from "@/actions/admin";
+import { useActionState, useMemo, useState, useTransition } from "react";
+import { Search, Pencil, LogIn } from "lucide-react";
+import { updateGebruiker, loginAls, type UpdateGebruikerFormState } from "@/actions/admin";
 import { NewGebruikerDialog } from "./new-gebruiker-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,11 +47,13 @@ export function GebruikersTab({
   teams,
   teamIdsPerProfile,
   rolIdsPerProfile,
+  eigenProfielId,
 }: {
   profiles: ProfileRow[];
   teams: Team[];
   teamIdsPerProfile: Record<string, string[]>;
   rolIdsPerProfile: Record<string, UserRole[]>;
+  eigenProfielId: string;
 }) {
   const [zoek, setZoek] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("naam");
@@ -126,6 +128,7 @@ export function GebruikersTab({
                     teams={teams}
                     huidigeTeamIds={teamIdsPerProfile[p.id] ?? []}
                     huidigeRolIds={rolIdsPerProfile[p.id] ?? [p.role]}
+                    toontInloggenAls={p.id !== eigenProfielId}
                   />
                 ))
               )}
@@ -142,11 +145,13 @@ function GebruikerRij({
   teams,
   huidigeTeamIds,
   huidigeRolIds,
+  toontInloggenAls,
 }: {
   profile: ProfileRow;
   teams: Team[];
   huidigeTeamIds: string[];
   huidigeRolIds: UserRole[];
+  toontInloggenAls: boolean;
 }) {
   const teamNamen = teams.filter((t) => huidigeTeamIds.includes(t.id)).map((t) => t.naam);
 
@@ -188,14 +193,63 @@ function GebruikerRij({
         <StatusDot label={profile.actief ? "Actief" : "Inactief"} tint={profile.actief ? "success" : "muted"} />
       </TableCell>
       <TableCell className="text-right">
-        <GebruikerBewerkenDialog
-          profile={profile}
-          teams={teams}
-          huidigeTeamIds={huidigeTeamIds}
-          huidigeRolIds={huidigeRolIds}
-        />
+        <div className="flex justify-end gap-2">
+          {toontInloggenAls && <InloggenAlsDialog profile={profile} />}
+          <GebruikerBewerkenDialog
+            profile={profile}
+            teams={teams}
+            huidigeTeamIds={huidigeTeamIds}
+            huidigeRolIds={huidigeRolIds}
+          />
+        </div>
       </TableCell>
     </TableRow>
+  );
+}
+
+function InloggenAlsDialog({ profile }: { profile: ProfileRow }) {
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  function bevestig() {
+    setError(null);
+    startTransition(async () => {
+      const result = await loginAls(profile.id);
+      if (result?.error) setError(result.error);
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger render={<Button size="sm" variant="outline" />}>
+        <LogIn className="h-4 w-4" />
+        Inloggen als
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Inloggen als {profile.full_name}?</DialogTitle>
+          <DialogDescription>
+            Je huidige sessie wordt vervangen door een sessie als {profile.full_name}. Dit is bedoeld voor de
+            testfase, bijvoorbeeld om testdata aan te maken of te bekijken hoe deze gebruiker Chronos ziet. Terug naar
+            je eigen account gaat via uitloggen en opnieuw inloggen.
+          </DialogDescription>
+        </DialogHeader>
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            Annuleren
+          </Button>
+          <Button type="button" onClick={bevestig} disabled={pending}>
+            {pending ? "Bezig…" : "Inloggen als " + profile.full_name}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

@@ -201,6 +201,51 @@ export type Database = {
           },
         ]
       }
+      factuuritem_wijzigingen: {
+        Row: {
+          aangemaakt_op: string
+          factuuritem_id: string
+          gewijzigd_door: string
+          id: string
+          nieuwe_waarde: string | null
+          oude_waarde: string | null
+          veld: string
+        }
+        Insert: {
+          aangemaakt_op?: string
+          factuuritem_id: string
+          gewijzigd_door: string
+          id?: string
+          nieuwe_waarde?: string | null
+          oude_waarde?: string | null
+          veld: string
+        }
+        Update: {
+          aangemaakt_op?: string
+          factuuritem_id?: string
+          gewijzigd_door?: string
+          id?: string
+          nieuwe_waarde?: string | null
+          oude_waarde?: string | null
+          veld?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "factuuritem_wijzigingen_factuuritem_id_fkey"
+            columns: ["factuuritem_id"]
+            isOneToOne: false
+            referencedRelation: "factuuritems"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "factuuritem_wijzigingen_gewijzigd_door_fkey"
+            columns: ["gewijzigd_door"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       factuuritems: {
         Row: {
           created_at: string
@@ -832,6 +877,7 @@ export type Database = {
         | "vergrendelen"
         | "heropenen"
         | "corrigeren"
+        | "inloggen_als"
       batch_status:
         | "concept"
         | "batch_goedgekeurd"
@@ -989,6 +1035,7 @@ export const Constants = {
         "vergrendelen",
         "heropenen",
         "corrigeren",
+        "inloggen_als",
       ],
       batch_status: [
         "concept",

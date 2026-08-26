@@ -2,9 +2,12 @@
 
 import crypto from "node:crypto";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
+import { IMPERSONATIE_COOKIE } from "@/lib/impersonatie";
 import type { UserRole } from "@/lib/supabase/types";
 
 export async function assertBeheerder() {
@@ -210,6 +213,72 @@ export async function updateGebruiker(
   revalidatePath("/profiel");
   revalidatePath("/dashboard");
   return { error: null, success: true };
+}
+
+// ============================================================================
+// Inloggen als (testfase)
+// ============================================================================
+
+// Uitsluitend voor de testfase: een beheerder kan zo inloggen als een andere
+// gebruiker om testdata aan te maken en te zien hoe die gebruiker Chronos
+// ervaart. Eenrichtings — teruggaan naar het eigen account gaat via gewoon
+// uitloggen en opnieuw inloggen, dat is in deze fase acceptabel.
+export async function loginAls(profileId: string): Promise<{ error: string | null }> {
+  const beheerder = await assertBeheerder();
+  if (profileId === beheerder.id) {
+    return { error: "Je bent al ingelogd als jezelf." };
+  }
+
+  const admin = createAdminClient();
+  const { data: doelgebruiker } = await admin
+    .from("profiles")
+    .select("id, full_name, email, actief")
+    .eq("id", profileId)
+    .single();
+  if (!doelgebruiker) {
+    return { error: "Gebruiker niet gevonden." };
+  }
+  if (!doelgebruiker.actief) {
+    return { error: "Deze gebruiker is niet actief." };
+  }
+
+  const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
+    type: "magiclink",
+    email: doelgebruiker.email,
+  });
+  if (linkError || !linkData) {
+    return { error: "Inloggen als deze gebruiker is mislukt." };
+  }
+
+  // Rechtstreeks de token-hash verifiëren i.p.v. via de /auth/callback-redirect:
+  // deze Supabase-instantie levert magiclink-tokens impliciet (in het URL-fragment,
+  // dus onzichtbaar voor een server-side route handler) — verifyOtp met token_hash
+  // werkt server-side, ongeacht implicit- of PKCE-flow, en zet de sessie direct.
+  const supabase = await createClient();
+  const { error: verifyError } = await supabase.auth.verifyOtp({
+    type: "magiclink",
+    token_hash: linkData.properties.hashed_token,
+  });
+  if (verifyError) {
+    return { error: "Inloggen als deze gebruiker is mislukt." };
+  }
+
+  await admin.from("auditlog").insert({
+    gebruiker_id: beheerder.id,
+    actie: "inloggen_als",
+    object_type: "profiles",
+    object_id: doelgebruiker.id,
+    reden: `${beheerder.full_name} logt in als ${doelgebruiker.full_name} (testfase).`,
+  });
+
+  const cookieStore = await cookies();
+  cookieStore.set(IMPERSONATIE_COOKIE, beheerder.full_name, {
+    path: "/",
+    maxAge: 60 * 60 * 8,
+    sameSite: "lax",
+  });
+
+  redirect("/dashboard");
 }
 
 // ============================================================================

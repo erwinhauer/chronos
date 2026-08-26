@@ -72,16 +72,30 @@ export default async function FactuurItemBewerkenPage({
     redirect("/factuuritems");
   }
 
-  const [{ data: actieveKlanten }, { data: projecten }, medewerkers, landen] = await Promise.all([
-    supabase
-      .from("klanten")
-      .select("id, naam, adres, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal")
-      .eq("status", "actief")
-      .order("naam"),
-    supabase.from("projecten").select("id, klant_id, naam, po_nummer").eq("actief", true).order("naam"),
-    magAllesBewerken ? haalHerToewijsbareMedewerkers(supabase, profile?.role, user.id) : Promise.resolve(null),
-    haalLandenMap(supabase),
-  ]);
+  const [{ data: actieveKlanten }, { data: projecten }, medewerkers, landen, { data: wijzigingenRuw }] =
+    await Promise.all([
+      supabase
+        .from("klanten")
+        .select("id, naam, adres, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal")
+        .eq("status", "actief")
+        .order("naam"),
+      supabase.from("projecten").select("id, klant_id, naam, po_nummer").eq("actief", true).order("naam"),
+      magAllesBewerken ? haalHerToewijsbareMedewerkers(supabase, profile?.role, user.id) : Promise.resolve(null),
+      haalLandenMap(supabase),
+      supabase
+        .from("factuuritem_wijzigingen")
+        .select("veld, oude_waarde, nieuwe_waarde, aangemaakt_op, profiles(full_name)")
+        .eq("factuuritem_id", item.id)
+        .order("aangemaakt_op", { ascending: false }),
+    ]);
+
+  const wijzigingenLog = (wijzigingenRuw ?? []).map((w) => ({
+    veld: w.veld,
+    oud: w.oude_waarde,
+    nieuw: w.nieuwe_waarde,
+    aangemaaktOp: w.aangemaakt_op,
+    gewijzigdDoor: (w.profiles as unknown as { full_name: string } | null)?.full_name ?? "Onbekend",
+  }));
 
   // De klant van dit item blijft altijd herleidbaar/selecteerbaar, ook als hij
   // inmiddels inactief is (anders zou het bewerkscherm hem niet meer tonen).
@@ -115,6 +129,7 @@ export default async function FactuurItemBewerkenPage({
         landen={landen}
         medewerkers={medewerkers ?? undefined}
         magMedewerkerWijzigen={magAllesBewerken}
+        wijzigingenLog={wijzigingenLog}
         initial={{
           id: item.id,
           dossiernummers: dossiersOpItem.map((d) => d.dossiernummer),

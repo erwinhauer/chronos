@@ -172,6 +172,6 @@ export async function importeerHubspotKlant(hubspotId: string): Promise<HubspotI
     klant = bestaandeKlant;
   }
 
-  revalidatePath("/klanten");
+  revalidatePath("/factuuritems");
   return { success: true, fout: null, klant };
 }
