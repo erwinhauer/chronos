@@ -871,6 +871,14 @@ export type Database = {
         Returns: undefined
       }
       shares_team_with: { Args: { target_profile: string }; Returns: boolean }
+      supplement_klant_vanuit_hubspot: {
+        Args: {
+          nieuw_adres: string
+          nieuwe_patricia_id: string
+          target_klant_id: string
+        }
+        Returns: undefined
+      }
       switch_active_role: {
         Args: { target_role: Database["public"]["Enums"]["user_role"] }
         Returns: undefined

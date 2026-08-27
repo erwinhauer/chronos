@@ -177,25 +177,29 @@ export async function importeerHubspotKlant(hubspotId: string): Promise<HubspotI
       return { success: false, fout: "Aanmaken van de klant is mislukt.", klant: null };
     }
     klant = data;
-  } else {
-    const aanvulling: { adres?: string; patricia_id?: string } = {};
-    if (!bestaandeKlant.adres && adres) aanvulling.adres = adres;
-    if (!bestaandeKlant.patricia_id && patriciaId) aanvulling.patricia_id = patriciaId;
-
-    if (Object.keys(aanvulling).length > 0) {
-      const { data, error } = await supabase
-        .from("klanten")
-        .update(aanvulling)
-        .eq("id", bestaandeKlant.id)
-        .select(KLANT_VELDEN)
-        .single();
-      if (error || !data) {
-        return { success: false, fout: "Bijwerken van de klant is mislukt.", klant: null };
-      }
-      klant = data;
-    } else {
-      klant = bestaandeKlant;
+  } else if (adres || patriciaId) {
+    // klanten is beheerder-only te updaten (klanten_update_beheerder) — een
+    // rechtstreekse .update() zou hier voor iedere andere rol mislukken.
+    // supplement_klant_vanuit_hubspot() mag elke actieve gebruiker aanroepen
+    // en vult alleen velden aan die nog leeg zijn, nooit een al ingevuld veld.
+    // De gegenereerde RPC-types kennen text-parameters geen "| null" toe,
+    // terwijl de database-functie een null-waarde voor adres/PNN gewoon
+    // accepteert (en dan simpelweg niets aanvult voor dat veld).
+    const { error: rpcError } = await supabase.rpc("supplement_klant_vanuit_hubspot", {
+      target_klant_id: bestaandeKlant.id,
+      nieuw_adres: adres as string,
+      nieuwe_patricia_id: patriciaId as string,
+    });
+    if (rpcError) {
+      return { success: false, fout: "Bijwerken van de klant is mislukt.", klant: null };
     }
+    const { data, error } = await supabase.from("klanten").select(KLANT_VELDEN).eq("id", bestaandeKlant.id).single();
+    if (error || !data) {
+      return { success: false, fout: "Bijwerken van de klant is mislukt.", klant: null };
+    }
+    klant = data;
+  } else {
+    klant = bestaandeKlant;
   }
 
   revalidatePath("/factuuritems");
