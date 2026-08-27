@@ -328,8 +328,14 @@ export function codeVoorDienstLabel(typeDienst: string): string {
 // weergave achteraan aangeplakt in plaats van weggelaten.
 export const PRODUCTGROEP_CODES = ["TM", "D", "I", "O", "CA", "S", "W", "@"];
 
+// Een dossier kan, naast het gewone <nummer><land><suffix>, ook via een
+// Internationale (WIPO/Madrid-)registratie lopen: <nummer><land>WO<suffix>,
+// bv. "TM64765CNWO01" = merkenwerk in China (CN) via een Internationale
+// registratie (WO). Het land dat telt voor rapportage/weergave blijft het
+// eerst genoemde, specifiek gedesigneerde land (CN), niet WO — de optionele
+// "WO" erna is puur een markering dat het via die registratie loopt.
 function tryParsePrefix(code: string, rest: string): DossiernummerParseResult | null {
-  const pattern = new RegExp(`^(\\d+)([A-Z]{2})(\\d*)$`);
+  const pattern = new RegExp(`^(\\d+)([A-Z]{2})(?:WO)?(\\d*)$`);
   const match = pattern.exec(rest);
   if (!match) return null;
   const [, nummer, landIso, suffix] = match;
