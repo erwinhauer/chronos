@@ -7,6 +7,7 @@ import { zoekHubspotKlanten, importeerHubspotKlant, type HubspotZoekresultaat } 
 import { deactiveerKlant, type NieuweKlant } from "@/actions/klanten";
 import { fuzzyFilter } from "@/lib/fuzzy-match";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 
 type Klant = { id: string; naam: string };
 
@@ -64,6 +65,14 @@ export function KlantCombobox({
 
   // Live meezoeken in HubSpot terwijl je typt — geen apart "importeren"-scherm
   // meer, gewoon één doorzoekbare lijst met bedrijven om uit te kiezen.
+  //
+  // Toont ook al-geïmporteerde HubSpot-bedrijven (bestaatAl): eerder werden die
+  // hier weggefilterd omdat ze "toch al" in de lokale klantenlijst hierboven
+  // zouden staan — maar die lijst zoekt op de lokale klanten.naam, die na
+  // import kan zijn hernoemd of afwijkt van de HubSpot-naam, waardoor zo'n
+  // klant nergens meer te vinden was op zijn HubSpot-naam. Klikken roept
+  // hetzelfde importeren()/importeerHubspotKlant() aan, dat voor een
+  // bestaande klant altijd de bestaande rij teruggeeft (nooit een duplicaat).
   useEffect(() => {
     const term = invoer.trim();
     if (!magHubspotImporteren || !open || !term) {
@@ -76,7 +85,7 @@ export function KlantCombobox({
         if (zoekTokenRef.current !== token) return;
         setHubspotZoekPending(false);
         setHubspotZoekFout(res.fout);
-        setHubspotResultaten(res.fout ? [] : res.resultaten.filter((r) => !r.bestaatAl));
+        setHubspotResultaten(res.fout ? [] : res.resultaten);
       });
     }, 350);
     return () => window.clearTimeout(timer);
@@ -222,6 +231,11 @@ export function KlantCombobox({
                       >
                         <Building2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                         <span className="flex-1 truncate">{r.naam}</span>
+                        {r.bestaatAl && (
+                          <Badge variant="outline" className="shrink-0 text-xs">
+                            Al klant
+                          </Badge>
+                        )}
                         {r.patriciaId && (
                           <span className="shrink-0 text-xs text-muted-foreground">PNN {r.patriciaId}</span>
                         )}
