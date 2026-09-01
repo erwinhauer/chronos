@@ -58,12 +58,13 @@ export type FactuurSpecificatieKlant = {
 };
 
 // De keuze om "Kosten van derden" en/of "Korting" te tonen (per specificatie
-// gekozen, zie NieuweSpecificatieForm) bepaalt ook of Tarief zichtbaar is: in
-// de simpele specificatie (geen van beide aan) hoort ook geen Tarief-kolom te
-// staan — die is alleen zinvol als context bij de uitgebreide kolommen.
-// Eén plek voor deze afleiding, gebruikt door zowel de preview/concept
-// (nieuwe-specificatie-form.tsx) als de bevroren, al-vastgelegde specificatie
-// (specificaties/[id]/page.tsx, specificatie-download.ts).
+// gekozen, zie NieuweSpecificatieForm) bepaalt ook of Tarief en Aantal (Qty)
+// zichtbaar zijn: in de simpele specificatie (geen van beide aan) hoort geen
+// van beide te staan, in de uitgebreide specificatie horen beide er juist bij
+// — samen met Kosten van derden/Korting laten ze zien hoe het regelbedrag is
+// opgebouwd. Eén plek voor deze afleiding, gebruikt door zowel de
+// preview/concept (nieuwe-specificatie-form.tsx) als de bevroren, al-
+// vastgelegde specificatie (specificaties/[id]/page.tsx, specificatie-download.ts).
 export function metSpecificatieDetailniveau<T extends FactuurSpecificatieKlant>(
   klant: T,
   detail: { kolom_externe_kosten_zichtbaar: boolean; kolom_korting_zichtbaar: boolean }
@@ -72,6 +73,7 @@ export function metSpecificatieDetailniveau<T extends FactuurSpecificatieKlant>(
   return {
     ...klant,
     kolom_tarief_zichtbaar: klant.kolom_tarief_zichtbaar && uitgebreid,
+    kolom_uren_zichtbaar: klant.kolom_uren_zichtbaar || uitgebreid,
     kolom_externe_kosten_zichtbaar: detail.kolom_externe_kosten_zichtbaar,
     kolom_korting_zichtbaar: detail.kolom_korting_zichtbaar,
   };
