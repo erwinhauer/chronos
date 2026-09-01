@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Receipt, Pencil, Search } from "lucide-react";
+import Link from "next/link";
+import { Receipt, Pencil, Copy, Trash2, MoreVertical, Search } from "lucide-react";
 import { landNaamVoorIso } from "@/lib/dossiernummer";
 import { euro, regelbedrag } from "@/lib/factuurbedragen";
 import type { LandenMap } from "@/lib/landen";
@@ -13,6 +14,12 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { FactuurItemStatus } from "@/lib/supabase/types";
 import { tagKleurStijl } from "@/lib/tag-kleur";
@@ -320,10 +327,15 @@ function FactuurItemsTabel({
   const aantalGeselecteerd = selecteerbareIds.filter((id) => geselecteerd.has(id)).length;
   const alleGeselecteerd = selecteerbareIds.length > 0 && aantalGeselecteerd === selecteerbareIds.length;
   const gedeeltelijkGeselecteerd = aantalGeselecteerd > 0 && !alleGeselecteerd;
+  // Eén gedeelde verwijder-dialoog voor de hele tabel (i.p.v. per rij), zodat
+  // hij ook vanuit het kebab-menu getriggerd kan worden zonder de bekende
+  // race tussen het sluiten van het menu en het openen van de dialoog.
+  const [verwijderId, setVerwijderId] = useState<string | null>(null);
 
   return (
-    <Table className="w-auto min-w-full table-fixed">
-      <TableHeader>
+    <>
+      <Table className="w-auto min-w-full table-fixed">
+        <TableHeader>
         <TableRow>
           {kanFactureren && (
             <TableHead className="w-8">
@@ -431,24 +443,46 @@ function FactuurItemsTabel({
               </TableCell>
               <TableCell className="text-right tabular-figures">{euro(bedrag, valuta)}</TableCell>
               <TableCell className="text-right">
-                {bewerkbaar && (
-                  <div className="flex items-center justify-end gap-1.5">
-                    <LinkButton
-                      size="icon-sm"
-                      variant="outline"
-                      href={`/factuuritems/${r.id}`}
-                      aria-label="Bewerken"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </LinkButton>
-                    <VerwijderFactuurItemDialog itemId={r.id} />
-                  </div>
-                )}
+                <DropdownMenu>
+                  <DropdownMenuTrigger render={<Button size="icon-sm" variant="outline" aria-label="Acties" />}>
+                    <MoreVertical className="h-4 w-4" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {bewerkbaar && (
+                      <DropdownMenuItem render={<Link href={`/factuuritems/${r.id}`} />}>
+                        <Pencil className="h-4 w-4" />
+                        Bewerken
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem render={<Link href={`/factuuritems/nieuw?kopie_van=${r.id}`} />}>
+                      <Copy className="h-4 w-4" />
+                      Kopiëren
+                    </DropdownMenuItem>
+                    {bewerkbaar && (
+                      <DropdownMenuItem
+                        variant="destructive"
+                        onClick={() => {
+                          // Even wachten tot het menu zelf gesloten is, anders
+                          // wint de sluit-transitie het van het openen van de dialoog.
+                          setTimeout(() => setVerwijderId(r.id), 0);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Verwijderen
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </TableCell>
             </TableRow>
           );
         })}
-      </TableBody>
-    </Table>
+        </TableBody>
+      </Table>
+      <VerwijderFactuurItemDialog
+        itemId={verwijderId}
+        onOpenChange={(open) => !open && setVerwijderId(null)}
+      />
+    </>
   );
 }

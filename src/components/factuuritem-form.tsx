@@ -45,14 +45,17 @@ type Medewerker = { id: string; full_name: string };
 type Wijziging = { veld: string; oud: string | null; nieuw: string | null; aangemaaktOp: string; gewijzigdDoor: string };
 
 type Initial = {
-  id: string;
+  // Optioneel: leeg bij een kopie (nieuw factuuritem vooringevuld vanuit een
+  // bestaand item) — daar bestaat nog geen id, en medewerker/datum horen bij
+  // wie/wanneer de kopie wordt aangemaakt, niet bij het origineel.
+  id?: string;
   dossiernummers: string[];
   dossiernamenPerNummer: Record<string, string>;
   klant_id: string;
-  medewerker_id: string;
+  medewerker_id?: string;
   project_id: string | null;
   team_id: string | null;
-  datum: string;
+  datum?: string;
   omschrijving_klant: string;
   interne_opmerking: string | null;
   eenheidstype: string;
@@ -646,7 +649,7 @@ export function FactuurItemForm({
                 Sluiten
               </Button>
               <Button type="submit" disabled={pending || !klantId || dossierSelectie.length === 0} className="flex-1">
-                {pending ? "Bezig…" : initial ? "Wijzigingen opslaan" : "Factuuritem aanmaken"}
+                {pending ? "Bezig…" : initial?.id ? "Wijzigingen opslaan" : "Factuuritem aanmaken"}
               </Button>
             </CardFooter>
           </Card>

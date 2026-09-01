@@ -1,7 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { Trash2 } from "lucide-react";
+import { useActionState } from "react";
 import { deleteFactuurItem } from "@/actions/factuuritems";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,20 +15,26 @@ import {
 type State = { error: string | null };
 const initialState: State = { error: null };
 
-export function VerwijderFactuurItemDialog({ itemId }: { itemId: string }) {
-  const [open, setOpen] = useState(false);
+// Volledig van buitenaf bestuurd (open = itemId !== null) zodat dit ook vanuit
+// een kebab-menu getriggerd kan worden zonder de bekende race tussen het
+// sluiten van het menu en het openen van de dialoog.
+export function VerwijderFactuurItemDialog({
+  itemId,
+  onOpenChange,
+}: {
+  itemId: string | null;
+  onOpenChange: (open: boolean) => void;
+}) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- vereist door useActionState's reducer-signatuur
   const [state, formAction, pending] = useActionState(async (_prevState: State) => {
+    if (!itemId) return initialState;
     const result = await deleteFactuurItem(itemId);
-    if (!result.error) setOpen(false);
+    if (!result.error) onOpenChange(false);
     return result;
   }, initialState);
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <Button type="button" size="icon-sm" variant="outline" aria-label="Verwijderen" onClick={() => setOpen(true)}>
-        <Trash2 className="h-4 w-4" />
-      </Button>
+    <Dialog open={itemId !== null} onOpenChange={onOpenChange}>
       <DialogContent>
         <form action={formAction} className="flex flex-col gap-5">
           <DialogHeader>
@@ -46,7 +51,7 @@ export function VerwijderFactuurItemDialog({ itemId }: { itemId: string }) {
           )}
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Annuleren
             </Button>
             <Button type="submit" variant="destructive" disabled={pending}>
