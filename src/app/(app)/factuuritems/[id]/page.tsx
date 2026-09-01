@@ -148,6 +148,9 @@ export default async function FactuurItemBewerkenPage({
         initial={{
           id: item.id,
           dossiernummers: dossiersOpItem.map((d) => d.dossiernummer),
+          dossiernamenPerNummer: Object.fromEntries(
+            dossiersOpItem.map((d) => [d.dossiernummer, d.matter_naam ?? ""])
+          ),
           klant_id: item.klant_id,
           medewerker_id: item.medewerker_id,
           project_id: item.project_id,

@@ -204,6 +204,7 @@ export default async function DashboardPage({
     klantPeriode?: string;
     productgroepPeriode?: string;
     landPeriode?: string;
+    teamlidPeriode?: string;
   }>;
 }) {
   const {
@@ -213,12 +214,14 @@ export default async function DashboardPage({
     klantPeriode: klantPeriodeParam,
     productgroepPeriode: productgroepPeriodeParam,
     landPeriode: landPeriodeParam,
+    teamlidPeriode: teamlidPeriodeParam,
   } = await searchParams;
   const periode = parsePeriodeKey(periodeParam);
   const medewerkerPeriode = parsePeriodeKey(medewerkerPeriodeParam, { type: "mtd" });
   const klantPeriode = parsePeriodeKey(klantPeriodeParam);
   const productgroepPeriode = parsePeriodeKey(productgroepPeriodeParam);
   const landPeriode = parsePeriodeKey(landPeriodeParam);
+  const teamlidPeriode = parsePeriodeKey(teamlidPeriodeParam);
   const echtHuidigJaar = new Date().getFullYear();
   const gekozenJaar = jaarParam && /^\d{4}$/.test(jaarParam) ? Number(jaarParam) : echtHuidigJaar;
 
@@ -328,13 +331,16 @@ export default async function DashboardPage({
       const teamLeden = ditJaar.filter((r) => leden.has(r.medewerker_id));
       const { chartData, medewerkerNamen } = buildOmzetGrafiekData(teamLeden, namenPerId);
 
-      // Nieuwe teamleider/medewerker-KPI's: vaste MTD/YTD-vensters, los van de
-      // globale periode-select hierboven.
+      // Nieuwe teamleider/medewerker-KPI's: vaste MTD-vensters voor de rij-1-
+      // tegel/donut, los van de globale periode-select hierboven.
       const teamItemsMtd = ditJaarMtd.filter((r) => leden.has(r.medewerker_id));
       const gefactureerdMtd = teamItemsMtd.reduce((sum, r) => sum + regelbedrag(r), 0);
       const maandTargetBruto = d.bruto_bedrag / 12;
-      const teamlidRijenMtd = berekenTeamlidKpiRijen(teamItemsMtd, leden, namenPerId, teamleiderIds);
-      const teamlidRijenYtd = berekenTeamlidKpiRijen(teamLeden, leden, namenPerId, teamleiderIds);
+      // "Per teamlid"-tegels: één, onafhankelijk filterbaar venster (teamlidPeriode).
+      const teamItemsInTeamlidPeriode = ditJaar.filter(
+        (r) => leden.has(r.medewerker_id) && inPeriode(r.datum, teamlidPeriode, gekozenJaar)
+      );
+      const teamlidKpiRijen = berekenTeamlidKpiRijen(teamItemsInTeamlidPeriode, leden, namenPerId, teamleiderIds);
 
       return {
         teamId: team.id,
@@ -345,8 +351,7 @@ export default async function DashboardPage({
         gefactureerdMtd,
         maandTargetBruto,
         nogTeFactureren: ohwPerTeamId.get(team.id) ?? 0,
-        teamlidRijenMtd,
-        teamlidRijenYtd,
+        teamlidKpiRijen,
         brutoOmzetTeam,
         urenOmzetTeam,
         teamlidRijen,
@@ -937,20 +942,14 @@ export default async function DashboardPage({
                     </div>
 
                     <div className="flex flex-col gap-3">
-                      <p className="text-sm font-medium text-muted-foreground">
-                        Per teamlid · deze maand (MTD)
-                      </p>
-                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                        {t.teamlidRijenMtd.map((lid) => (
-                          <TeamlidKpiTegel key={lid.naam} lid={lid} />
-                        ))}
+                      <div className="flex items-center justify-between gap-4">
+                        <p className="text-sm font-medium text-muted-foreground">
+                          Per teamlid · {periodeLabel(teamlidPeriode)}
+                        </p>
+                        <TabelPeriodeSelect paramNaam="teamlidPeriode" />
                       </div>
-                    </div>
-
-                    <div className="flex flex-col gap-3">
-                      <p className="text-sm font-medium text-muted-foreground">Per teamlid · dit jaar (YTD)</p>
                       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                        {t.teamlidRijenYtd.map((lid) => (
+                        {t.teamlidKpiRijen.map((lid) => (
                           <TeamlidKpiTegel key={lid.naam} lid={lid} />
                         ))}
                       </div>

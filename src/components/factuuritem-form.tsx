@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
+import { Fragment, useActionState, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, EyeOff, Plus } from "lucide-react";
 import type { FactuurItemFormState } from "@/actions/factuuritems";
@@ -46,6 +46,7 @@ type Wijziging = { veld: string; oud: string | null; nieuw: string | null; aange
 type Initial = {
   id: string;
   dossiernummers: string[];
+  dossiernamenPerNummer: Record<string, string>;
   klant_id: string;
   medewerker_id: string;
   project_id: string | null;
@@ -131,6 +132,7 @@ export function FactuurItemForm({
 
   const [projectId, setProjectId] = useState(initial?.project_id ?? "");
   const [dossierSelectie, setDossierSelectie] = useState<string[]>(initial?.dossiernummers ?? []);
+  const [dossiernamen, setDossiernamen] = useState<Record<string, string>>(initial?.dossiernamenPerNummer ?? {});
   const [klantId, setKlantId] = useState(initial?.klant_id ?? voorgeselecteerdeKlantId ?? "");
   const [medewerkerIdVeld, setMedewerkerIdVeld] = useState(initial?.medewerker_id ?? medewerkerId);
   const [teamId, setTeamId] = useState(
@@ -157,6 +159,7 @@ export function FactuurItemForm({
   // heeft ingevuld/gewijzigd voordat "Sluiten" een bevestiging vraagt.
   const [startSnapshot] = useState(() => ({
     dossierSelectie: initial?.dossiernummers ?? [],
+    dossiernamen: initial?.dossiernamenPerNummer ?? {},
     projectId: initial?.project_id ?? "",
     omschrijvingKlant: initial?.omschrijving_klant ?? "",
     interneOpmerking: initial?.interne_opmerking ?? "",
@@ -223,6 +226,7 @@ export function FactuurItemForm({
   const isFormGewijzigd =
     dossierSelectie.length !== startSnapshot.dossierSelectie.length ||
     dossierSelectie.some((id) => !startSnapshot.dossierSelectie.includes(id)) ||
+    JSON.stringify(dossiernamen) !== JSON.stringify(startSnapshot.dossiernamen) ||
     klantId !== startSnapshot.klantId ||
     projectId !== startSnapshot.projectId ||
     omschrijvingKlant !== startSnapshot.omschrijvingKlant ||
@@ -245,7 +249,10 @@ export function FactuurItemForm({
   return (
     <form action={formAction} className="flex flex-col gap-6">
       {dossierSelectie.map((d) => (
-        <input key={d} type="hidden" name="dossiernummers" value={d} />
+        <Fragment key={d}>
+          <input type="hidden" name="dossiernummers" value={d} />
+          <input type="hidden" name="dossiernamen" value={dossiernamen[d] ?? ""} />
+        </Fragment>
       ))}
       <input type="hidden" name="klant_id" value={klantId} />
       <input type="hidden" name="medewerker_id" value={medewerkerIdVeld} />
@@ -290,6 +297,23 @@ export function FactuurItemForm({
                   )}
                 </div>
               </div>
+
+              {dossierSelectie.length > 0 && (
+                <div className="flex flex-col gap-3">
+                  {dossierSelectie.map((d) => (
+                    <div key={d} className="flex flex-col gap-2">
+                      <Label htmlFor={`dossiernaam_${d}`}>Dossiernaam — {d}</Label>
+                      <Input
+                        id={`dossiernaam_${d}`}
+                        value={dossiernamen[d] ?? ""}
+                        onChange={(e) => setDossiernamen((prev) => ({ ...prev, [d]: e.target.value }))}
+                        placeholder="Merk waar dit dossier over gaat"
+                        required
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {teams.length > 1 && (
                 <div className="flex flex-col gap-2">

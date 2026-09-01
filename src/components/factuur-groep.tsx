@@ -330,6 +330,7 @@ function FactuurItemsTabel({
           )}
           <TableHead className="w-24">Datum</TableHead>
           <TableHead className="w-56">Dossier</TableHead>
+          <TableHead className="w-40">Dossiernaam</TableHead>
           <TableHead className="w-32">Land</TableHead>
           {toonMedewerker && <TableHead className="w-28">Medewerker</TableHead>}
           <TableHead className="w-64">Omschrijving</TableHead>
@@ -375,11 +376,9 @@ function FactuurItemsTabel({
                     )}
                   </div>
                 )}
-                {eerste && (
-                  <div className="whitespace-normal break-words text-xs text-muted-foreground">
-                    {eerste.matter_naam ?? "—"}
-                  </div>
-                )}
+              </TableCell>
+              <TableCell className="whitespace-normal break-words text-sm text-muted-foreground">
+                {Array.from(new Set(r.dossiers.map((d) => d.matter_naam ?? "—"))).join(", ")}
               </TableCell>
               <TableCell className="whitespace-normal break-words">
                 {landen_op_regel.length > 0 ? (

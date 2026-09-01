@@ -22,9 +22,18 @@ function parseInput(formData: FormData) {
   const medewerker_id = String(formData.get("medewerker_id") ?? "").trim();
   const project_id = String(formData.get("project_id") ?? "").trim() || null;
   const team_id = String(formData.get("team_id") ?? "").trim() || null;
-  const dossiernummers = Array.from(
-    new Set(formData.getAll("dossiernummers").map((v) => String(v).trim().toUpperCase()).filter(Boolean))
-  );
+  // Op index zippen vóórdat er gededupliceerd wordt — twee onafhankelijke
+  // transformaties op dossiernummers/dossiernamen zouden de 1-op-1-koppeling
+  // tussen een dossier en zijn naam kunnen verliezen.
+  const dossiernummersRuw = formData.getAll("dossiernummers").map((v) => String(v).trim().toUpperCase());
+  const dossiernamenRuw = formData.getAll("dossiernamen").map((v) => String(v).trim());
+  const gezienDossiernummers = new Set<string>();
+  const dossierParen: { dossiernummer: string; dossiernaam: string }[] = [];
+  for (const [i, dossiernummer] of dossiernummersRuw.entries()) {
+    if (!dossiernummer || gezienDossiernummers.has(dossiernummer)) continue;
+    gezienDossiernummers.add(dossiernummer);
+    dossierParen.push({ dossiernummer, dossiernaam: dossiernamenRuw[i] ?? "" });
+  }
   const datum = String(formData.get("datum") ?? "");
   const omschrijving_klant = String(formData.get("omschrijving_klant") ?? "").trim();
   const interne_opmerking = String(formData.get("interne_opmerking") ?? "").trim();
@@ -46,7 +55,7 @@ function parseInput(formData: FormData) {
     medewerker_id,
     project_id,
     team_id,
-    dossiernummers,
+    dossierParen,
     datum,
     omschrijving_klant,
     interne_opmerking: interne_opmerking || null,
@@ -87,25 +96,29 @@ type DossierResolutie =
 
 // Zolang er geen Patricia-koppeling is, typt de gebruiker het dossiernummer
 // vrij in — alleen het format wordt (opnieuw, server-side) gevalideerd via
-// parseDossiernummer(). matter_naam is nog niet af te leiden en blijft null
-// tot die koppeling er is.
-function resolveDossiers(dossiernummers: string[]): DossierResolutie {
-  if (dossiernummers.length === 0) {
+// parseDossiernummer(). De dossiernaam (het merk) vult de gebruiker nu zelf
+// in per dossier; zodra de Patricia-koppeling er is kan dit automatisch op
+// basis van het dossiernummer.
+function resolveDossiers(dossierParen: { dossiernummer: string; dossiernaam: string }[]): DossierResolutie {
+  if (dossierParen.length === 0) {
     return { ok: false, error: "Voeg minimaal één dossier toe." };
   }
 
   const rijen: { dossiernummer: string; type_dienst: string; land: string; matter_naam: string | null; volgorde: number }[] =
     [];
-  for (const [index, dossiernummer] of dossiernummers.entries()) {
+  for (const [index, { dossiernummer, dossiernaam }] of dossierParen.entries()) {
     const parsed = parseDossiernummer(dossiernummer);
     if (!parsed) {
       return { ok: false, error: `Dossiernummer "${dossiernummer}" heeft niet het verwachte formaat.` };
+    }
+    if (!dossiernaam) {
+      return { ok: false, error: `Vul de dossiernaam in voor dossier "${dossiernummer}".` };
     }
     rijen.push({
       dossiernummer,
       type_dienst: parsed.typeLabel,
       land: parsed.landIso,
-      matter_naam: null,
+      matter_naam: dossiernaam,
       volgorde: index,
     });
   }
@@ -251,7 +264,7 @@ export async function createFactuurItem(
   }
 
   const supabase = await createClient();
-  const dossiers = resolveDossiers(input.dossiernummers);
+  const dossiers = resolveDossiers(input.dossierParen);
   if (!dossiers.ok) {
     return { error: dossiers.error, success: false };
   }
@@ -353,7 +366,7 @@ export async function updateFactuurItem(
   }
 
   const supabase = await createClient();
-  const dossiers = resolveDossiers(input.dossiernummers);
+  const dossiers = resolveDossiers(input.dossierParen);
   if (!dossiers.ok) {
     return { error: dossiers.error, success: false };
   }
@@ -375,7 +388,7 @@ export async function updateFactuurItem(
   const { data: voor } = await supabase
     .from("factuuritems")
     .select(
-      "klant_id, project_id, team_id, medewerker_id, datum, omschrijving_klant, interne_opmerking, qty, prijstype, tarief, externe_kosten, korting, kantoorkosten_van_toepassing, declarabel, klanten(naam), projecten(naam), profiles!factuuritems_medewerker_id_fkey(full_name), factuuritem_dossiers(dossiernummer)"
+      "klant_id, project_id, team_id, medewerker_id, datum, omschrijving_klant, interne_opmerking, qty, prijstype, tarief, externe_kosten, korting, kantoorkosten_van_toepassing, declarabel, klanten(naam), projecten(naam), profiles!factuuritems_medewerker_id_fkey(full_name), factuuritem_dossiers(dossiernummer, matter_naam)"
     )
     .eq("id", id)
     .single();
@@ -482,6 +495,14 @@ export async function updateFactuurItem(
       .map((d) => d.dossiernummer)
       .sort()
       .join(", ");
+    const oudeDossiernamen = (voor.factuuritem_dossiers ?? [])
+      .map((d) => d.matter_naam ?? "—")
+      .sort()
+      .join(", ");
+    const nieuweDossiernamen = dossiers.rijen
+      .map((d) => d.matter_naam ?? "—")
+      .sort()
+      .join(", ");
 
     const wijzigingen: VeldWijziging[] = [];
     vergelijkVeld(wijzigingen, "Klant", oudeKlantNaam, nieuweKlantNaamVal);
@@ -489,6 +510,7 @@ export async function updateFactuurItem(
     vergelijkVeld(wijzigingen, "Medewerker", oudeMedewerkerNaam, nieuweMedewerkerNaamVal);
     vergelijkVeld(wijzigingen, "Team", oudeTeamNaam, nieuweTeamNaamVal);
     vergelijkVeld(wijzigingen, "Dossier(s)", oudeDossiers, nieuweDossiers);
+    vergelijkVeld(wijzigingen, "Dossiernaam", oudeDossiernamen, nieuweDossiernamen);
     vergelijkVeld(wijzigingen, "Datum", voor.datum, input.datum);
     vergelijkVeld(wijzigingen, "Omschrijving voor klant", voor.omschrijving_klant, input.omschrijving_klant);
     vergelijkVeld(wijzigingen, "Interne opmerking", voor.interne_opmerking, input.interne_opmerking);
