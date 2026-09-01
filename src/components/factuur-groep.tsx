@@ -59,6 +59,7 @@ type ProjectSectie = {
 export function FactuurGroep({
   klantId,
   klantNaam,
+  valuta = "EUR",
   items,
   projecten,
   toonMedewerker,
@@ -69,6 +70,7 @@ export function FactuurGroep({
 }: {
   klantId: string;
   klantNaam: string;
+  valuta?: string;
   items: FactuurGroepItem[];
   projecten: Project[];
   toonMedewerker: boolean;
@@ -118,10 +120,10 @@ export function FactuurGroep({
         <CardTitle className="text-base">{klantNaam}</CardTitle>
         <div className="text-right text-sm">
           <div className="text-muted-foreground">
-            Honorarium {euro(subtotaalHonorarium)} · Kosten van derden {euro(subtotaalKosten)} · Korting -
-            {euro(subtotaalKorting)}
+            Honorarium {euro(subtotaalHonorarium, valuta)} · Kosten van derden {euro(subtotaalKosten, valuta)} ·
+            Korting -{euro(subtotaalKorting, valuta)}
           </div>
-          <div className="font-semibold tabular-figures">Subtotaal {euro(subtotaalTotaal)}</div>
+          <div className="font-semibold tabular-figures">Subtotaal {euro(subtotaalTotaal, valuta)}</div>
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-4 p-4">
@@ -142,6 +144,7 @@ export function FactuurGroep({
               <ProjectSectieBlok
                 key={sectie.sleutel}
                 klantId={klantId}
+                valuta={valuta}
                 sectie={sectie}
                 kleurIndex={index}
                 projecten={projecten}
@@ -162,6 +165,7 @@ export function FactuurGroep({
 
 function ProjectSectieBlok({
   klantId,
+  valuta,
   sectie,
   kleurIndex,
   projecten,
@@ -173,6 +177,7 @@ function ProjectSectieBlok({
   landen,
 }: {
   klantId: string;
+  valuta: string;
   sectie: ProjectSectie;
   kleurIndex: number;
   projecten: Project[];
@@ -272,6 +277,7 @@ function ProjectSectieBlok({
       <div className={toonHeader ? "overflow-hidden rounded-lg border border-border" : undefined}>
         <FactuurItemsTabel
           items={sectie.items}
+          valuta={valuta}
           toonMedewerker={toonMedewerker}
           kanFactureren={kanFactureren}
           magAllesBewerken={magAllesBewerken}
@@ -288,6 +294,7 @@ function ProjectSectieBlok({
 
 function FactuurItemsTabel({
   items,
+  valuta,
   toonMedewerker,
   kanFactureren,
   magAllesBewerken,
@@ -298,6 +305,7 @@ function FactuurItemsTabel({
   landen,
 }: {
   items: FactuurGroepItem[];
+  valuta: string;
   toonMedewerker: boolean;
   kanFactureren: boolean;
   magAllesBewerken: boolean;
@@ -412,7 +420,7 @@ function FactuurItemsTabel({
               <TableCell className="tabular-figures">
                 {r.qty} {r.eenheidstype}
               </TableCell>
-              <TableCell className="text-right tabular-figures">{euro(bedrag)}</TableCell>
+              <TableCell className="text-right tabular-figures">{euro(bedrag, valuta)}</TableCell>
               <TableCell className="text-right">
                 {bewerkbaar && (
                   <div className="flex items-center justify-end gap-1.5">

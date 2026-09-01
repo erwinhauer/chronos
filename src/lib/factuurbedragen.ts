@@ -22,8 +22,13 @@ export function isGefactureerd(status: FactuurItemStatus) {
   return status === "definitief";
 }
 
-export function euro(n: number) {
-  return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n);
+// valuta is optioneel (default EUR) — bedragen die aan één specifieke klant
+// gebonden zijn (bv. een factuuritem-formulier of -tabel) geven de klant se
+// eigen valuta door; bedrijfsbrede/meerdere-klanten-overzichten (dashboard)
+// blijven ongewijzigd in EUR, want die tellen over klanten met verschillende
+// valuta's heen op.
+export function euro(n: number, valuta: string = "EUR") {
+  return new Intl.NumberFormat("nl-NL", { style: "currency", currency: valuta }).format(n);
 }
 
 export function round2(n: number) {

@@ -15,6 +15,7 @@ export type FactuurGroepSamenvatting = {
   klantId: string;
   klantNaam: string;
   patriciaId: string | null;
+  valuta: string;
   aantalItems: number;
   oudsteDatum: string;
   bedrag: number;
@@ -110,7 +111,7 @@ export function FactuurGroepenTabel({ groepen }: { groepen: FactuurGroepSamenvat
                     <TableCell className="whitespace-nowrap text-muted-foreground">
                       {new Date(g.oudsteDatum).toLocaleDateString("nl-NL")}
                     </TableCell>
-                    <TableCell className="text-right tabular-figures">{euro(g.bedrag)}</TableCell>
+                    <TableCell className="text-right tabular-figures">{euro(g.bedrag, g.valuta)}</TableCell>
                   </TableRow>
                 ))
               )}

@@ -22,7 +22,7 @@ export default async function FactuuritemsPerKlantPagina({
       (await supabase.rpc("team_services_klant", { target_klant_id: klantId })).data === true);
 
   const [{ data: klant }, { data: items }, { data: projecten }, landen] = await Promise.all([
-    supabase.from("klanten").select("naam, patricia_id, adres").eq("id", klantId).single(),
+    supabase.from("klanten").select("naam, patricia_id, adres, valuta").eq("id", klantId).single(),
     supabase
       .from("factuuritems")
       .select(
@@ -101,6 +101,7 @@ export default async function FactuuritemsPerKlantPagina({
         <FactuurGroep
           klantId={klantId}
           klantNaam={klant.naam}
+          valuta={klant.valuta}
           items={genormaliseerd}
           projecten={projecten ?? []}
           toonMedewerker={toonMedewerker}

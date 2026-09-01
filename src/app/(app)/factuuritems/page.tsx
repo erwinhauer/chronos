@@ -11,17 +11,20 @@ export default async function FactuuritemsPage() {
 
   const { data: items } = await supabase
     .from("factuuritems")
-    .select("id, klant_id, datum, honorarium, externe_kosten, korting, status, declarabel, klanten(naam, patricia_id)")
+    .select(
+      "id, klant_id, datum, honorarium, externe_kosten, korting, status, declarabel, klanten(naam, patricia_id, valuta)"
+    )
     .eq("status", "aangemaakt")
     .order("datum", { ascending: false });
 
   const groepenMap = new Map<string, FactuurGroepSamenvatting>();
   for (const item of items ?? []) {
-    const klant = item.klanten as unknown as { naam: string; patricia_id: string | null } | null;
+    const klant = item.klanten as unknown as { naam: string; patricia_id: string | null; valuta: string } | null;
     const bestaand = groepenMap.get(item.klant_id) ?? {
       klantId: item.klant_id,
       klantNaam: klant?.naam ?? "Onbekend",
       patriciaId: klant?.patricia_id ?? null,
+      valuta: klant?.valuta ?? "EUR",
       aantalItems: 0,
       oudsteDatum: item.datum,
       bedrag: 0,

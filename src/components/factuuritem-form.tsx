@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ChevronDown, EyeOff, Plus } from "lucide-react";
 import type { FactuurItemFormState } from "@/actions/factuuritems";
 import { wisselKlantTaal, wisselKlantValuta } from "@/actions/klanten";
+import { euro } from "@/lib/factuurbedragen";
 import { createClient } from "@/lib/supabase/client";
 import { DossiernummerTagInput } from "@/components/dossiernummer-tag-input";
 import { KlantCombobox } from "@/components/klant-combobox";
@@ -67,10 +68,6 @@ type Initial = {
 };
 
 const initialState: FactuurItemFormState = { error: null, success: false };
-
-function euro(n: number) {
-  return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n);
-}
 
 export function FactuurItemForm({
   klanten: klantenProp,
@@ -512,7 +509,9 @@ export function FactuurItemForm({
                       />
                     </div>
                     {prijstype === "uren" && voorgesteldTarief !== null && (
-                      <p className="text-xs text-muted-foreground">Voorgesteld tarief: {euro(voorgesteldTarief)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Voorgesteld tarief: {euro(voorgesteldTarief, klant?.valuta ?? "EUR")}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -585,7 +584,7 @@ export function FactuurItemForm({
                     />
                   )}
                   <p className="text-xs text-muted-foreground">
-                    Max. het honorarium ({euro(honorarium)}), nooit over kosten van derden.
+                    Max. het honorarium ({euro(honorarium, klant?.valuta ?? "EUR")}), nooit over kosten van derden.
                   </p>
                   {kortingTeHoog && (
                     <p className="text-xs font-medium text-warning">
@@ -620,20 +619,20 @@ export function FactuurItemForm({
               <CardTitle className="text-base">Overzicht regel</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-2 text-sm">
-              <Row label="Honorarium" value={euro(honorarium)} />
-              <Row label="Kosten van derden" value={euro(externeKosten)} />
-              <Row label="Korting" value={`- ${euro(kortingBerekend)}`} />
+              <Row label="Honorarium" value={euro(honorarium, klant?.valuta ?? "EUR")} />
+              <Row label="Kosten van derden" value={euro(externeKosten, klant?.valuta ?? "EUR")} />
+              <Row label="Korting" value={`- ${euro(kortingBerekend, klant?.valuta ?? "EUR")}`} />
               <div className="my-1 border-t border-border" />
-              <Row label="Regelbedrag" value={euro(regelbedrag)} bold />
+              <Row label="Regelbedrag" value={euro(regelbedrag, klant?.valuta ?? "EUR")} bold />
               <Row
                 label={`Kantoorkosten (${kantoorkostenPercentage}%)`}
-                value={kantoorkostenActief ? euro(kantoorkostenBedrag) : "n.v.t."}
+                value={kantoorkostenActief ? euro(kantoorkostenBedrag, klant?.valuta ?? "EUR") : "n.v.t."}
               />
               <p className="text-xs text-muted-foreground">
                 Indicatief per regel — het werkelijke bedrag (min. €15, max. €200) wordt per factuur bepaald.
               </p>
               <div className="my-1 border-t border-border" />
-              <Row label="Totaal" value={euro(round2(regelbedrag + kantoorkostenBedrag))} bold />
+              <Row label="Totaal" value={euro(round2(regelbedrag + kantoorkostenBedrag), klant?.valuta ?? "EUR")} bold />
             </CardContent>
             {state.error && (
               <CardContent className="pt-0">
