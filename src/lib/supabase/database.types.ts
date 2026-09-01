@@ -86,6 +86,8 @@ export type Database = {
           goedgekeurd_op: string | null
           id: string
           klant_id: string
+          kolom_externe_kosten_zichtbaar: boolean
+          kolom_korting_zichtbaar: boolean
           periode_eind: string
           periode_start: string
           project_id: string | null
@@ -105,6 +107,8 @@ export type Database = {
           goedgekeurd_op?: string | null
           id?: string
           klant_id: string
+          kolom_externe_kosten_zichtbaar?: boolean
+          kolom_korting_zichtbaar?: boolean
           periode_eind: string
           periode_start: string
           project_id?: string | null
@@ -124,6 +128,8 @@ export type Database = {
           goedgekeurd_op?: string | null
           id?: string
           klant_id?: string
+          kolom_externe_kosten_zichtbaar?: boolean
+          kolom_korting_zichtbaar?: boolean
           periode_eind?: string
           periode_start?: string
           project_id?: string | null

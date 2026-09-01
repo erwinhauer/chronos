@@ -32,6 +32,7 @@ export type FactuurGroepItem = {
   datum: string;
   dossiers: { dossiernummer: string; type_dienst: string | null; land: string | null; matter_naam: string | null }[];
   omschrijving_klant: string;
+  interneOpmerking: string | null;
   eenheidstype: string;
   qty: number;
   honorarium: number;
@@ -373,6 +374,14 @@ function FactuurItemsTabel({
                 {eerste && (
                   <div className="flex items-center gap-1.5">
                     <div className="font-medium">{eerste.dossiernummer}</div>
+                    {r.interneOpmerking && (
+                      <span
+                        className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-warning text-[10px] leading-none font-bold text-white"
+                        title={r.interneOpmerking}
+                      >
+                        !
+                      </span>
+                    )}
                     {rest.length > 0 && (
                       <Badge
                         variant="outline"

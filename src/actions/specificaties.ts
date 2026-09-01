@@ -28,6 +28,8 @@ export async function genereerSpecificatie(
   const periode_start = String(formData.get("periode_start") ?? "");
   const periode_eind = String(formData.get("periode_eind") ?? "");
   const extra_korting = round2(Number(formData.get("extra_korting") ?? 0)) || 0;
+  const kolom_externe_kosten_zichtbaar = formData.get("kolom_externe_kosten_zichtbaar") === "on";
+  const kolom_korting_zichtbaar = formData.get("kolom_korting_zichtbaar") === "on";
 
   if (!klant_id || itemIds.length === 0) {
     return { error: "Selecteer minimaal één factuuritem.", success: false };
@@ -105,6 +107,8 @@ export async function genereerSpecificatie(
       totaal_kantoorkosten: totaalKantoorkosten,
       extra_korting,
       totaal_bedrag: totaalBedrag,
+      kolom_externe_kosten_zichtbaar,
+      kolom_korting_zichtbaar,
       goedgekeurd_door: user?.id,
       goedgekeurd_op: new Date().toISOString(),
     })

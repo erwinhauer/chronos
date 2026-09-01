@@ -23,6 +23,14 @@ export default async function SpecificatiePagina({ params }: { params: Promise<{
 
   const klant = batch.klanten;
   if (!klant) notFound();
+  // De kolomkeuze voor kosten van derden/korting is bevroren op de batch zelf
+  // vastgelegd (bij aanmaken van de specificatie) — niet dezelfde als de
+  // (later wijzigbare) standaardinstelling van de klant.
+  const specificatieKlant = {
+    ...klant,
+    kolom_externe_kosten_zichtbaar: batch.kolom_externe_kosten_zichtbaar,
+    kolom_korting_zichtbaar: batch.kolom_korting_zichtbaar,
+  };
 
   const [{ data: items }, landen] = await Promise.all([
     supabase
@@ -73,7 +81,7 @@ export default async function SpecificatiePagina({ params }: { params: Promise<{
       <div className="flex flex-col gap-6 print:hidden">
         <FactuurVoorbeeldKaart>
           <FactuurSpecificatie
-            klant={klant}
+            klant={specificatieKlant}
             project={batch.projecten as unknown as { naam: string; po_nummer: string | null } | null}
             voorbereidDoor={
               (batch.profiles as unknown as { full_name: string } | null)?.full_name ?? "—"

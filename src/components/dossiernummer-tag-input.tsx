@@ -18,13 +18,29 @@ export function DossiernummerTagInput({
   landen?: LandenMap;
 }) {
   const [invoer, setInvoer] = useState("");
+  const [fout, setFout] = useState<string | null>(null);
+
+  // Meerdere dossiers mogen op één factuuritem, maar alleen van hetzelfde
+  // type (TM, O, I, A, etc.) — anders is achteraf niet meer te meten hoeveel
+  // omzet er per dossiertype is geschreven. Land mag wel verschillen.
+  const eersteGeparsed = value.map((d) => parseDossiernummer(d)).find((p) => p !== null);
+  const bestaandType = eersteGeparsed ? { code: eersteGeparsed.typeCode, label: eersteGeparsed.typeLabel } : null;
 
   function toevoegen() {
     const nummer = invoer.trim().toUpperCase();
     if (!nummer || value.includes(nummer)) {
       setInvoer("");
+      setFout(null);
       return;
     }
+    const parsed = parseDossiernummer(nummer);
+    if (parsed && bestaandType && parsed.typeCode !== bestaandType.code) {
+      setFout(
+        `${parsed.typeLabel} kan niet samen met ${bestaandType.label} op één factuuritem — combineer alleen dossiers van hetzelfde type.`
+      );
+      return;
+    }
+    setFout(null);
     onChange([...value, nummer]);
     setInvoer("");
   }
@@ -42,7 +58,10 @@ export function DossiernummerTagInput({
         <Input
           id="dossiernummer_input"
           value={invoer}
-          onChange={(e) => setInvoer(e.target.value.toUpperCase())}
+          onChange={(e) => {
+            setInvoer(e.target.value.toUpperCase());
+            setFout(null);
+          }}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
@@ -60,6 +79,7 @@ export function DossiernummerTagInput({
           {preview ? `${preview.typeLabel} · ${landNaamVoorIso(preview.landIso, landen)}` : "Onbekend dossiernummerformaat"}
         </p>
       )}
+      {fout && <p className="text-xs font-medium text-destructive">{fout}</p>}
       {value.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {value.map((d) => (

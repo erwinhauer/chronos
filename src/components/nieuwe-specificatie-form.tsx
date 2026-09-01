@@ -13,6 +13,7 @@ import {
 } from "@/components/factuur-specificatie";
 import { FactuurVoorbeeldKaart } from "@/components/factuur-voorbeeld-kaart";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -65,6 +66,8 @@ export function NieuweSpecificatieForm({
   const [state, formAction, pending] = useActionState(genereerSpecificatie, initialState);
   const [toonBevestiging, setToonBevestiging] = useState(false);
   const [extraKorting, setExtraKorting] = useState(0);
+  const [toonKostenDerden, setToonKostenDerden] = useState(klant.kolom_externe_kosten_zichtbaar);
+  const [toonKorting, setToonKorting] = useState(klant.kolom_korting_zichtbaar);
   const [conceptBezig, setConceptBezig] = useState(false);
   const [conceptFout, setConceptFout] = useState<string | null>(null);
 
@@ -77,6 +80,8 @@ export function NieuweSpecificatieForm({
       periode_start: periodeStart,
       periode_eind: periodeEind,
       extra_korting: extraKorting,
+      kolom_externe_kosten_zichtbaar: toonKostenDerden,
+      kolom_korting_zichtbaar: toonKorting,
     });
     setConceptBezig(false);
     if (error || !base64 || !filename) {
@@ -107,6 +112,15 @@ export function NieuweSpecificatieForm({
 
   const extraKortingTeHoog = extraKorting > basisTotalen.subtotaal_voor_extra_korting;
 
+  const klantVoorPreview = useMemo(
+    () => ({
+      ...klant,
+      kolom_externe_kosten_zichtbaar: toonKostenDerden,
+      kolom_korting_zichtbaar: toonKorting,
+    }),
+    [klant, toonKostenDerden, toonKorting]
+  );
+
   return (
     <form ref={formRef} action={formAction} className="flex flex-col gap-6">
       <input type="hidden" name="klant_id" value={klant.id} />
@@ -116,6 +130,8 @@ export function NieuweSpecificatieForm({
       <input type="hidden" name="periode_start" value={periodeStart} />
       <input type="hidden" name="periode_eind" value={periodeEind} />
       <input type="hidden" name="extra_korting" value={extraKorting} />
+      <input type="hidden" name="kolom_externe_kosten_zichtbaar" value={toonKostenDerden ? "on" : ""} />
+      <input type="hidden" name="kolom_korting_zichtbaar" value={toonKorting ? "on" : ""} />
 
       <Card>
         <CardHeader>
@@ -158,6 +174,20 @@ export function NieuweSpecificatieForm({
               </p>
             )}
           </div>
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <Label>Detailniveau van deze specificatie</Label>
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={toonKostenDerden}
+                onCheckedChange={(checked) => setToonKostenDerden(checked === true)}
+              />
+              Kosten van derden als aparte kolom tonen
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox checked={toonKorting} onCheckedChange={(checked) => setToonKorting(checked === true)} />
+              Korting als aparte kolom tonen
+            </label>
+          </div>
         </CardContent>
       </Card>
 
@@ -168,7 +198,7 @@ export function NieuweSpecificatieForm({
         <CardContent className="flex flex-col gap-6 print:hidden">
           <FactuurVoorbeeldKaart>
             <FactuurSpecificatie
-              klant={klant}
+              klant={klantVoorPreview}
               project={project}
               voorbereidDoor={voorbereidDoor}
               valuta={klant.valuta}

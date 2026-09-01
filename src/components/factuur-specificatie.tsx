@@ -213,7 +213,7 @@ export function FactuurSpecificatie({
                 {klant.kolom_externe_kosten_zichtbaar && (
                   <TableCell className="text-right tabular-figures">{euro(item.externe_kosten)}</TableCell>
                 )}
-                {klant.kolom_korting_zichtbaar && (
+                {toontKortingKolom && (
                   <TableCell className="text-right tabular-figures">{euro(item.korting)}</TableCell>
                 )}
                 <TableCell className="text-right tabular-figures">

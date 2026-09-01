@@ -48,6 +48,13 @@ export async function genereerSpecificatiePdfBase64(specificatieId: string): Pro
   if (!klant) {
     return { base64: null, filename: null, error: "Klant niet gevonden." };
   }
+  // Bevroren kolomkeuze van de batch zelf, niet de (later wijzigbare)
+  // standaardinstelling van de klant — zie [id]/page.tsx voor dezelfde regel.
+  const specificatieKlant = {
+    ...klant,
+    kolom_externe_kosten_zichtbaar: batch.kolom_externe_kosten_zichtbaar,
+    kolom_korting_zichtbaar: batch.kolom_korting_zichtbaar,
+  };
   const project = batch.projecten as unknown as { naam: string; po_nummer: string | null } | null;
   const voorbereidDoor = (batch.profiles as unknown as { full_name: string } | null)?.full_name ?? "—";
 
@@ -86,7 +93,7 @@ export async function genereerSpecificatiePdfBase64(specificatieId: string): Pro
 
   try {
     const buffer = await genereerSpecificatiePdf({
-      klant,
+      klant: specificatieKlant,
       project,
       voorbereidDoor,
       periodeStart: batch.periode_start,
@@ -115,6 +122,8 @@ export async function genereerConceptSpecificatiePdfBase64(input: {
   periode_start: string;
   periode_eind: string;
   extra_korting: number;
+  kolom_externe_kosten_zichtbaar?: boolean;
+  kolom_korting_zichtbaar?: boolean;
 }): Promise<SpecificatiePdfResultaat> {
   const profile = await getCurrentProfile();
   if (profile?.role !== "finance" && profile?.role !== "beheerder" && profile?.role !== "teamleider") {
@@ -130,6 +139,13 @@ export async function genereerConceptSpecificatiePdfBase64(input: {
   if (!klant) {
     return { base64: null, filename: null, error: "Klant niet gevonden." };
   }
+  // Concept-voorbeeld gebruikt de kolomkeuze die de gebruiker nu op het
+  // aanmaakscherm heeft gezet, met de klant se eigen instelling als fallback.
+  const specificatieKlant = {
+    ...klant,
+    kolom_externe_kosten_zichtbaar: input.kolom_externe_kosten_zichtbaar ?? klant.kolom_externe_kosten_zichtbaar,
+    kolom_korting_zichtbaar: input.kolom_korting_zichtbaar ?? klant.kolom_korting_zichtbaar,
+  };
 
   const [{ data: items }, landen] = await Promise.all([
     supabase
@@ -188,7 +204,7 @@ export async function genereerConceptSpecificatiePdfBase64(input: {
   try {
     const aangemaaktOp = new Date().toISOString();
     const buffer = await genereerSpecificatiePdf({
-      klant,
+      klant: specificatieKlant,
       project,
       voorbereidDoor: profile?.full_name ?? "—",
       periodeStart: input.periode_start,
