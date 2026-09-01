@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { genereerSpecificatiePdf } from "@/lib/specificatie-pdf";
+import { metSpecificatieDetailniveau } from "@/components/factuur-specificatie";
 import { haalLandenMap } from "@/lib/landen";
 import { berekenFactuurtotalen, round2 } from "@/lib/factuurbedragen";
 
@@ -50,11 +51,10 @@ export async function genereerSpecificatiePdfBase64(specificatieId: string): Pro
   }
   // Bevroren kolomkeuze van de batch zelf, niet de (later wijzigbare)
   // standaardinstelling van de klant — zie [id]/page.tsx voor dezelfde regel.
-  const specificatieKlant = {
-    ...klant,
+  const specificatieKlant = metSpecificatieDetailniveau(klant, {
     kolom_externe_kosten_zichtbaar: batch.kolom_externe_kosten_zichtbaar,
     kolom_korting_zichtbaar: batch.kolom_korting_zichtbaar,
-  };
+  });
   const project = batch.projecten as unknown as { naam: string; po_nummer: string | null } | null;
   const voorbereidDoor = (batch.profiles as unknown as { full_name: string } | null)?.full_name ?? "—";
 
@@ -141,11 +141,10 @@ export async function genereerConceptSpecificatiePdfBase64(input: {
   }
   // Concept-voorbeeld gebruikt de kolomkeuze die de gebruiker nu op het
   // aanmaakscherm heeft gezet, met de klant se eigen instelling als fallback.
-  const specificatieKlant = {
-    ...klant,
+  const specificatieKlant = metSpecificatieDetailniveau(klant, {
     kolom_externe_kosten_zichtbaar: input.kolom_externe_kosten_zichtbaar ?? klant.kolom_externe_kosten_zichtbaar,
     kolom_korting_zichtbaar: input.kolom_korting_zichtbaar ?? klant.kolom_korting_zichtbaar,
-  };
+  });
 
   const [{ data: items }, landen] = await Promise.all([
     supabase

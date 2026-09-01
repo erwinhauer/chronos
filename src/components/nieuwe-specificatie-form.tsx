@@ -8,6 +8,7 @@ import { round2 } from "@/lib/factuurbedragen";
 import type { LandenMap } from "@/lib/landen";
 import {
   FactuurSpecificatie,
+  metSpecificatieDetailniveau,
   type FactuurSpecificatieItem,
   type FactuurSpecificatieKlant,
 } from "@/components/factuur-specificatie";
@@ -113,11 +114,11 @@ export function NieuweSpecificatieForm({
   const extraKortingTeHoog = extraKorting > basisTotalen.subtotaal_voor_extra_korting;
 
   const klantVoorPreview = useMemo(
-    () => ({
-      ...klant,
-      kolom_externe_kosten_zichtbaar: toonKostenDerden,
-      kolom_korting_zichtbaar: toonKorting,
-    }),
+    () =>
+      metSpecificatieDetailniveau(klant, {
+        kolom_externe_kosten_zichtbaar: toonKostenDerden,
+        kolom_korting_zichtbaar: toonKorting,
+      }),
     [klant, toonKostenDerden, toonKorting]
   );
 

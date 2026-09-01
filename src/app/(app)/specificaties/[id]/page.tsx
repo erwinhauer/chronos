@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { SetBreadcrumb } from "@/lib/breadcrumb-context";
-import { FactuurSpecificatie } from "@/components/factuur-specificatie";
+import { FactuurSpecificatie, metSpecificatieDetailniveau } from "@/components/factuur-specificatie";
 import { FactuurVoorbeeldKaart } from "@/components/factuur-voorbeeld-kaart";
 import { DownloadSpecificatieKnop } from "@/components/download-specificatie-knop";
 import { haalLandenMap } from "@/lib/landen";
@@ -26,11 +26,10 @@ export default async function SpecificatiePagina({ params }: { params: Promise<{
   // De kolomkeuze voor kosten van derden/korting is bevroren op de batch zelf
   // vastgelegd (bij aanmaken van de specificatie) — niet dezelfde als de
   // (later wijzigbare) standaardinstelling van de klant.
-  const specificatieKlant = {
-    ...klant,
+  const specificatieKlant = metSpecificatieDetailniveau(klant, {
     kolom_externe_kosten_zichtbaar: batch.kolom_externe_kosten_zichtbaar,
     kolom_korting_zichtbaar: batch.kolom_korting_zichtbaar,
-  };
+  });
 
   const [{ data: items }, landen] = await Promise.all([
     supabase
