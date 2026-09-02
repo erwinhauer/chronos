@@ -10,6 +10,50 @@ Uitgangspunten (besloten):
   token kan dus gewoon door alle drie de omgevingen gebruikt worden; geen sandbox nodig.
 - Backups en monitoring horen bij deze livegang, niet bij een latere fase.
 
+## Status (bijgewerkt 2026-09-02)
+
+Stappen 1 t/m 5 zijn uitgevoerd:
+
+- ✅ **Stap 1**: `vercel-build` gebruikt nu `SUPABASE_PROJECT_REF` (met de bestaande
+  productie-ref als default) i.p.v. een hardcoded waarde. Geverifieerd: LIVE-deploys
+  blijven werken.
+- ✅ **Stap 2**: nieuw Supabase-project **"Chronos Beta"** aangemaakt (regio eu-north-1,
+  org `wdfiivdxprswjfrxcmqr`, ref `rmccpxyuuocjxwyxoyvd`).
+- ✅ **Stap 3**: volledige migratiehistorie toegepast op Chronos Beta, via een deploy op
+  de nieuwe `beta`-branch (Vercel's build-omgeving kon de Postgres-pooler wél
+  betrouwbaar bereiken — vanaf deze machine gaf zowel `supabase db push` als
+  `migration repair` rechtstreeks een TLS-verbindingsfout, ongeacht wachtwoord/ref;
+  hetzelfde patroon als eerder bij productie). Onderweg de eenmalige
+  Espero/KNVB-opschoningsmigratie aangepast zodat hij op een lege database een
+  onschuldige no-op is in plaats van hard te falen (zie de aparte commit daarvoor).
+- ✅ **Stap 4**: bestaande `scripts/seed.mjs` gedraaid tegen Chronos Beta (basisset:
+  7 demo-gebruikers, 2 teams, 2 klanten, 10 factuuritems, 3 specificaties). De
+  rijkere/realistischere BETA-specifieke uitbreiding (zie §4 hieronder) is nog niet
+  gedaan — dit is de bestaande lokale demoset, één-op-één overgezet.
+- ✅ **Stap 5**: branch `beta` aangemaakt en gepusht; branch-gebonden environment
+  variables ingesteld in Vercel (`NEXT_PUBLIC_SUPABASE_URL`,
+  `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_PROJECT_REF`,
+  `SUPABASE_DB_PASSWORD`), gescopeerd op de `beta`-branch specifiek. Stabiele,
+  automatisch-bijwerkende URL: **https://chronos-git-beta-erwin-hauers-projects.vercel.app**
+  (elke push naar `beta` deployt hier opnieuw naartoe, zonder handmatige stappen).
+
+**Nog niet gedaan, en waarom dit bij jou moet liggen:**
+
+- ⚠️ **Stap 6 (Deployment Protection)**: de beta-URL staat al niet publiek open — Vercel
+  vraagt standaard een Vercel-login ("Vercel Authentication"). Dat beschermt tegen
+  toevallige bezoekers, maar blokkeert ook je eigen betatesters als die geen
+  Vercel-account hebben. Kies zelf in de Vercel-projectinstellingen (Settings →
+  Deployment Protection) of je overschakelt naar "Password Protection" (gedeeld
+  wachtwoord, praktischer voor externe testers) of testers als Vercel-teamlid toevoegt.
+- ⚠️ **Stap 7 (backups)**: hangt af van het Supabase-abonnement van zowel het
+  bestaande LIVE-project als het nieuwe Chronos Beta-project — dat moet je zelf
+  checken/instellen in het Supabase-dashboard (Project Settings → Backups).
+- ⚠️ **Stap 8 (foutregistratie)**: vereist een nieuw account bij een derde partij
+  (bv. Sentry) — dat maak ik nooit zelf aan. Zodra je een account + DSN hebt, bouw ik
+  de code-integratie.
+- ⚠️ **Stap 9 (betatesters)**: wie precies wordt uitgenodigd is een keuze die alleen
+  jij kunt maken; zodra je een lijst hebt, zet ik ze als Auth-gebruiker in Chronos Beta.
+
 ## 1. Omgevingen-overzicht
 
 | | **LIVE** | **BETA** | **TEST** |
