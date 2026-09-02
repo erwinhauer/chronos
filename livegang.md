@@ -52,14 +52,13 @@ Stappen 1 t/m 5 zijn uitgevoerd:
 - ⏭️ **Stap 8 (foutregistratie)**: overgeslagen op jouw verzoek. Vercel's eigen logs
   blijven wel gewoon beschikbaar. Kan later alsnog, zodra je een Sentry-account (of
   vergelijkbaar) + DSN hebt.
-- ⚠️ **Stap 9 (betatesters) — nog open, en groter dan alleen "wie":** de geseede
-  demo-gebruikers gebruiken `@chronos.local`-adressen. Lokaal werkt dat omdat Mailpit
-  alle mail onderschept, ongeacht domein — maar op de gehoste BETA-omgeving is
-  `chronos.local` geen bestaand, afleverbaar domein: magic-link-mails daarheen
-  bouncen gewoon. **Niemand kan nu inloggen op BETA** totdat er echte
-  e-mailadressen (of in elk geval een echt domein) worden toegevoegd. Zodra je een
-  testerslijst hebt, zet ik ze als Auth-gebruiker in Chronos Beta met hun eigen
-  e-mailadres.
+- 🔄 **Stap 9 (betatesters) — gestart.** Eerste (en vooralsnog enige) gebruiker in
+  Chronos Beta: **Erwin Haüer, erwin@knijff.com, rol beheerder**. Inloggen gaat via
+  Chronos' eigen magic-link (geen wachtwoordveld in de app-UI — een wachtwoord is wel
+  op het account gezet zoals gevraagd, maar heeft geen effect zolang de app alleen
+  magic-link aanbiedt). Verdere testers: zodra er een lijst is, zet ik ze op dezelfde
+  manier neer — met hun eigen, echte e-mailadres (zie de opmerking hierboven over
+  `@chronos.local` die niet afleverbaar is).
 
 ## 1. Omgevingen-overzicht
 
