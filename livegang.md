@@ -37,22 +37,29 @@ Stappen 1 t/m 5 zijn uitgevoerd:
   automatisch-bijwerkende URL: **https://chronos-git-beta-erwin-hauers-projects.vercel.app**
   (elke push naar `beta` deployt hier opnieuw naartoe, zonder handmatige stappen).
 
-**Nog niet gedaan, en waarom dit bij jou moet liggen:**
-
-- ⚠️ **Stap 6 (Deployment Protection)**: de beta-URL staat al niet publiek open — Vercel
-  vraagt standaard een Vercel-login ("Vercel Authentication"). Dat beschermt tegen
-  toevallige bezoekers, maar blokkeert ook je eigen betatesters als die geen
-  Vercel-account hebben. Kies zelf in de Vercel-projectinstellingen (Settings →
-  Deployment Protection) of je overschakelt naar "Password Protection" (gedeeld
-  wachtwoord, praktischer voor externe testers) of testers als Vercel-teamlid toevoegt.
-- ⚠️ **Stap 7 (backups)**: hangt af van het Supabase-abonnement van zowel het
-  bestaande LIVE-project als het nieuwe Chronos Beta-project — dat moet je zelf
-  checken/instellen in het Supabase-dashboard (Project Settings → Backups).
-- ⚠️ **Stap 8 (foutregistratie)**: vereist een nieuw account bij een derde partij
-  (bv. Sentry) — dat maak ik nooit zelf aan. Zodra je een account + DSN hebt, bouw ik
-  de code-integratie.
-- ⚠️ **Stap 9 (betatesters)**: wie precies wordt uitgenodigd is een keuze die alleen
-  jij kunt maken; zodra je een lijst hebt, zet ik ze als Auth-gebruiker in Chronos Beta.
+- ✅ **Stap 6 (Deployment Protection)**: Password Protection bleek een betaalde
+  Vercel-add-on ("Advanced Deployment Protection") te vereisen, die dit team niet
+  heeft. Op jouw keuze is de standaard Vercel-login-vereiste (SSO Protection) daarom
+  uitgezet voor preview-deploys — de beta-URL is nu rechtstreeks bereikbaar, maar
+  blijft wel achter Chronos' eigen magic-link-inlog zitten (niemand komt zonder
+  geldig account bij data).
+- ✅ **Stap 7 (backups)**: al geverifieerd zonder verdere actie — beide projecten
+  hebben standaard dagelijkse fysieke backups aan staan (`walg_enabled: true`).
+  Point-in-time recovery staat bij geen van beide aan; dat is een betaalde upgrade,
+  alleen nodig als je preciezer dan "terug naar gisteren" wilt kunnen herstellen. Een
+  proefherstel is nog niet gedaan — dat raakt een bestaand project, dus alleen op
+  jouw verzoek.
+- ⏭️ **Stap 8 (foutregistratie)**: overgeslagen op jouw verzoek. Vercel's eigen logs
+  blijven wel gewoon beschikbaar. Kan later alsnog, zodra je een Sentry-account (of
+  vergelijkbaar) + DSN hebt.
+- ⚠️ **Stap 9 (betatesters) — nog open, en groter dan alleen "wie":** de geseede
+  demo-gebruikers gebruiken `@chronos.local`-adressen. Lokaal werkt dat omdat Mailpit
+  alle mail onderschept, ongeacht domein — maar op de gehoste BETA-omgeving is
+  `chronos.local` geen bestaand, afleverbaar domein: magic-link-mails daarheen
+  bouncen gewoon. **Niemand kan nu inloggen op BETA** totdat er echte
+  e-mailadressen (of in elk geval een echt domein) worden toegevoegd. Zodra je een
+  testerslijst hebt, zet ik ze als Auth-gebruiker in Chronos Beta met hun eigen
+  e-mailadres.
 
 ## 1. Omgevingen-overzicht
 
