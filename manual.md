@@ -16,6 +16,9 @@ wat er per klant openstaat, en een controleerbare stap tussen "werk vastleggen" 
 Chronos vervangt geen juridisch werk of advies — het is puur de administratieve laag
 eromheen: tijdschrijven, factuuritems en specificaties.
 
+*Deze handleiding staat ook in de app zelf, via het profielmenu rechtsboven →
+**Handleiding** — die pagina toont automatisch de nieuwste versie van dit document.*
+
 ## 2. Belangrijkste features
 
 - **Inloggen zonder wachtwoord** — een link per e-mail (magic link), geen wachtwoord
@@ -32,6 +35,9 @@ eromheen: tijdschrijven, factuuritems en specificaties.
   voorbereiding op de uiteindelijke factuur.
 - **Wijzigingenlog** — elke aanpassing aan een factuuritem wordt vastgelegd: wat er
   wijzigde, door wie en wanneer.
+- **Klanten-overzicht** — per klant terugzien hoeveel er ooit is gefactureerd, met
+  een uitsplitsing per dossiertype en land, plus alle bijbehorende specificaties
+  (als PDF-download).
 - **Rollen** — Medewerker, Teamleider, Finance, Beheerder en Directie zien elk een
   andere selectie van het dashboard en mogen andere dingen (zie §3).
 
@@ -143,7 +149,27 @@ project) tot één geheel, ter voorbereiding op de factuur.
 Dat is de volledige route: van het vastleggen van een werkzaamheid tot de
 **definitieve specificatie**.
 
-## 5. Feedback geven tijdens de testfase
+## 5. Klantenoverzicht (Teamleider, Finance, Beheerder, Directie)
+
+Via **Klanten** in de zijbalk zie je, per klant, hoeveel er ooit is gefactureerd
+(alleen definitieve factuuritems tellen mee — nog openstaand werk staat hier niet
+bij, dat blijft bij Factuuritems).
+
+1. De lijst toont per klant het totaal gefactureerde bedrag, het aantal
+   definitieve factuuritems en het aantal specificaties — klik een klant aan voor
+   het detail.
+2. Op de klantpagina zie je het totaal, plus een uitsplitsing **per dossiertype**
+   (Merken, Opposities, etc.) en **per land**.
+3. Daaronder staat de volledige lijst van definitieve factuuritems (alleen-lezen —
+   deze zijn al gefactureerd en dus niet meer te wijzigen).
+4. Onderaan staan alle specificaties die ooit voor deze klant zijn vastgelegd, elk
+   met een knop om de PDF opnieuw te downloaden.
+
+Zodra een factuuritem op een definitieve specificatie terechtkomt, verdwijnt het
+automatisch uit de gewone Factuuritems-lijst bij de klant (die toont alleen nog
+niet-gefactureerd werk) en verschijnt het hier.
+
+## 6. Feedback geven tijdens de testfase
 
 Dit is een betaomgeving met verzonnen testdata — niets wat je hier invoert is een
 echte factuur of een echte cliënt. Loop tegen iets vreemds aan, mis je iets, of is

@@ -3,8 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { euro, isGefactureerd, isNogTeFactureren, regelbedrag, nettoOmzetPlaceholder } from "@/lib/factuurbedragen";
 import { parsePeriodeKey, periodeLabel, inPeriode } from "@/lib/omzet-periode";
-import { landNaamVoorIso, codeVoorDienstLabel, PRODUCTGROEP_CODES } from "@/lib/dossiernummer";
+import { codeVoorDienstLabel, PRODUCTGROEP_CODES } from "@/lib/dossiernummer";
 import { haalLandenMap, type LandenMap } from "@/lib/landen";
+import { eersteDienst, groepeerPerProductgroep, groepeerPerLand } from "@/lib/omzet-aggregatie";
 import { OmzetGrafiek, type OmzetRij } from "@/components/omzet-grafiek";
 import { PeriodeSelect } from "@/components/periode-select";
 import { JaarSelect } from "@/components/jaar-select";
@@ -47,20 +48,6 @@ type FactuurRegel = {
   factuuritem_dossiers: { type_dienst: string | null; land: string | null; volgorde: number }[];
 };
 
-function eersteDossier(r: FactuurRegel) {
-  const dossiers = r.factuuritem_dossiers ?? [];
-  if (dossiers.length === 0) return null;
-  return dossiers.slice().sort((a, b) => a.volgorde - b.volgorde)[0];
-}
-
-function eersteDienst(r: FactuurRegel): string {
-  return eersteDossier(r)?.type_dienst ?? "Onbekend";
-}
-
-function eersteLandIso(r: FactuurRegel): string | null {
-  return eersteDossier(r)?.land ?? null;
-}
-
 function buildOmzetGrafiekData(
   ditJaar: { medewerker_id: string; datum: string; honorarium: number; externe_kosten: number; korting: number }[],
   namenPerId: Map<string, string>
@@ -99,40 +86,6 @@ function buildOmzetGrafiekData(
   }
 
   return { chartData, medewerkerNamen };
-}
-
-// Omzet per productgroep, geordend op de acht dossiernummercodes die de
-// directie/beheerder-rapportage vast wil zien (TM/D/I/O/CA/S/W/@) — overige
-// diensten (bv. Algemeen/Mutaties) komen er in de weergave achteraan, niet weg.
-function groepeerPerProductgroep(rows: FactuurRegel[]) {
-  const map = new Map<string, { code: string; label: string; omzet: number; aantal: number }>();
-  for (const r of rows) {
-    const label = eersteDienst(r);
-    const code = label === "Onbekend" ? "—" : codeVoorDienstLabel(label);
-    const bestaand = map.get(label) ?? { code, label, omzet: 0, aantal: 0 };
-    bestaand.omzet += regelbedrag(r);
-    bestaand.aantal += 1;
-    map.set(label, bestaand);
-  }
-  const volgordeIndex = (code: string) => {
-    const i = PRODUCTGROEP_CODES.indexOf(code);
-    return i === -1 ? PRODUCTGROEP_CODES.length : i;
-  };
-  return Array.from(map.values()).sort((a, b) => volgordeIndex(a.code) - volgordeIndex(b.code));
-}
-
-function groepeerPerLand(rows: FactuurRegel[], landenMap: LandenMap, top: number) {
-  const map = new Map<string, { landNaam: string; iso: string | null; omzet: number }>();
-  for (const r of rows) {
-    const iso = eersteLandIso(r);
-    const landNaam = landNaamVoorIso(iso, landenMap);
-    const bestaand = map.get(landNaam) ?? { landNaam, iso, omzet: 0 };
-    bestaand.omzet += regelbedrag(r);
-    map.set(landNaam, bestaand);
-  }
-  return Array.from(map.values())
-    .sort((a, b) => b.omzet - a.omzet)
-    .slice(0, top);
 }
 
 // Per teamlid (teamleider eerst, dan alfabetisch): uren gefactureerd (aantal
