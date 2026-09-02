@@ -1,5 +1,5 @@
 import type { UserRole } from "@/lib/supabase/types";
-import { LayoutDashboard, Receipt, Users, Settings, CircleUser } from "lucide-react";
+import { LayoutDashboard, Receipt, Users, BookOpen, Settings, CircleUser } from "lucide-react";
 
 const ALLE_ROLLEN: UserRole[] = ["medewerker", "teamleider", "finance", "beheerder", "directie"];
 
@@ -32,6 +32,12 @@ export const NAV_ITEMS: NavItem[] = [
 ];
 
 export const NAV_ITEMS_BOTTOM: NavItem[] = [
+  {
+    label: "Handleiding",
+    href: "/handleiding",
+    icon: BookOpen,
+    roles: ALLE_ROLLEN,
+  },
   {
     label: "Profiel",
     href: "/profiel",

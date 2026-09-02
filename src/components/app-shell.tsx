@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Menu, LogOut, ChevronRight, UserRoundCog, BookOpen } from "lucide-react";
+import { Menu, LogOut, ChevronRight, UserRoundCog } from "lucide-react";
 import { ChronosLogo } from "@/components/chronos-logo";
 import { NavLinks } from "@/components/nav-links";
 import { Button } from "@/components/ui/button";
@@ -197,10 +197,6 @@ function AppShellContent({
                 <span className="text-xs font-normal text-muted-foreground">{profile.email}</span>
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem render={<Link href="/handleiding" />}>
-                <BookOpen className="h-4 w-4" />
-                Handleiding
-              </DropdownMenuItem>
               <DropdownMenuItem render={<Link href="/profiel" />}>Profiel</DropdownMenuItem>
               <DropdownMenuItem onClick={() => signOut()}>
                 <LogOut className="h-4 w-4" />

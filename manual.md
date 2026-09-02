@@ -16,8 +16,10 @@ wat er per klant openstaat, en een controleerbare stap tussen "werk vastleggen" 
 Chronos vervangt geen juridisch werk of advies — het is puur de administratieve laag
 eromheen: tijdschrijven, factuuritems en specificaties.
 
-*Deze handleiding staat ook in de app zelf, via het profielmenu rechtsboven →
-**Handleiding** — die pagina toont automatisch de nieuwste versie van dit document.*
+*Deze handleiding staat ook, mooier opgemaakt met visuals, in de app zelf — via de
+zijbalk onderaan, boven "Profiel". Dat is een los, met de hand opgemaakt scherm (geen
+automatische render van dit bestand); bij een nieuwe stap of feature hier, dus ook
+die pagina bijwerken.*
 
 ## 2. Belangrijkste features
 
@@ -171,6 +173,5 @@ niet-gefactureerd werk) en verschijnt het hier.
 
 ## 6. Feedback geven tijdens de testfase
 
-Dit is een betaomgeving met verzonnen testdata — niets wat je hier invoert is een
-echte factuur of een echte cliënt. Loop tegen iets vreemds aan, mis je iets, of is
-iets niet duidelijk? Meld dit bij [testcoördinator/kanaal — aanvullen].
+Loop je tegen iets vreemds aan, mis je iets, of is iets niet duidelijk? Meld dit bij
+[testcoördinator/kanaal — aanvullen].
