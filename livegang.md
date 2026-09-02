@@ -10,6 +10,79 @@ Uitgangspunten (besloten):
   token kan dus gewoon door alle drie de omgevingen gebruikt worden; geen sandbox nodig.
 - Backups en monitoring horen bij deze livegang, niet bij een latere fase.
 
+## Status (bijgewerkt 2026-09-02)
+
+Stappen 1 t/m 5 zijn uitgevoerd:
+
+- ✅ **Stap 1**: `vercel-build` gebruikt nu `SUPABASE_PROJECT_REF` (met de bestaande
+  productie-ref als default) i.p.v. een hardcoded waarde. Geverifieerd: LIVE-deploys
+  blijven werken.
+- ✅ **Stap 2**: nieuw Supabase-project **"Chronos Beta"** aangemaakt (regio eu-north-1,
+  org `wdfiivdxprswjfrxcmqr`, ref `rmccpxyuuocjxwyxoyvd`).
+- ✅ **Stap 3**: volledige migratiehistorie toegepast op Chronos Beta, via een deploy op
+  de nieuwe `beta`-branch (Vercel's build-omgeving kon de Postgres-pooler wél
+  betrouwbaar bereiken — vanaf deze machine gaf zowel `supabase db push` als
+  `migration repair` rechtstreeks een TLS-verbindingsfout, ongeacht wachtwoord/ref;
+  hetzelfde patroon als eerder bij productie). Onderweg de eenmalige
+  Espero/KNVB-opschoningsmigratie aangepast zodat hij op een lege database een
+  onschuldige no-op is in plaats van hard te falen (zie de aparte commit daarvoor).
+- ✅ **Stap 4**: bestaande `scripts/seed.mjs` gedraaid tegen Chronos Beta (basisset:
+  7 demo-gebruikers, 2 teams, 2 klanten, 10 factuuritems, 3 specificaties). De
+  rijkere/realistischere BETA-specifieke uitbreiding (zie §4 hieronder) is nog niet
+  gedaan — dit is de bestaande lokale demoset, één-op-één overgezet.
+- ✅ **Stap 5**: branch `beta` aangemaakt en gepusht; branch-gebonden environment
+  variables ingesteld in Vercel (`NEXT_PUBLIC_SUPABASE_URL`,
+  `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_PROJECT_REF`,
+  `SUPABASE_DB_PASSWORD`), gescopeerd op de `beta`-branch specifiek. Stabiele,
+  automatisch-bijwerkende URL: **https://chronos-git-beta-erwin-hauers-projects.vercel.app**
+  (elke push naar `beta` deployt hier opnieuw naartoe, zonder handmatige stappen).
+
+- ✅ **Stap 6 (Deployment Protection)**: Password Protection bleek een betaalde
+  Vercel-add-on ("Advanced Deployment Protection") te vereisen, die dit team niet
+  heeft. Op jouw keuze is de standaard Vercel-login-vereiste (SSO Protection) daarom
+  uitgezet voor preview-deploys — de beta-URL is nu rechtstreeks bereikbaar, maar
+  blijft wel achter Chronos' eigen magic-link-inlog zitten (niemand komt zonder
+  geldig account bij data).
+- ✅ **Stap 7 (backups)**: al geverifieerd zonder verdere actie — beide projecten
+  hebben standaard dagelijkse fysieke backups aan staan (`walg_enabled: true`).
+  Point-in-time recovery staat bij geen van beide aan; dat is een betaalde upgrade,
+  alleen nodig als je preciezer dan "terug naar gisteren" wilt kunnen herstellen. Een
+  proefherstel is nog niet gedaan — dat raakt een bestaand project, dus alleen op
+  jouw verzoek.
+- ⏭️ **Stap 8 (foutregistratie)**: overgeslagen op jouw verzoek. Vercel's eigen logs
+  blijven wel gewoon beschikbaar. Kan later alsnog, zodra je een Sentry-account (of
+  vergelijkbaar) + DSN hebt.
+- 🔄 **Stap 9 (betatesters) — gestart.** Eerste (en vooralsnog enige) gebruiker in
+  Chronos Beta: **Erwin Haüer, erwin@knijff.com, rol beheerder**. Inloggen gaat via
+  Chronos' eigen magic-link (geen wachtwoordveld in de app-UI — een wachtwoord is wel
+  op het account gezet zoals gevraagd, maar heeft geen effect zolang de app alleen
+  magic-link aanbiedt). Verdere testers: zodra er een lijst is, zet ik ze op dezelfde
+  manier neer — met hun eigen, echte e-mailadres (zie de opmerking hierboven over
+  `@chronos.local` die niet afleverbaar is).
+
+## 0. Werkwijze vanaf nu (afgesproken 2026-09-02)
+
+Nieuwe wijzigingen gaan niet meer standaard rechtstreeks naar `main`/LIVE:
+
+- **Kleine/simpele wijzigingen**: direct committen en pushen naar `beta` — deploy't
+  automatisch naar de BETA-URL om uit te proberen.
+- **Grotere/nieuwe features**: eerst een aparte featurebranch voorstellen (niet
+  meteen op `beta` zelf werken), zodat BETA intussen stabiel/bruikbaar blijft. Die
+  branch wordt pas in `beta` gemerged zodra hij klaar is om getest te worden.
+- **Promotie naar `main` (LIVE)**: pas nadat het op BETA is getest en expliciet is
+  goedgekeurd — nooit automatisch. Zie §3 voor het exacte git-commando's-voorbeeld.
+
+### BETA-wachtrij (staat op BETA, nog niet gepromoot naar LIVE)
+
+Deze lijst houd ik bij zodra ik iets naar `beta` push (toevoegen) en werk ik bij
+zodra `beta` naar `main` wordt gepromoot (verwijderen). Controleren of deze lijst
+nog klopt met de werkelijkheid kan altijd met `git log origin/main..origin/beta`.
+
+*Bijgewerkt 2026-09-02 — momenteel leeg.* `beta` bevat op dit moment alleen een
+lege trigger-commit; `main` staat er zelfs voor (recentere livegang-doc-updates die
+nog niet naar `beta` zijn doorgezet). Zodra hier een echte feature op komt te staan,
+verschijnt die hieronder met een korte omschrijving en de datum van pushen.
+
 ## 1. Omgevingen-overzicht
 
 | | **LIVE** | **BETA** | **TEST** |
