@@ -72,6 +72,17 @@ Nieuwe wijzigingen gaan niet meer standaard rechtstreeks naar `main`/LIVE:
 - **Promotie naar `main` (LIVE)**: pas nadat het op BETA is getest en expliciet is
   goedgekeurd — nooit automatisch. Zie §3 voor het exacte git-commando's-voorbeeld.
 
+### BETA-wachtrij (staat op BETA, nog niet gepromoot naar LIVE)
+
+Deze lijst houd ik bij zodra ik iets naar `beta` push (toevoegen) en werk ik bij
+zodra `beta` naar `main` wordt gepromoot (verwijderen). Controleren of deze lijst
+nog klopt met de werkelijkheid kan altijd met `git log origin/main..origin/beta`.
+
+*Bijgewerkt 2026-09-02 — momenteel leeg.* `beta` bevat op dit moment alleen een
+lege trigger-commit; `main` staat er zelfs voor (recentere livegang-doc-updates die
+nog niet naar `beta` zijn doorgezet). Zodra hier een echte feature op komt te staan,
+verschijnt die hieronder met een korte omschrijving en de datum van pushen.
+
 ## 1. Omgevingen-overzicht
 
 | | **LIVE** | **BETA** | **TEST** |
