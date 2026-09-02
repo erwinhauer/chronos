@@ -83,6 +83,10 @@ nog klopt met de werkelijkheid kan altijd met `git log origin/main..origin/beta`
 - **In-app Handleiding** — nieuw menu-item "Handleiding" (profielmenu, boven
   "Profiel") dat `manual.md` rechtstreeks als opgemaakte pagina toont.
   Gepusht naar `beta` op 2026-09-02, nog niet gepromoot naar `main`.
+- **Klanten-overzicht** — nieuwe sectie (teamleider/finance/beheerder/directie)
+  met gefactureerde omzet per klant, uitgesplitst per dossiertype en land, plus
+  specificatie-downloads. Gepusht naar `beta` op 2026-09-02, nog niet
+  gepromoot naar `main`.
 
 Daarnaast staan er nog wat livegang-doc-updates op `main` die nog niet naar
 `beta` zijn doorgezet (geen functionele wijziging, alleen documentatie).
