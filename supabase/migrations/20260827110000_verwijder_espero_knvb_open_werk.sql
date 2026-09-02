@@ -11,8 +11,11 @@
 -- te verwijderen zonder de gefactureerde-werk-grens hierboven te doorbreken.
 --
 -- Faalt bewust hard (raise exception, stopt de hele deploy) als een van de
--- twee klantnamen niet precies één keer wordt gevonden — een verkeerde/
--- dubbele match mag hier nooit stilzwijgend de foute rijen raken.
+-- twee klantnamen méér dan één keer wordt gevonden — een dubbele match mag
+-- hier nooit stilzwijgend de foute rijen raken. Geen enkele match (0) is
+-- juist geen fout: dat is de normale situatie op een omgeving waar deze
+-- klanten nooit hebben bestaan (bv. een verse BETA/TEST-database) of waar
+-- deze opschoning al eerder is toegepast — daar is dit dan bewust een no-op.
 do $$
 declare
   espero_id uuid;
@@ -25,11 +28,15 @@ begin
   select count(*) into espero_count from public.klanten where naam ilike '%espero%';
   select count(*) into knvb_count from public.klanten where naam ilike '%voetbalbond%';
 
-  if espero_count <> 1 then
-    raise exception 'Verwacht precies 1 klant met naam ILIKE %%espero%%, gevonden: %', espero_count;
+  if espero_count > 1 then
+    raise exception 'Verwacht hoogstens 1 klant met naam ILIKE %%espero%%, gevonden: %', espero_count;
   end if;
-  if knvb_count <> 1 then
-    raise exception 'Verwacht precies 1 klant met naam ILIKE %%voetbalbond%%, gevonden: %', knvb_count;
+  if knvb_count > 1 then
+    raise exception 'Verwacht hoogstens 1 klant met naam ILIKE %%voetbalbond%%, gevonden: %', knvb_count;
+  end if;
+  if espero_count = 0 and knvb_count = 0 then
+    raise notice 'Geen Espero B.V. of KNVB-klant gevonden — niets op te schonen (no-op).';
+    return;
   end if;
 
   select id into espero_id from public.klanten where naam ilike '%espero%';
