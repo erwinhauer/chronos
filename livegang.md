@@ -60,6 +60,18 @@ Stappen 1 t/m 5 zijn uitgevoerd:
   manier neer — met hun eigen, echte e-mailadres (zie de opmerking hierboven over
   `@chronos.local` die niet afleverbaar is).
 
+## 0. Werkwijze vanaf nu (afgesproken 2026-09-02)
+
+Nieuwe wijzigingen gaan niet meer standaard rechtstreeks naar `main`/LIVE:
+
+- **Kleine/simpele wijzigingen**: direct committen en pushen naar `beta` — deploy't
+  automatisch naar de BETA-URL om uit te proberen.
+- **Grotere/nieuwe features**: eerst een aparte featurebranch voorstellen (niet
+  meteen op `beta` zelf werken), zodat BETA intussen stabiel/bruikbaar blijft. Die
+  branch wordt pas in `beta` gemerged zodra hij klaar is om getest te worden.
+- **Promotie naar `main` (LIVE)**: pas nadat het op BETA is getest en expliciet is
+  goedgekeurd — nooit automatisch. Zie §3 voor het exacte git-commando's-voorbeeld.
+
 ## 1. Omgevingen-overzicht
 
 | | **LIVE** | **BETA** | **TEST** |
