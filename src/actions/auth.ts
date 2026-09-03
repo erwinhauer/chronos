@@ -39,6 +39,33 @@ export async function stuurMagicLink(
   return { error: null, success: true };
 }
 
+// TIJDELIJK — alleen voor de feature/patricia-koppeling branch, om te kunnen
+// inloggen terwijl Chronos Beta's magic-link-mails niet aankomen (geen custom
+// SMTP). Niet meenemen naar `beta`/`main`: Chronos logt normaal uitsluitend in
+// via magic link, bewust zonder wachtwoordveld.
+export type WachtwoordLoginState = { error: string | null };
+
+export async function logInMetWachtwoord(
+  _prevState: WachtwoordLoginState,
+  formData: FormData
+): Promise<WachtwoordLoginState> {
+  const email = String(formData.get("email") ?? "").trim();
+  const wachtwoord = String(formData.get("wachtwoord") ?? "");
+  const next = String(formData.get("next") ?? "/dashboard");
+
+  if (!email || !wachtwoord) {
+    return { error: "Vul e-mailadres en wachtwoord in." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signInWithPassword({ email, password: wachtwoord });
+  if (error) {
+    return { error: "Inloggen mislukt: " + error.message };
+  }
+
+  redirect(next);
+}
+
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();
