@@ -1,10 +1,12 @@
 "use client";
 
-import { Fragment, useActionState, useEffect, useMemo, useState, useTransition } from "react";
+import { Fragment, useActionState, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, EyeOff, Plus } from "lucide-react";
 import type { FactuurItemFormState } from "@/actions/factuuritems";
 import { wisselKlantTaal, wisselKlantValuta } from "@/actions/klanten";
+import { haalPatriciaDossierInfo } from "@/actions/patricia";
+import { vindKlantVoorPatriciaNaam } from "@/lib/patricia-match";
 import { euro } from "@/lib/factuurbedragen";
 import { createClient } from "@/lib/supabase/client";
 import { DossiernummerTagInput } from "@/components/dossiernummer-tag-input";
@@ -134,6 +136,50 @@ export function FactuurItemForm({
   const [dossierSelectie, setDossierSelectie] = useState<string[]>(initial?.dossiernummers ?? []);
   const [dossiernamen, setDossiernamen] = useState<Record<string, string>>(initial?.dossiernamenPerNummer ?? {});
   const [klantId, setKlantId] = useState(initial?.klant_id ?? voorgeselecteerdeKlantId ?? "");
+  const klantIdRef = useRef(klantId);
+  useEffect(() => {
+    klantIdRef.current = klantId;
+  }, [klantId]);
+
+  // Patricia-koppeling: bij een nieuw dossiernummer automatisch de dossiernaam
+  // (Catch Word) en — als er geen klant is gekozen en Patricia's Client-naam
+  // eenduidig overeenkomt met een bestaande klant — ook de klant voorstellen.
+  // Faalt Patricia (onbereikbaar, dossier onbekend)? Dan blijft het veld
+  // gewoon leeg voor handmatige invoer, nooit een blokkerende foutmelding.
+  const [dossiersInBehandeling, setDossiersInBehandeling] = useState<Set<string>>(new Set());
+  const [patriciaKlantHint, setPatriciaKlantHint] = useState<string | null>(null);
+
+  function handleDossierSelectieChange(nieuweSelectie: string[]) {
+    const toegevoegd = nieuweSelectie.filter((d) => !dossierSelectie.includes(d));
+    setDossierSelectie(nieuweSelectie);
+    for (const d of toegevoegd) {
+      setDossiersInBehandeling((prev) => new Set(prev).add(d));
+      haalPatriciaDossierInfo(d)
+        .then((info) => {
+          if (!info) return;
+          if (info.dossiernaam) {
+            setDossiernamen((prev) => (prev[d] ? prev : { ...prev, [d]: info.dossiernaam! }));
+          }
+          if (info.klantNaam && !klantIdRef.current) {
+            const match = vindKlantVoorPatriciaNaam(klanten, info.klantNaam);
+            if (match) {
+              setKlantId(match.id);
+              setPatriciaKlantHint(null);
+            } else {
+              setPatriciaKlantHint(info.klantNaam);
+            }
+          }
+        })
+        .catch(() => {})
+        .finally(() => {
+          setDossiersInBehandeling((prev) => {
+            const volgende = new Set(prev);
+            volgende.delete(d);
+            return volgende;
+          });
+        });
+    }
+  }
   const [medewerkerIdVeld, setMedewerkerIdVeld] = useState(initial?.medewerker_id ?? medewerkerId);
   const [teamId, setTeamId] = useState(
     initial?.team_id ?? standaardTeamId ?? (teams.length === 1 ? teams[0].id : "")
@@ -281,19 +327,27 @@ export function FactuurItemForm({
             </CardHeader>
             <CardContent className="flex flex-col gap-5">
               <div className="grid gap-6 sm:grid-cols-2">
-                <DossiernummerTagInput value={dossierSelectie} onChange={setDossierSelectie} landen={landen} />
+                <DossiernummerTagInput value={dossierSelectie} onChange={handleDossierSelectieChange} landen={landen} />
                 <div className="flex flex-col gap-2">
                   <Label>Klant</Label>
                   <KlantCombobox
                     klanten={klanten}
                     value={klantId}
-                    onChange={setKlantId}
+                    onChange={(id) => {
+                      setKlantId(id);
+                      setPatriciaKlantHint(null);
+                    }}
                     onKlantAangemaakt={(nieuw) => setExtraKlanten((prev) => [...prev, nieuw])}
                     magHubspotImporteren={magHubspotImporteren}
                     magKlantenVerwijderen={magKlantenVerwijderen}
                   />
                   {klant?.adres && (
                     <p className="text-xs whitespace-pre-line text-muted-foreground">{klant.adres}</p>
+                  )}
+                  {patriciaKlantHint && (
+                    <p className="text-xs text-muted-foreground">
+                      Patricia: <span className="font-medium">{patriciaKlantHint}</span> — kies zelf de juiste klant.
+                    </p>
                   )}
                 </div>
               </div>
@@ -302,7 +356,12 @@ export function FactuurItemForm({
                 <div className="flex flex-col gap-3">
                   {dossierSelectie.map((d) => (
                     <div key={d} className="flex flex-col gap-2">
-                      <Label htmlFor={`dossiernaam_${d}`}>Dossiernaam — {d}</Label>
+                      <Label htmlFor={`dossiernaam_${d}`}>
+                        Dossiernaam — {d}
+                        {dossiersInBehandeling.has(d) && (
+                          <span className="ml-2 font-normal text-muted-foreground">Patricia raadplegen…</span>
+                        )}
+                      </Label>
                       <Input
                         id={`dossiernaam_${d}`}
                         value={dossiernamen[d] ?? ""}
