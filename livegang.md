@@ -78,12 +78,16 @@ Deze lijst houd ik bij zodra ik iets naar `beta` push (toevoegen) en werk ik bij
 zodra `beta` naar `main` wordt gepromoot (verwijderen). Controleren of deze lijst
 nog klopt met de werkelijkheid kan altijd met `git log origin/main..origin/beta`.
 
-*Bijgewerkt 2026-09-02 — momenteel leeg.* In-app Handleiding en Klanten-overzicht
-zijn beide gepromoot naar `main`/LIVE op 2026-09-02 (na testen op BETA en
-expliciet akkoord). Daarna is de Handleiding verplaatst naar de zijbalk (boven
-"Profiel") en herontworpen met echte componenten (commit `7aaa3b1`) — ook getest
-op BETA en na akkoord gepromoot naar `main`/LIVE op 2026-09-02. `main` en `beta`
-staan weer gelijk.
+*Bijgewerkt 2026-09-03.* In-app Handleiding en Klanten-overzicht zijn beide
+gepromoot naar `main`/LIVE op 2026-09-02 (na testen op BETA en expliciet
+akkoord). Daarna is de Handleiding verplaatst naar de zijbalk (boven "Profiel")
+en herontworpen met echte componenten (commit `7aaa3b1`) — ook getest op BETA
+en na akkoord gepromoot naar `main`/LIVE op 2026-09-02.
+
+- **Op BETA, nog niet gepromoot**: fix voor het Medewerker-badge in de
+  factuuritems-per-klant-tabel (commit `e440fc1`, 2026-09-03) — viel niet terug
+  op automatisch gesuggereerde initialen wanneer een gebruiker geen initialen
+  had ingesteld, waardoor het badge leeg bleef (o.a. bij Erwin zelf op BETA).
 
 ## 1. Omgevingen-overzicht
 
