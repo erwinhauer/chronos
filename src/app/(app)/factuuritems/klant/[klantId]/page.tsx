@@ -6,6 +6,7 @@ import { haalLandenMap } from "@/lib/landen";
 import { FactuurGroep, type FactuurGroepItem } from "@/components/factuur-groep";
 import { LinkButton } from "@/components/link-button";
 import { SetBreadcrumb } from "@/lib/breadcrumb-context";
+import { suggestInitialen } from "@/lib/initials";
 
 export default async function FactuuritemsPerKlantPagina({
   params,
@@ -66,7 +67,7 @@ export default async function FactuuritemsPerKlantPagina({
       status: item.status,
       medewerkerId: item.medewerker_id,
       medewerkerNaam: medewerker?.full_name ?? null,
-      medewerkerInitialen: medewerker?.initialen ?? null,
+      medewerkerInitialen: medewerker ? medewerker.initialen || suggestInitialen(medewerker.full_name) : null,
       laatstBewerktDoor,
       projectId: item.project_id,
       projectNaam: project?.naam ?? null,
