@@ -18,6 +18,7 @@ export function KlantCombobox({
   onKlantAangemaakt,
   magHubspotImporteren = false,
   magKlantenVerwijderen = false,
+  zoekVoorstel,
 }: {
   klanten: Klant[];
   value: string;
@@ -25,10 +26,25 @@ export function KlantCombobox({
   onKlantAangemaakt: (klant: NieuweKlant) => void;
   magHubspotImporteren?: boolean;
   magKlantenVerwijderen?: boolean;
+  // Bv. een Client-naam uit Patricia zonder eenduidige match: vult de
+  // zoekbalk voor en opent 'm, zodat direct een fuzzy match of "nieuwe klant
+  // aanmaken" met die naam gekozen kan worden — zonder opnieuw te hoeven typen.
+  zoekVoorstel?: string;
 }) {
   const [invoer, setInvoer] = useState("");
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  // Render-fase aanpassing (zelfde patroon als elders in dit formulier) i.p.v.
+  // setState in een effect: bij een nieuwe zoekVoorstel-waarde de zoekbalk
+  // vullen en openen — geen .focus() nodig (en niet gewenst: dat zou de
+  // onFocus-handler hieronder triggeren, die invoer weer leegmaakt voor een
+  // verse zoekopdracht).
+  const [toegepasteVoorstel, setToegepasteVoorstel] = useState<string | undefined>(undefined);
+  if (zoekVoorstel && zoekVoorstel !== toegepasteVoorstel) {
+    setToegepasteVoorstel(zoekVoorstel);
+    setInvoer(zoekVoorstel);
+    setOpen(true);
+  }
 
   const [hubspotResultaten, setHubspotResultaten] = useState<HubspotZoekresultaat[]>([]);
   const [hubspotZoekPending, setHubspotZoekPending] = useState(false);

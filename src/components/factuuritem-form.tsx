@@ -356,6 +356,7 @@ export function FactuurItemForm({
                     onKlantAangemaakt={(nieuw) => setExtraKlanten((prev) => [...prev, nieuw])}
                     magHubspotImporteren={magHubspotImporteren}
                     magKlantenVerwijderen={magKlantenVerwijderen}
+                    zoekVoorstel={patriciaKlantHint ?? undefined}
                   />
                   {klant?.adres && (
                     <p className="text-xs whitespace-pre-line text-muted-foreground">{klant.adres}</p>
