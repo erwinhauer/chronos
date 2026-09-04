@@ -151,7 +151,23 @@ export function FactuurItemForm({
 
   function handleDossierSelectieChange(nieuweSelectie: string[]) {
     const toegevoegd = nieuweSelectie.filter((d) => !dossierSelectie.includes(d));
+    const verwijderd = dossierSelectie.filter((d) => !nieuweSelectie.includes(d));
     setDossierSelectie(nieuweSelectie);
+
+    // Een verwijderd dossier neemt zijn eigen dossiernaam mee, en — omdat
+    // Klant een gedeeld veld is voor het hele factuuritem, niet per dossier —
+    // ook de (mogelijk automatisch ingevulde) klant, zodat er nooit een klant
+    // blijft hangen die bij een inmiddels verwijderd dossier hoorde.
+    if (verwijderd.length > 0) {
+      setDossiernamen((prev) => {
+        const volgende = { ...prev };
+        for (const d of verwijderd) delete volgende[d];
+        return volgende;
+      });
+      setKlantId("");
+      setPatriciaKlantHint(null);
+    }
+
     for (const d of toegevoegd) {
       setDossiersInBehandeling((prev) => new Set(prev).add(d));
       haalPatriciaDossierInfo(d)
