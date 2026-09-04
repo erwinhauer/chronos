@@ -123,6 +123,28 @@ function berekenTeamlidKpiRijen(
   });
 }
 
+// Onderhanden werk (nog te factureren) per teamlid, zelfde volgorde als de
+// "Per teamlid"-tegels hierboven: teamleider eerst, dan alfabetisch.
+function berekenOhwPerTeamlid(
+  ohwRows: FactuurRegel[],
+  leden: Set<string>,
+  namenPerId: Map<string, string>,
+  teamleiderIds: Set<string>
+): { naam: string; isTeamleider: boolean; bedrag: number }[] {
+  const map = new Map<string, { naam: string; isTeamleider: boolean; bedrag: number }>();
+  for (const lidId of leden) {
+    map.set(lidId, { naam: namenPerId.get(lidId) ?? "Onbekend", isTeamleider: teamleiderIds.has(lidId), bedrag: 0 });
+  }
+  for (const r of ohwRows) {
+    const rij = map.get(r.medewerker_id);
+    if (rij) rij.bedrag += regelbedrag(r);
+  }
+  return Array.from(map.values()).sort((a, b) => {
+    if (a.isTeamleider !== b.isTeamleider) return a.isTeamleider ? -1 : 1;
+    return a.naam.localeCompare(b.naam);
+  });
+}
+
 // Top-klanten mét een per-klant uitsplitsing naar productgroep en land/regio
 // (voor de uitklapbare rijen in TopKlantenTabel) — dezelfde functie voedt zowel
 // de bedrijfsbrede kaart als elke per-team kaart, elk met hun eigen rijenset.
@@ -294,6 +316,15 @@ export default async function DashboardPage({
         (r) => leden.has(r.medewerker_id) && inPeriode(r.datum, teamlidPeriode, gekozenJaar)
       );
       const teamlidKpiRijen = berekenTeamlidKpiRijen(teamItemsInTeamlidPeriode, leden, namenPerId, teamleiderIds);
+      // Zelfde periode-filter als de "Nog te factureren werk van het team"-tegel
+      // hieronder (ohwRows, gefilterd op de globale periode/jaar) — de uitsplitsing
+      // per teamlid moet optellen tot precies het bedrag dat die tegel toont.
+      const ohwPerTeamlid = berekenOhwPerTeamlid(
+        ohwRows.filter((r) => leden.has(r.medewerker_id)),
+        leden,
+        namenPerId,
+        teamleiderIds
+      );
 
       return {
         teamId: team.id,
@@ -304,6 +335,7 @@ export default async function DashboardPage({
         gefactureerdMtd,
         maandTargetBruto,
         nogTeFactureren: ohwPerTeamId.get(team.id) ?? 0,
+        ohwPerTeamlid,
         teamlidKpiRijen,
         brutoOmzetTeam,
         urenOmzetTeam,
@@ -861,16 +893,31 @@ export default async function DashboardPage({
                         </CardContent>
                       </Card>
                       <Card className="rounded-2xl">
-                        <CardContent className="flex items-center gap-4">
-                          <StatIcon icon={Briefcase} tint="warning" className="h-11 w-11" />
-                          <div>
-                            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                              Nog te factureren werk van het team
-                            </p>
-                            <div className="text-xl font-semibold tabular-figures text-warning">
-                              {euro(t.nogTeFactureren)}
+                        <CardContent className="flex flex-col gap-3">
+                          <div className="flex items-center gap-4">
+                            <StatIcon icon={Briefcase} tint="warning" className="h-11 w-11" />
+                            <div>
+                              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                                Nog te factureren werk van het team
+                              </p>
+                              <div className="text-xl font-semibold tabular-figures text-warning">
+                                {euro(t.nogTeFactureren)}
+                              </div>
                             </div>
                           </div>
+                          {t.ohwPerTeamlid.length > 0 && (
+                            <div className="flex flex-col gap-1 border-t border-border pt-2">
+                              {t.ohwPerTeamlid.map((lid) => (
+                                <div key={lid.naam} className="flex items-center justify-between text-xs">
+                                  <span className="text-muted-foreground">
+                                    {lid.naam}
+                                    {lid.isTeamleider && " (TL)"}
+                                  </span>
+                                  <span className="tabular-figures font-medium">{euro(lid.bedrag)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </CardContent>
                       </Card>
                       <Card className="rounded-2xl">
