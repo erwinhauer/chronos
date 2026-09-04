@@ -53,7 +53,7 @@ export default async function FactuurItemBewerkenPage({
   const { data: item } = await supabase
     .from("factuuritems")
     .select(
-      "*, laatst_bewerkt_door_profiel:profiles!factuuritems_laatst_bewerkt_door_fkey(full_name), factuuritem_dossiers(dossiernummer, type_dienst, land, matter_naam, volgorde), klanten(id, naam, adres, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal, valuta)"
+      "*, laatst_bewerkt_door_profiel:profiles!factuuritems_laatst_bewerkt_door_fkey(full_name), factuuritem_dossiers(dossiernummer, type_dienst, land, matter_naam, volgorde), klanten(id, naam, adres, patricia_id, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal, valuta)"
     )
     .eq("id", id)
     .single();
@@ -82,7 +82,7 @@ export default async function FactuurItemBewerkenPage({
   ] = await Promise.all([
     supabase
       .from("klanten")
-      .select("id, naam, adres, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal, valuta")
+      .select("id, naam, adres, patricia_id, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal, valuta")
       .eq("status", "actief")
       .order("naam"),
     supabase.from("projecten").select("id, klant_id, naam, po_nummer").eq("actief", true).order("naam"),
@@ -142,7 +142,6 @@ export default async function FactuurItemBewerkenPage({
         landen={landen}
         medewerkers={medewerkers ?? undefined}
         magMedewerkerWijzigen={magAllesBewerken}
-        magKlantenVerwijderen={profile?.role === "beheerder"}
         wijzigingenLog={wijzigingenLog}
         teams={teams}
         initial={{

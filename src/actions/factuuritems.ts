@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { parseDossiernummer } from "@/lib/dossiernummer";
+import { zoekDossierInfo } from "@/lib/patricia";
 import type { PrijsType, KortingType } from "@/lib/supabase/types";
 
 export type FactuurItemFormState = { error: string | null; success: boolean };
@@ -92,24 +93,31 @@ type DossierResolutie =
   | {
       ok: true;
       rijen: { dossiernummer: string; type_dienst: string; land: string; matter_naam: string | null; volgorde: number }[];
+      // Patricia's ACTOR_ID voor de Client die alle dossiers hieronder delen
+      // (afgedwongen in de loop hieronder) — gebruikt om het ingestuurde
+      // klant_id server-side te toetsen, nooit de client hierin vertrouwen.
+      klantActorId: string;
     };
 
-// Zolang er geen Patricia-koppeling is, typt de gebruiker het dossiernummer
-// vrij in — alleen het format wordt (opnieuw, server-side) gevalideerd via
-// parseDossiernummer(). De dossiernaam (het merk) vult de gebruiker nu zelf
-// in per dossier; zodra de Patricia-koppeling er is kan dit automatisch op
-// basis van het dossiernummer.
-function resolveDossiers(dossierParen: { dossiernummer: string; dossiernaam: string }[]): DossierResolutie {
+// Elk dossier moet in Patricia bestaan — dit is een harde vereiste (zie
+// src/lib/patricia.ts), geen best-effort meer. Meerdere dossiers op één regel
+// mag, maar alleen van hetzelfde type (TM, O, I, A, etc.) én hetzelfde land
+// — anders is achteraf niet meer te meten hoeveel omzet er per dossiertype/
+// land is geschreven, en zou de klant (bepaald door Patricia) niet eenduidig
+// zijn. De dossiernaam (het merk) blijft een door de gebruiker bewerkbaar
+// veld, wel verplicht.
+async function resolveDossiers(
+  dossierParen: { dossiernummer: string; dossiernaam: string }[]
+): Promise<DossierResolutie> {
   if (dossierParen.length === 0) {
     return { ok: false, error: "Voeg minimaal één dossier toe." };
   }
 
   const rijen: { dossiernummer: string; type_dienst: string; land: string; matter_naam: string | null; volgorde: number }[] =
     [];
-  // Meerdere dossiers op één regel mag, maar alleen van hetzelfde type (TM, O,
-  // I, A, etc.) — anders is achteraf niet meer te meten hoeveel omzet er per
-  // dossiertype is geschreven. Land mag wel verschillen tussen dossiers.
-  let eersteType: { code: string; label: string } | null = null;
+  let eersteType: { code: string; label: string; landIso: string } | null = null;
+  let klantActorId: string | null = null;
+
   for (const [index, { dossiernummer, dossiernaam }] of dossierParen.entries()) {
     const parsed = parseDossiernummer(dossiernummer);
     if (!parsed) {
@@ -119,13 +127,30 @@ function resolveDossiers(dossierParen: { dossiernummer: string; dossiernaam: str
       return { ok: false, error: `Vul de dossiernaam in voor dossier "${dossiernummer}".` };
     }
     if (eersteType === null) {
-      eersteType = { code: parsed.typeCode, label: parsed.typeLabel };
-    } else if (parsed.typeCode !== eersteType.code) {
+      eersteType = { code: parsed.typeCode, label: parsed.typeLabel, landIso: parsed.landIso };
+    } else if (parsed.typeCode !== eersteType.code || parsed.landIso !== eersteType.landIso) {
       return {
         ok: false,
-        error: `Dossier "${dossiernummer}" (${parsed.typeLabel}) heeft een ander type dan de eerder toegevoegde dossiers (${eersteType.label}). Combineer op één factuuritem alleen dossiers van hetzelfde type.`,
+        error: `Dossier "${dossiernummer}" (${parsed.typeLabel} · ${parsed.landIso}) heeft een ander type of land dan de eerder toegevoegde dossiers (${eersteType.label} · ${eersteType.landIso}). Combineer op één factuuritem alleen dossiers van hetzelfde type én land.`,
       };
     }
+
+    const info = await zoekDossierInfo(dossiernummer);
+    if (!info) {
+      return { ok: false, error: `Dossiernummer "${dossiernummer}" is niet gevonden in Patricia (of Patricia is niet bereikbaar).` };
+    }
+    if (!info.klantActorId) {
+      return { ok: false, error: `Voor dossier "${dossiernummer}" staat geen Client geregistreerd in Patricia.` };
+    }
+    if (klantActorId === null) {
+      klantActorId = info.klantActorId;
+    } else if (info.klantActorId !== klantActorId) {
+      return {
+        ok: false,
+        error: `Dossier "${dossiernummer}" hoort in Patricia bij een andere klant dan de eerder toegevoegde dossiers.`,
+      };
+    }
+
     rijen.push({
       dossiernummer,
       type_dienst: parsed.typeLabel,
@@ -135,13 +160,26 @@ function resolveDossiers(dossierParen: { dossiernummer: string; dossiernaam: str
     });
   }
 
-  return { ok: true, rijen };
+  return { ok: true, rijen, klantActorId: klantActorId! };
 }
 
-async function klantBestaat(supabase: Awaited<ReturnType<typeof createClient>>, klant_id: string): Promise<boolean> {
-  if (!klant_id) return false;
-  const { data } = await supabase.from("klanten").select("id").eq("id", klant_id).single();
-  return Boolean(data);
+// "Chronos-klanten" bestaan niet los van Patricia — het ingestuurde klant_id
+// moet dus altijd horen bij de Patricia-klant van de toegevoegde dossiers.
+// Een klant zonder patricia_id (nog niet via deze koppeling aangemaakt/
+// gekoppeld, bv. een ouder bestaand item) wordt hier bewust doorgelaten —
+// anders zou bewerken van bestaande, oudere factuuritems kunnen vastlopen.
+async function valideerKlantBijDossiers(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  klant_id: string,
+  klantActorId: string
+): Promise<string | null> {
+  if (!klant_id) return "Kies een klant.";
+  const { data } = await supabase.from("klanten").select("id, patricia_id").eq("id", klant_id).maybeSingle();
+  if (!data) return "De gekozen klant bestaat niet (meer).";
+  if (data.patricia_id && data.patricia_id !== klantActorId) {
+    return "De gekozen klant komt niet overeen met de Patricia-klant van de toegevoegde dossiers.";
+  }
+  return null;
 }
 
 async function medewerkerBestaat(
@@ -276,12 +314,13 @@ export async function createFactuurItem(
   }
 
   const supabase = await createClient();
-  const dossiers = resolveDossiers(input.dossierParen);
+  const dossiers = await resolveDossiers(input.dossierParen);
   if (!dossiers.ok) {
     return { error: dossiers.error, success: false };
   }
-  if (!(await klantBestaat(supabase, input.klant_id))) {
-    return { error: "De gekozen klant bestaat niet (meer).", success: false };
+  const klantFout = await valideerKlantBijDossiers(supabase, input.klant_id, dossiers.klantActorId);
+  if (klantFout) {
+    return { error: klantFout, success: false };
   }
 
   const {
@@ -378,12 +417,13 @@ export async function updateFactuurItem(
   }
 
   const supabase = await createClient();
-  const dossiers = resolveDossiers(input.dossierParen);
+  const dossiers = await resolveDossiers(input.dossierParen);
   if (!dossiers.ok) {
     return { error: dossiers.error, success: false };
   }
-  if (!(await klantBestaat(supabase, input.klant_id))) {
-    return { error: "De gekozen klant bestaat niet (meer).", success: false };
+  const klantFout = await valideerKlantBijDossiers(supabase, input.klant_id, dossiers.klantActorId);
+  if (klantFout) {
+    return { error: klantFout, success: false };
   }
 
   const [

@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { createFactuurItem } from "@/actions/factuuritems";
 import { FactuurItemForm } from "@/components/factuuritem-form";
 import { SetBreadcrumb } from "@/lib/breadcrumb-context";
@@ -13,12 +12,9 @@ export default async function NieuwFactuurItemPage({
 }) {
   const { klant_id, kopie_van } = await searchParams;
   const supabase = await createClient();
-  const [
-    {
-      data: { user },
-    },
-    profile,
-  ] = await Promise.all([supabase.auth.getUser(), getCurrentProfile()]);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
   const [
@@ -31,7 +27,7 @@ export default async function NieuwFactuurItemPage({
   ] = await Promise.all([
     supabase
       .from("klanten")
-      .select("id, naam, adres, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal, valuta")
+      .select("id, naam, adres, patricia_id, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal, valuta")
       .eq("status", "actief")
       .order("naam"),
     supabase.from("projecten").select("id, klant_id, naam, po_nummer").eq("actief", true).order("naam"),
@@ -52,7 +48,7 @@ export default async function NieuwFactuurItemPage({
       ? supabase
           .from("factuuritems")
           .select(
-            "klant_id, project_id, omschrijving_klant, interne_opmerking, eenheidstype, qty, prijstype, tarief, externe_kosten, korting, korting_type, korting_percentage, kantoorkosten_van_toepassing, declarabel, klanten(id, naam, adres, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal, valuta), factuuritem_dossiers(dossiernummer, matter_naam, volgorde)"
+            "klant_id, project_id, omschrijving_klant, interne_opmerking, eenheidstype, qty, prijstype, tarief, externe_kosten, korting, korting_type, korting_percentage, kantoorkosten_van_toepassing, declarabel, klanten(id, naam, adres, patricia_id, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal, valuta), factuuritem_dossiers(dossiernummer, matter_naam, volgorde)"
           )
           .eq("id", kopie_van)
           .single()
@@ -96,7 +92,6 @@ export default async function NieuwFactuurItemPage({
         medewerkerId={user.id}
         voorgeselecteerdeKlantId={klant_id ?? bronItem?.klant_id}
         landen={landen}
-        magKlantenVerwijderen={profile?.role === "beheerder"}
         teams={teams}
         standaardTeamId={laatsteItem?.team_id ?? null}
         initial={

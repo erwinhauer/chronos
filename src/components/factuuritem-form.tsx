@@ -5,12 +5,10 @@ import { useRouter } from "next/navigation";
 import { ChevronDown, EyeOff, Plus } from "lucide-react";
 import type { FactuurItemFormState } from "@/actions/factuuritems";
 import { wisselKlantTaal, wisselKlantValuta } from "@/actions/klanten";
-import { haalPatriciaDossierInfo } from "@/actions/patricia";
-import { vindKlantVoorPatriciaNaam } from "@/lib/patricia-match";
+import { haalPatriciaDossierInfo, vindOfMaakKlantVoorPatriciaActor } from "@/actions/patricia";
 import { euro } from "@/lib/factuurbedragen";
 import { createClient } from "@/lib/supabase/client";
 import { DossiernummerTagInput } from "@/components/dossiernummer-tag-input";
-import { KlantCombobox } from "@/components/klant-combobox";
 import { NewProjectDialog } from "@/components/new-project-dialog";
 import type { LandenMap } from "@/lib/landen";
 import { Button } from "@/components/ui/button";
@@ -34,6 +32,7 @@ type Klant = {
   id: string;
   naam: string;
   adres: string | null;
+  patricia_id: string | null;
   kantoorkosten_actief: boolean;
   kantoorkosten_percentage: number;
   specificatietaal: "nl" | "en";
@@ -85,8 +84,6 @@ export function FactuurItemForm({
   landen,
   medewerkers,
   magMedewerkerWijzigen = false,
-  magHubspotImporteren = true,
-  magKlantenVerwijderen = false,
   wijzigingenLog,
   teams = [],
   standaardTeamId,
@@ -101,8 +98,6 @@ export function FactuurItemForm({
   landen?: LandenMap;
   medewerkers?: Medewerker[];
   magMedewerkerWijzigen?: boolean;
-  magHubspotImporteren?: boolean;
-  magKlantenVerwijderen?: boolean;
   wijzigingenLog?: Wijziging[];
   teams?: Team[];
   standaardTeamId?: string | null;
@@ -141,59 +136,64 @@ export function FactuurItemForm({
     klantIdRef.current = klantId;
   }, [klantId]);
 
-  // Patricia-koppeling: bij een nieuw dossiernummer automatisch de dossiernaam
-  // (Catch Word) en — als er geen klant is gekozen en Patricia's Client-naam
-  // eenduidig overeenkomt met een bestaande klant — ook de klant voorstellen.
-  // Faalt Patricia (onbereikbaar, dossier onbekend)? Dan blijft het veld
-  // gewoon leeg voor handmatige invoer, nooit een blokkerende foutmelding.
-  const [dossiersInBehandeling, setDossiersInBehandeling] = useState<Set<string>>(new Set());
-  const [patriciaKlantHint, setPatriciaKlantHint] = useState<string | null>(null);
+  // Patricia-koppeling: "Chronos-klanten" bestaan niet los van Patricia —
+  // elke klant is een contact met de rol Client op een Patricia-dossier. Het
+  // eerste dossier bepaalt dus de klant (gevonden op patricia_id, of anders
+  // aangemaakt); elk volgende dossier op dit factuuritem moet bij diezelfde
+  // Patricia-klant horen. klantActorIdRef volgt Patricia's ACTOR_ID (niet
+  // hetzelfde als klantId, Chronos' eigen uuid) om dat te kunnen toetsen.
+  const klantActorIdRef = useRef<string | null>(
+    klantenProp.find((k) => k.id === (initial?.klant_id ?? voorgeselecteerdeKlantId))?.patricia_id ?? null
+  );
 
-  function handleDossierSelectieChange(nieuweSelectie: string[]) {
-    const toegevoegd = nieuweSelectie.filter((d) => !dossierSelectie.includes(d));
+  async function handleDossierToevoegen(nummer: string): Promise<string | null> {
+    const info = await haalPatriciaDossierInfo(nummer);
+    if (!info) {
+      return "Dit dossiernummer is niet gevonden in Patricia (of Patricia is niet bereikbaar).";
+    }
+    if (!info.klantActorId) {
+      return "Voor dit dossier staat geen Client geregistreerd in Patricia.";
+    }
+    if (klantActorIdRef.current && info.klantActorId !== klantActorIdRef.current) {
+      const huidigeKlantNaam = klanten.find((k) => k.id === klantIdRef.current)?.naam ?? "de al gekoppelde klant";
+      return `Dit dossier hoort bij ${info.klantNaam ?? "een andere klant"} in Patricia, niet bij ${huidigeKlantNaam} — combineer op één factuuritem alleen dossiers van dezelfde klant.`;
+    }
+
+    if (!klantActorIdRef.current) {
+      const res = await vindOfMaakKlantVoorPatriciaActor(
+        info.klantActorId,
+        info.klantNaam ?? "Onbekende klant",
+        info.klantAdres
+      );
+      if (!res.success) {
+        return res.error;
+      }
+      setExtraKlanten((prev) => [...prev, res.klant]);
+      setKlantId(res.klant.id);
+      klantActorIdRef.current = info.klantActorId;
+    }
+
+    setDossierSelectie((prev) => [...prev, nummer]);
+    setDossiernamen((prev) => ({ ...prev, [nummer]: info.dossiernaam ?? "" }));
+    return null;
+  }
+
+  function handleDossierVerwijderen(nieuweSelectie: string[]) {
     const verwijderd = dossierSelectie.filter((d) => !nieuweSelectie.includes(d));
     setDossierSelectie(nieuweSelectie);
-
-    // Een verwijderd dossier neemt zijn eigen dossiernaam mee, en — omdat
-    // Klant een gedeeld veld is voor het hele factuuritem, niet per dossier —
-    // ook de (mogelijk automatisch ingevulde) klant, zodat er nooit een klant
-    // blijft hangen die bij een inmiddels verwijderd dossier hoorde.
     if (verwijderd.length > 0) {
       setDossiernamen((prev) => {
         const volgende = { ...prev };
         for (const d of verwijderd) delete volgende[d];
         return volgende;
       });
-      setKlantId("");
-      setPatriciaKlantHint(null);
     }
-
-    for (const d of toegevoegd) {
-      setDossiersInBehandeling((prev) => new Set(prev).add(d));
-      haalPatriciaDossierInfo(d)
-        .then((info) => {
-          if (!info) return;
-          if (info.dossiernaam) {
-            setDossiernamen((prev) => (prev[d] ? prev : { ...prev, [d]: info.dossiernaam! }));
-          }
-          if (info.klantNaam && !klantIdRef.current) {
-            const match = vindKlantVoorPatriciaNaam(klanten, info.klantNaam);
-            if (match) {
-              setKlantId(match.id);
-              setPatriciaKlantHint(null);
-            } else {
-              setPatriciaKlantHint(info.klantNaam);
-            }
-          }
-        })
-        .catch(() => {})
-        .finally(() => {
-          setDossiersInBehandeling((prev) => {
-            const volgende = new Set(prev);
-            volgende.delete(d);
-            return volgende;
-          });
-        });
+    // Pas de klant loslaten zodra ALLE dossiers weg zijn — de overgebleven
+    // dossiers (indien nog aanwezig) horen per constructie al bij dezelfde
+    // klant, dus die blijft correct staan zolang er nog een dossier over is.
+    if (nieuweSelectie.length === 0) {
+      setKlantId("");
+      klantActorIdRef.current = null;
     }
   }
   const [medewerkerIdVeld, setMedewerkerIdVeld] = useState(initial?.medewerker_id ?? medewerkerId);
@@ -343,28 +343,22 @@ export function FactuurItemForm({
             </CardHeader>
             <CardContent className="flex flex-col gap-5">
               <div className="grid gap-6 sm:grid-cols-2">
-                <DossiernummerTagInput value={dossierSelectie} onChange={handleDossierSelectieChange} landen={landen} />
+                <DossiernummerTagInput
+                  value={dossierSelectie}
+                  onChange={handleDossierVerwijderen}
+                  onToevoegen={handleDossierToevoegen}
+                  landen={landen}
+                />
                 <div className="flex flex-col gap-2">
                   <Label>Klant</Label>
-                  <KlantCombobox
-                    klanten={klanten}
-                    value={klantId}
-                    onChange={(id) => {
-                      setKlantId(id);
-                      setPatriciaKlantHint(null);
-                    }}
-                    onKlantAangemaakt={(nieuw) => setExtraKlanten((prev) => [...prev, nieuw])}
-                    magHubspotImporteren={magHubspotImporteren}
-                    magKlantenVerwijderen={magKlantenVerwijderen}
-                    zoekVoorstel={patriciaKlantHint ?? undefined}
-                  />
+                  <div className="flex h-9 items-center rounded-lg border border-input bg-muted/40 px-2.5 text-sm">
+                    {klant?.naam ?? <span className="text-muted-foreground">Wordt bepaald op basis van dossier(s)</span>}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Bepaald door Patricia (de Client op het dossier) — niet handmatig aan te passen.
+                  </p>
                   {klant?.adres && (
                     <p className="text-xs whitespace-pre-line text-muted-foreground">{klant.adres}</p>
-                  )}
-                  {patriciaKlantHint && (
-                    <p className="text-xs text-muted-foreground">
-                      Patricia: <span className="font-medium">{patriciaKlantHint}</span> — kies zelf de juiste klant.
-                    </p>
                   )}
                 </div>
               </div>
@@ -373,12 +367,7 @@ export function FactuurItemForm({
                 <div className="flex flex-col gap-3">
                   {dossierSelectie.map((d) => (
                     <div key={d} className="flex flex-col gap-2">
-                      <Label htmlFor={`dossiernaam_${d}`}>
-                        Dossiernaam — {d}
-                        {dossiersInBehandeling.has(d) && (
-                          <span className="ml-2 font-normal text-muted-foreground">Patricia raadplegen…</span>
-                        )}
-                      </Label>
+                      <Label htmlFor={`dossiernaam_${d}`}>Dossiernaam — {d}</Label>
                       <Input
                         id={`dossiernaam_${d}`}
                         value={dossiernamen[d] ?? ""}

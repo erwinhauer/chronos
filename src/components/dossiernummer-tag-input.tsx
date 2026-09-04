@@ -11,22 +11,32 @@ import { Label } from "@/components/ui/label";
 export function DossiernummerTagInput({
   value,
   onChange,
+  onToevoegen,
   landen,
 }: {
   value: string[];
   onChange: (value: string[]) => void;
+  // Async validatie/koppeling tegen Patricia (bestaat het dossier? zelfde
+  // klant als de al toegevoegde dossiers?) — geeft `null` terug bij succes
+  // (de aanroeper heeft dan zelf al de state bijgewerkt) of een foutmelding
+  // om te tonen. Toevoegen gebeurt hier dus niet meer zelf via `onChange`.
+  onToevoegen: (nummer: string) => Promise<string | null>;
   landen?: LandenMap;
 }) {
   const [invoer, setInvoer] = useState("");
   const [fout, setFout] = useState<string | null>(null);
+  const [bezig, setBezig] = useState(false);
 
   // Meerdere dossiers mogen op één factuuritem, maar alleen van hetzelfde
-  // type (TM, O, I, A, etc.) — anders is achteraf niet meer te meten hoeveel
-  // omzet er per dossiertype is geschreven. Land mag wel verschillen.
+  // type (TM, O, I, A, etc.) én hetzelfde land — anders is achteraf niet
+  // meer te meten hoeveel omzet er per dossiertype/land is geschreven, en
+  // zou de (nu vaste, Patricia-bepaalde) klant niet eenduidig zijn.
   const eersteGeparsed = value.map((d) => parseDossiernummer(d)).find((p) => p !== null);
-  const bestaandType = eersteGeparsed ? { code: eersteGeparsed.typeCode, label: eersteGeparsed.typeLabel } : null;
+  const bestaandType = eersteGeparsed
+    ? { code: eersteGeparsed.typeCode, label: eersteGeparsed.typeLabel, landIso: eersteGeparsed.landIso }
+    : null;
 
-  function toevoegen() {
+  async function toevoegen() {
     const nummer = invoer.trim().toUpperCase();
     if (!nummer || value.includes(nummer)) {
       setInvoer("");
@@ -34,14 +44,24 @@ export function DossiernummerTagInput({
       return;
     }
     const parsed = parseDossiernummer(nummer);
-    if (parsed && bestaandType && parsed.typeCode !== bestaandType.code) {
+    if (!parsed) {
+      setFout("Onbekend dossiernummerformaat.");
+      return;
+    }
+    if (bestaandType && (parsed.typeCode !== bestaandType.code || parsed.landIso !== bestaandType.landIso)) {
       setFout(
-        `${parsed.typeLabel} kan niet samen met ${bestaandType.label} op één factuuritem — combineer alleen dossiers van hetzelfde type.`
+        `${parsed.typeLabel} · ${landNaamVoorIso(parsed.landIso, landen)} kan niet samen met ${bestaandType.label} · ${landNaamVoorIso(bestaandType.landIso, landen)} op één factuuritem — combineer alleen dossiers van hetzelfde type én land.`
       );
       return;
     }
     setFout(null);
-    onChange([...value, nummer]);
+    setBezig(true);
+    const foutmelding = await onToevoegen(nummer);
+    setBezig(false);
+    if (foutmelding) {
+      setFout(foutmelding);
+      return;
+    }
     setInvoer("");
   }
 
@@ -68,13 +88,15 @@ export function DossiernummerTagInput({
               toevoegen();
             }
           }}
+          disabled={bezig}
           placeholder="Typ het dossiernummer en klik op Enter, of klik op het plusje"
         />
-        <Button type="button" variant="outline" size="icon" onClick={toevoegen} aria-label="Dossier toevoegen">
+        <Button type="button" variant="outline" size="icon" onClick={toevoegen} disabled={bezig} aria-label="Dossier toevoegen">
           <Plus className="h-4 w-4" />
         </Button>
       </div>
-      {invoer && (
+      {bezig && <p className="text-xs text-muted-foreground">Controleren in Patricia…</p>}
+      {!bezig && invoer && (
         <p className="text-xs text-muted-foreground">
           {preview ? `${preview.typeLabel} · ${landNaamVoorIso(preview.landIso, landen)}` : "Onbekend dossiernummerformaat"}
         </p>
