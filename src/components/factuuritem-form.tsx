@@ -78,6 +78,7 @@ export function FactuurItemForm({
   action,
   initial,
   medewerkerId,
+  medewerkerNaam,
   voorgeselecteerdeKlantId,
   terugUrl = "/factuuritems",
   landen,
@@ -94,6 +95,9 @@ export function FactuurItemForm({
   action: (prevState: FactuurItemFormState, formData: FormData) => Promise<FactuurItemFormState>;
   initial?: Initial;
   medewerkerId: string;
+  // Naam van de ingelogde gebruiker — gebruikt als het Medewerker-veld niet
+  // bewerkbaar is (dan staat het altijd op de ingelogde gebruiker zelf).
+  medewerkerNaam: string;
   voorgeselecteerdeKlantId?: string;
   terugUrl?: string;
   landen?: LandenMap;
@@ -336,9 +340,9 @@ export function FactuurItemForm({
               )}
 
               <div className="grid gap-4 sm:grid-cols-2">
-                {initial && magMedewerkerWijzigen && medewerkers && (
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="medewerker">Medewerker</Label>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="medewerker">Medewerker</Label>
+                  {magMedewerkerWijzigen && medewerkers ? (
                     <NativeSelect
                       key={`medewerker-${selectResetKey}`}
                       id="medewerker"
@@ -351,8 +355,15 @@ export function FactuurItemForm({
                         </option>
                       ))}
                     </NativeSelect>
-                  </div>
-                )}
+                  ) : (
+                    <div
+                      id="medewerker"
+                      className="flex h-9 items-center rounded-lg border border-input bg-muted/40 px-2.5 text-sm"
+                    >
+                      {medewerkerNaam}
+                    </div>
+                  )}
+                </div>
                 {klantId && (
                   <div className="flex flex-col gap-2">
                     <div className="flex h-6 items-center justify-between">
