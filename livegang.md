@@ -91,17 +91,12 @@ na akkoord gepromoot naar `main`/LIVE op 2026-09-04. Daarna is het
 Medewerker-veld bij "Factuuritems > Nieuw" altijd zichtbaar gemaakt (default
 de ingelogde gebruiker, wijzigbaar naar een teamgenoot voor teamleider/
 beheerder — commit `1882717`) — lokaal getest en op verzoek direct naar
-zowel `beta` als `main`/LIVE gepromoot op 2026-09-07. `main` en `beta` stonden
-daarna weer gelijk.
-
-- **Op BETA, nog niet gepromoot**: teamleider kon een niet-gefactureerd
-  factuuritem van een teamgenoot niet verwijderen — er stond geen delete-RLS-
-  policy voor teamleider, dus faalde de delete stilzwijgend en toonde de app
-  ten onrechte "al definitief/gefactureerd" (migratie
-  `20260907120000_factuuritem_delete_teamleider.sql`, commit `3db1747`,
-  2026-09-07). Dit is een actieve productiebug (net ondervonden en handmatig
-  gecorrigeerd voor het Augusta Benelux B.V.-item op LIVE) — kandidaat voor
-  snelle promotie zodra getest op BETA.
+zowel `beta` als `main`/LIVE gepromoot op 2026-09-07. Daarna is de fix voor het
+niet kunnen verwijderen van een teamgenoot's niet-gefactureerd factuuritem
+door een teamleider (migratie `20260907120000_factuuritem_delete_teamleider.sql`,
+commit `3db1747`) getest op BETA en gepromoot naar `main`/LIVE op 2026-09-07 —
+inclusief handmatige correctie van het al geraakte Augusta Benelux B.V.-item.
+`main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
