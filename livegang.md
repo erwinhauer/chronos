@@ -87,7 +87,11 @@ het lege Medewerker-badge (commit `e440fc1`) getest op BETA en na akkoord
 gepromoot naar `main`/LIVE op 2026-09-03. Daarna is de dashboard-tegel "Nog te
 factureren werk van het team" uitgebreid met een uitsplitsing per teamlid
 (teamleider eerst, dan alfabetisch — commit `e00da57`) — ook getest op BETA en
-na akkoord gepromoot naar `main`/LIVE op 2026-09-04. `main` en `beta` staan
+na akkoord gepromoot naar `main`/LIVE op 2026-09-04. Daarna is het
+Medewerker-veld bij "Factuuritems > Nieuw" altijd zichtbaar gemaakt (default
+de ingelogde gebruiker, wijzigbaar naar een teamgenoot voor teamleider/
+beheerder — commit `1882717`) — lokaal getest en op verzoek direct naar
+zowel `beta` als `main`/LIVE gepromoot op 2026-09-07. `main` en `beta` staan
 weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
