@@ -245,7 +245,9 @@ function valideerGedeeld(input: ReturnType<typeof parseInput>): string | null {
   if (input.prijstype !== "uren" && input.prijstype !== "vast_honorarium") {
     return "Kies of dit uren of een vast honorarium (fixed fee) is.";
   }
-  if (input.tarief === null || input.tarief < 0) {
+  // Negatief mag: zo kan een factuuritem ook crediteren (BR-05 laat dit toe,
+  // zie de aangepaste korting-check in de migratie hiervoor).
+  if (input.tarief === null) {
     return "Vul een geldige prijs in.";
   }
   if (input.korting_type === "percentage") {
@@ -307,7 +309,9 @@ export async function createFactuurItem(
       ? round2(honorarium * ((input.korting_percentage ?? 0) / 100))
       : input.korting_bedrag_ingevoerd;
 
-  if (round2(korting) > round2(honorarium)) {
+  // Bij een negatief honorarium (crediteren) is een korting sowieso niet
+  // zinvol — dezelfde uitzondering als de check-constraint in de database.
+  if (round2(honorarium) >= 0 && round2(korting) > round2(honorarium)) {
     return { error: "Korting mag niet hoger zijn dan het honorarium.", success: false };
   }
 
@@ -417,7 +421,9 @@ export async function updateFactuurItem(
       ? round2(honorarium * ((input.korting_percentage ?? 0) / 100))
       : input.korting_bedrag_ingevoerd;
 
-  if (round2(korting) > round2(honorarium)) {
+  // Bij een negatief honorarium (crediteren) is een korting sowieso niet
+  // zinvol — dezelfde uitzondering als de check-constraint in de database.
+  if (round2(honorarium) >= 0 && round2(korting) > round2(honorarium)) {
     return { error: "Korting mag niet hoger zijn dan het honorarium.", success: false };
   }
 

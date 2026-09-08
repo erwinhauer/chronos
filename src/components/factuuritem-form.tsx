@@ -515,7 +515,6 @@ export function FactuurItemForm({
                         id="tarief_input"
                         type="number"
                         step="0.01"
-                        min="0"
                         className="pl-6"
                         value={tarief ?? ""}
                         onChange={(e) => setTarief(e.target.value === "" ? null : Number(e.target.value))}
@@ -525,6 +524,11 @@ export function FactuurItemForm({
                     {prijstype === "uren" && voorgesteldTarief !== null && (
                       <p className="text-xs text-muted-foreground">
                         Voorgesteld tarief: {euro(voorgesteldTarief, klant?.valuta ?? "EUR")}
+                      </p>
+                    )}
+                    {tarief !== null && tarief < 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Negatief bedrag — dit factuuritem crediteert in plaats van declareert.
                       </p>
                     )}
                   </div>
@@ -584,6 +588,7 @@ export function FactuurItemForm({
                         className="pl-6"
                         value={kortingBedrag}
                         onChange={(e) => setKortingBedrag(Number(e.target.value))}
+                        disabled={honorarium < 0}
                       />
                     </div>
                   ) : (
@@ -595,10 +600,13 @@ export function FactuurItemForm({
                       max="100"
                       value={kortingPercentage}
                       onChange={(e) => setKortingPercentage(Number(e.target.value))}
+                      disabled={honorarium < 0}
                     />
                   )}
                   <p className="text-xs text-muted-foreground">
-                    Max. het honorarium ({euro(honorarium, klant?.valuta ?? "EUR")}), nooit over kosten van derden.
+                    {honorarium < 0
+                      ? "Niet van toepassing bij een negatief bedrag (crediteren)."
+                      : `Max. het honorarium (${euro(honorarium, klant?.valuta ?? "EUR")}), nooit over kosten van derden.`}
                   </p>
                   {kortingTeHoog && (
                     <p className="text-xs font-medium text-warning">
