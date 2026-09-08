@@ -105,6 +105,11 @@ handmatige inloglink) die altijd op "/login?fout=verlopen" uitkwamen —
 nieuwe `/auth/confirm`-route, commit `c0b04fa` — getest op BETA en gepromoot
 naar `main`/LIVE op 2026-09-08. Daarna is ook de negatief-bedrag-feature
 zelf getest op BETA en na akkoord gepromoot naar `main`/LIVE op 2026-09-08.
+Daarna is de fix voor het bij "Factuuritems > Nieuw" gekozen teamlid dat
+altijd op de aanmaker terechtkwam (zowel een app-bug in `createFactuurItem`
+als een ontbrekende RLS insert-policy voor teamleider/beheerder, migratie
+`20260908130000_factuuritem_insert_teamleider_beheerder.sql`, commit
+`d55f9af`) getest op BETA en gepromoot naar `main`/LIVE op 2026-09-08.
 `main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
