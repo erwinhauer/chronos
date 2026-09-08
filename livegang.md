@@ -96,7 +96,15 @@ niet kunnen verwijderen van een teamgenoot's niet-gefactureerd factuuritem
 door een teamleider (migratie `20260907120000_factuuritem_delete_teamleider.sql`,
 commit `3db1747`) getest op BETA en gepromoot naar `main`/LIVE op 2026-09-07 —
 inclusief handmatige correctie van het al geraakte Augusta Benelux B.V.-item.
-`main` en `beta` staan weer gelijk.
+Daarna is de fix voor admin-gegenereerde magiclinks (o.a. een handmatige
+inloglink) die altijd op "/login?fout=verlopen" uitkwamen — nieuwe
+`/auth/confirm`-route, commit `c0b04fa` — getest op BETA en gepromoot naar
+`main`/LIVE op 2026-09-08.
+
+Nog open op BETA: het toestaan van een negatief bedrag op een factuuritem
+om deels te crediteren (migratie `20260908110000_factuuritem_negatief_bedrag.sql`,
+commit `60b31cd`) — lokaal getest, staat op BETA, wacht nog op testen door
+Erwin voordat dit naar `main`/LIVE gaat.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
