@@ -103,12 +103,9 @@ end-to-end getest, gepusht naar `beta` en daar schoon gedeployed op
 2026-09-08. Daarna is de fix voor admin-gegenereerde magiclinks (o.a. een
 handmatige inloglink) die altijd op "/login?fout=verlopen" uitkwamen —
 nieuwe `/auth/confirm`-route, commit `c0b04fa` — getest op BETA en gepromoot
-naar `main`/LIVE op 2026-09-08.
-
-Nog open op BETA: het toestaan van een negatief bedrag op een factuuritem
-om deels te crediteren (zie boven) — wacht nog op testen door Erwin i.v.m.
-een wijziging in facturatiebedragen en een database-constraint, voordat dit
-naar `main`/LIVE gaat.
+naar `main`/LIVE op 2026-09-08. Daarna is ook de negatief-bedrag-feature
+zelf getest op BETA en na akkoord gepromoot naar `main`/LIVE op 2026-09-08.
+`main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
