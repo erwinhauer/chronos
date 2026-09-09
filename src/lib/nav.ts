@@ -56,7 +56,7 @@ export const ALL_NAV_ITEMS: NavItem[] = [...NAV_ITEMS, ...NAV_ITEMS_BOTTOM];
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   medewerker: "Medewerker",
-  teamleider: "Teamleider",
+  teamleider: "Praktijkvoerder",
   finance: "Finance",
   beheerder: "Beheerder",
   directie: "Directie",

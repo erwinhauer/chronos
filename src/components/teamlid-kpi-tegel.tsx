@@ -23,7 +23,7 @@ export function TeamlidKpiTegel({ lid }: { lid: TeamlidKpi }) {
           <span className="text-sm font-medium">{lid.naam}</span>
           {lid.isTeamleider && (
             <Badge variant="outline" className="text-[10px]">
-              Teamleider
+              Praktijkvoerder
             </Badge>
           )}
         </div>

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Receipt, Pencil, Copy, Trash2, MoreVertical, Search } from "lucide-react";
+import { Receipt, Pencil, Copy, Trash2, MoreVertical, Search, ChevronDown, ChevronUp } from "lucide-react";
 import { landNaamVoorIso } from "@/lib/dossiernummer";
 import { euro, regelbedrag } from "@/lib/factuurbedragen";
 import type { LandenMap } from "@/lib/landen";
@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { FactuurItemStatus } from "@/lib/supabase/types";
-import { tagKleurStijl } from "@/lib/tag-kleur";
+import { tagKleurStijl, VASTE_TAG_STIJL } from "@/lib/tag-kleur";
 
 type Project = { id: string; naam: string; po_nummer: string | null };
 
@@ -47,6 +47,7 @@ export type FactuurGroepItem = {
   honorarium: number;
   externe_kosten: number;
   korting: number;
+  kantoorkostenVanToepassing: boolean;
   status: FactuurItemStatus;
   medewerkerId: string;
   medewerkerNaam: string | null;
@@ -65,6 +66,8 @@ type ProjectSectie = {
   projectOmschrijving: string | null;
   items: FactuurGroepItem[];
 };
+
+type Groepering = "project" | "dossier";
 
 export function FactuurGroep({
   klantId,
@@ -90,11 +93,15 @@ export function FactuurGroep({
   landen: LandenMap;
 }) {
   const [zoekterm, setZoekterm] = useState("");
+  const [groepeerOp, setGroepeerOp] = useState<Groepering>("project");
   const gefilterdeItems = useMemo(() => {
     const q = zoekterm.trim().toLowerCase();
     if (!q) return items;
     return items.filter((item) => {
-      const dossierTekst = item.dossiers.map((d) => d.dossiernummer).join(" ").toLowerCase();
+      const dossierTekst = item.dossiers
+        .map((d) => `${d.dossiernummer} ${d.matter_naam ?? ""}`)
+        .join(" ")
+        .toLowerCase();
       return dossierTekst.includes(q) || item.omschrijving_klant.toLowerCase().includes(q);
     });
   }, [items, zoekterm]);
@@ -106,9 +113,23 @@ export function FactuurGroep({
 
   const sectieMap = new Map<string, ProjectSectie>();
   for (const item of gefilterdeItems) {
-    const sleutel = item.projectId ?? "__geen__";
+    // Bij groeperen op dossier bepaalt het EERSTE dossier de groep — zelfde
+    // vereenvoudiging als elders in deze tabel (de rij toont het eerste
+    // dossier prominent, de rest als "+N"). Een item met meerdere dossiers
+    // dubbel tonen (één keer per dossier) zou de selectie/specificatie-telling
+    // per sectie kunnen verwarren, dus bewust maar één groep per item.
+    const sleutel =
+      groepeerOp === "dossier" ? (item.dossiers[0]?.dossiernummer ?? "__geen__") : (item.projectId ?? "__geen__");
     const bestaand = sectieMap.get(sleutel);
     if (bestaand) bestaand.items.push(item);
+    else if (groepeerOp === "dossier")
+      sectieMap.set(sleutel, {
+        sleutel,
+        projectNaam: item.dossiers[0]?.dossiernummer ?? null,
+        projectPoNummer: null,
+        projectOmschrijving: item.dossiers[0]?.matter_naam ?? null,
+        items: [item],
+      });
     else
       sectieMap.set(sleutel, {
         sleutel,
@@ -121,8 +142,10 @@ export function FactuurGroep({
   const secties = Array.from(sectieMap.values()).sort((a, b) => (a.projectNaam ?? "").localeCompare(b.projectNaam ?? ""));
   // Ook tonen bij precies één sectie, zolang die een echt project is (naam,
   // PO-nummer of omschrijving) — anders blijft die info onzichtbaar voor de
-  // (meest voorkomende) klant met maar één project.
-  const toonProjectHeaders = secties.length > 1 || (secties.length === 1 && secties[0].sleutel !== "__geen__");
+  // (meest voorkomende) klant met maar één project. Bij groeperen op dossier
+  // is de header altijd zinvol (het IS de groepering).
+  const toonProjectHeaders =
+    groepeerOp === "dossier" || secties.length > 1 || (secties.length === 1 && secties[0].sleutel !== "__geen__");
 
   return (
     <Card>
@@ -137,14 +160,34 @@ export function FactuurGroep({
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-4 p-4">
-        <div className="relative sm:w-80">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={zoekterm}
-            onChange={(e) => setZoekterm(e.target.value)}
-            placeholder="Zoek op dossier of omschrijving…"
-            className="pl-8"
-          />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="relative sm:w-80">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={zoekterm}
+              onChange={(e) => setZoekterm(e.target.value)}
+              placeholder="Zoek op dossier, dossiernaam of omschrijving…"
+              className="pl-8"
+            />
+          </div>
+          <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/40 p-0.5">
+            <Button
+              type="button"
+              size="sm"
+              variant={groepeerOp === "project" ? "default" : "ghost"}
+              onClick={() => setGroepeerOp("project")}
+            >
+              Groeperen op project
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={groepeerOp === "dossier" ? "default" : "ghost"}
+              onClick={() => setGroepeerOp("dossier")}
+            >
+              Groeperen op dossier
+            </Button>
+          </div>
         </div>
         {secties.length === 0 ? (
           <p className="py-10 text-center text-sm text-muted-foreground">Geen factuuritems gevonden.</p>
@@ -159,6 +202,7 @@ export function FactuurGroep({
                 kleurIndex={index}
                 projecten={projecten}
                 toonHeader={toonProjectHeaders}
+                groepeerOp={groepeerOp}
                 toonMedewerker={toonMedewerker}
                 kanFactureren={kanFactureren}
                 magAllesBewerken={magAllesBewerken}
@@ -180,6 +224,7 @@ function ProjectSectieBlok({
   kleurIndex,
   projecten,
   toonHeader,
+  groepeerOp,
   toonMedewerker,
   kanFactureren,
   magAllesBewerken,
@@ -190,6 +235,7 @@ function ProjectSectieBlok({
   valuta: string;
   sectie: ProjectSectie;
   kleurIndex: number;
+  groepeerOp: Groepering;
   projecten: Project[];
   toonHeader: boolean;
   toonMedewerker: boolean;
@@ -260,8 +306,8 @@ function ProjectSectieBlok({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <div className="flex items-center gap-2 text-sm font-medium">
-              {sectie.projectNaam ?? "Geen project"}
-              {kanFactureren && sectie.sleutel !== "__geen__" && huidigProjectId && (
+              {sectie.projectNaam ?? (groepeerOp === "dossier" ? "Geen dossier" : "Geen project")}
+              {groepeerOp === "project" && kanFactureren && sectie.sleutel !== "__geen__" && huidigProjectId && (
                 <>
                   <EditProjectDialog
                     projectId={huidigProjectId}
@@ -344,6 +390,18 @@ function FactuurItemsTabel({
   // hij ook vanuit het kebab-menu getriggerd kan worden zonder de bekende
   // race tussen het sluiten van het menu en het openen van de dialoog.
   const [verwijderId, setVerwijderId] = useState<string | null>(null);
+  // Bij meerdere dossiers op één regel: standaard alleen het eerste tonen
+  // (+N-badge voor de rest), uitklapbaar per rij zodat de tabel compact
+  // blijft totdat de gebruiker de overige dossiers wil zien.
+  const [uitgeklapt, setUitgeklapt] = useState<Set<string>>(new Set());
+  function toggleUitgeklapt(id: string) {
+    setUitgeklapt((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   return (
     <>
@@ -397,25 +455,35 @@ function FactuurItemsTabel({
               </TableCell>
               <TableCell>
                 {eerste && (
-                  <div className="flex items-center gap-1.5">
-                    <div className="font-medium">{eerste.dossiernummer}</div>
-                    {r.interneOpmerking && (
-                      <span
-                        className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-warning text-[10px] leading-none font-bold text-white"
-                        title={r.interneOpmerking}
-                      >
-                        !
-                      </span>
-                    )}
-                    {rest.length > 0 && (
-                      <Badge
-                        variant="outline"
-                        className="text-xs"
-                        title={rest.map((d) => d.dossiernummer).join(", ")}
-                      >
-                        +{rest.length}
-                      </Badge>
-                    )}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-1.5">
+                      <div className="font-medium">{eerste.dossiernummer}</div>
+                      {r.interneOpmerking && (
+                        <span
+                          className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-warning text-[10px] leading-none font-bold text-white"
+                          title={r.interneOpmerking}
+                        >
+                          !
+                        </span>
+                      )}
+                      {rest.length > 0 && (
+                        <Badge
+                          variant="outline"
+                          className="cursor-pointer text-xs"
+                          title={rest.map((d) => d.dossiernummer).join(", ")}
+                          onClick={() => toggleUitgeklapt(r.id)}
+                        >
+                          {uitgeklapt.has(r.id) ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                          +{rest.length}
+                        </Badge>
+                      )}
+                    </div>
+                    {uitgeklapt.has(r.id) &&
+                      rest.map((d) => (
+                        <div key={d.dossiernummer} className="text-sm text-muted-foreground">
+                          {d.dossiernummer}
+                        </div>
+                      ))}
                   </div>
                 )}
               </TableCell>
@@ -428,7 +496,7 @@ function FactuurItemsTabel({
                     {landen_op_regel.map((l) => {
                       const naam = landNaamVoorIso(l, landen);
                       return (
-                        <Badge key={l} variant="outline" className="text-xs" style={tagKleurStijl(naam)}>
+                        <Badge key={l} variant="outline" className="text-xs" style={VASTE_TAG_STIJL}>
                           {naam}
                         </Badge>
                       );
@@ -440,7 +508,11 @@ function FactuurItemsTabel({
               </TableCell>
               {toonMedewerker && (
                 <TableCell>
-                  {r.medewerkerInitialen && <Badge variant="secondary">{r.medewerkerInitialen}</Badge>}
+                  {r.medewerkerInitialen && (
+                    <Badge variant="outline" style={tagKleurStijl(r.medewerkerId)}>
+                      {r.medewerkerInitialen}
+                    </Badge>
+                  )}
                 </TableCell>
               )}
               <TableCell className="whitespace-normal break-words" title={r.omschrijving_klant}>
@@ -454,7 +526,19 @@ function FactuurItemsTabel({
               <TableCell className="tabular-figures">
                 {r.qty} {r.eenheidstype}
               </TableCell>
-              <TableCell className="text-right tabular-figures">{euro(bedrag, valuta)}</TableCell>
+              <TableCell className="text-right tabular-figures">
+                <span className="inline-flex items-center gap-1">
+                  {euro(bedrag, valuta)}
+                  {r.kantoorkostenVanToepassing && (
+                    <span
+                      className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] leading-none font-bold text-muted-foreground"
+                      title="Bureaukosten zijn gerekend bij dit factuuritem."
+                    >
+                      B
+                    </span>
+                  )}
+                </span>
+              </TableCell>
               <TableCell className="text-right">
                 <DropdownMenu>
                   <DropdownMenuTrigger render={<Button size="icon-sm" variant="outline" aria-label="Acties" />}>

@@ -27,7 +27,7 @@ export default async function FactuuritemsPerKlantPagina({
     supabase
       .from("factuuritems")
       .select(
-        "id, datum, omschrijving_klant, interne_opmerking, eenheidstype, qty, honorarium, externe_kosten, korting, status, declarabel, medewerker_id, klant_id, project_id, projecten(naam, po_nummer, omschrijving), profiles!factuuritems_medewerker_id_fkey(full_name, initialen), laatst_bewerkt_door_profiel:profiles!factuuritems_laatst_bewerkt_door_fkey(full_name), factuuritem_dossiers(dossiernummer, type_dienst, land, matter_naam, volgorde)"
+        "id, datum, omschrijving_klant, interne_opmerking, eenheidstype, qty, honorarium, externe_kosten, korting, status, declarabel, kantoorkosten_van_toepassing, medewerker_id, klant_id, project_id, projecten(naam, po_nummer, omschrijving), profiles!factuuritems_medewerker_id_fkey(full_name, initialen), laatst_bewerkt_door_profiel:profiles!factuuritems_laatst_bewerkt_door_fkey(full_name), factuuritem_dossiers(dossiernummer, type_dienst, land, matter_naam, volgorde)"
       )
       .eq("klant_id", klantId)
       .eq("status", "aangemaakt")
@@ -64,6 +64,7 @@ export default async function FactuuritemsPerKlantPagina({
       honorarium: item.honorarium,
       externe_kosten: item.externe_kosten,
       korting: item.korting,
+      kantoorkostenVanToepassing: item.kantoorkosten_van_toepassing,
       status: item.status,
       medewerkerId: item.medewerker_id,
       medewerkerNaam: medewerker?.full_name ?? null,
