@@ -110,7 +110,12 @@ altijd op de aanmaker terechtkwam (zowel een app-bug in `createFactuurItem`
 als een ontbrekende RLS insert-policy voor teamleider/beheerder, migratie
 `20260908130000_factuuritem_insert_teamleider_beheerder.sql`, commit
 `d55f9af`) getest op BETA en gepromoot naar `main`/LIVE op 2026-09-08.
-`main` en `beta` staan weer gelijk.
+Daarna is een project na aanmaken ook wijzigbaar (projectnaam, PO-nummer,
+omschrijving — commit `5e0a932`) en archiveerbaar gemaakt (verdwijnt uit de
+keuzelijst voor nieuwe factuuritems, bestaande items blijven ongewijzigd —
+geen echte delete i.v.m. de FK vanuit factuuritems/facturatiebatches, commit
+`e4a1ba7`) — lokaal end-to-end getest en gepromoot naar `main`/LIVE op
+2026-09-09. `main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
