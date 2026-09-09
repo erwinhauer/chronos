@@ -517,17 +517,22 @@ function FactuurItemsTabel({
                 {r.qty} {r.eenheidstype}
               </TableCell>
               <TableCell className="text-right tabular-figures">
-                <span className="inline-flex items-center gap-1">
-                  {euro(bedrag, valuta)}
-                  {r.kantoorkostenVanToepassing && (
-                    <span
-                      className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] leading-none font-bold text-muted-foreground"
-                      title="Bureaukosten zijn gerekend bij dit factuuritem."
-                    >
-                      B
-                    </span>
-                  )}
-                </span>
+                <div className="flex items-center justify-end gap-1">
+                  <span>{euro(bedrag, valuta)}</span>
+                  {/* Vaste breedte, ook als er geen B-badge is — anders
+                      verspringt het bedrag zelf per rij en lijnen de
+                      bedragen niet meer verticaal uit. */}
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center">
+                    {r.kantoorkostenVanToepassing && (
+                      <span
+                        className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-muted text-[10px] leading-none font-bold text-muted-foreground"
+                        title="Bureaukosten zijn gerekend bij dit factuuritem."
+                      >
+                        B
+                      </span>
+                    )}
+                  </span>
+                </div>
               </TableCell>
               <TableCell className="text-right">
                 <DropdownMenu>
