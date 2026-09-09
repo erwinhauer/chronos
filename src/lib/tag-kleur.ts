@@ -24,3 +24,12 @@ export function tagKleurStijl(waarde: string) {
     backgroundColor: `color-mix(in oklch, ${kleur} 12%, transparent)`,
   };
 }
+
+// Vaste (niet per-waarde gehashte) variant, voor tags die bewust allemaal
+// dezelfde kleur moeten hebben (bv. land-tags) — zelfde donkerblauwe
+// merkkleur als --primary, in plaats van de categorische tagKleur-reeks.
+export const VASTE_TAG_STIJL = {
+  color: "var(--primary)",
+  borderColor: "color-mix(in oklch, var(--primary) 40%, transparent)",
+  backgroundColor: "color-mix(in oklch, var(--primary) 12%, transparent)",
+};

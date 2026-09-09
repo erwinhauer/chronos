@@ -911,7 +911,7 @@ export default async function DashboardPage({
                                 <div key={lid.naam} className="flex items-center justify-between text-xs">
                                   <span className="text-muted-foreground">
                                     {lid.naam}
-                                    {lid.isTeamleider && " (TL)"}
+                                    {lid.isTeamleider && " (Praktijkvoerder)"}
                                   </span>
                                   <span className="tabular-figures font-medium">{euro(lid.bedrag)}</span>
                                 </div>

@@ -700,7 +700,10 @@ export function FactuurItemForm({
           {initial && wijzigingenLog && <LogSectie wijzigingen={wijzigingenLog} />}
         </div>
 
-        <div className="flex flex-col gap-5">
+        <div
+          className="dark flex flex-col gap-5"
+          style={{ "--card": "var(--sidebar)", "--card-foreground": "var(--sidebar-foreground)" } as React.CSSProperties}
+        >
           <Card className="sticky top-6">
             <CardHeader>
               <CardTitle className="text-base">Overzicht regel</CardTitle>

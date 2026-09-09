@@ -60,7 +60,7 @@ const FEATURES = [
 
 const ROLLEN = [
   { rol: "Medewerker", kan: "Eigen factuuritems aanmaken, bewerken, kopiëren", ziet: "Eigen cijfers" },
-  { rol: "Teamleider", kan: "Factuuritems van het eigen team; specificaties maken", ziet: "Team-dashboard" },
+  { rol: "Praktijkvoerder", kan: "Factuuritems van het eigen team; specificaties maken", ziet: "Team-dashboard" },
   { rol: "Finance", kan: "Specificaties maken over alle klanten", ziet: "Financieel overzicht" },
   { rol: "Beheerder", kan: "Alles, plus gebruikers-, team- en instellingenbeheer", ziet: "Alles" },
   { rol: "Directie", kan: "Alleen lezen", ziet: "Praktijkbreed dashboard" },
@@ -337,7 +337,7 @@ export default function HandleidingPage() {
       <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
         <div className="flex flex-col gap-3">
           <SectieKop label="Stap 5" titel="Een specificatie maken" />
-          <p className="text-xs font-medium text-muted-foreground">Finance, Teamleider, Beheerder</p>
+          <p className="text-xs font-medium text-muted-foreground">Finance, Praktijkvoerder, Beheerder</p>
           <p className="text-sm text-muted-foreground">
             Een specificatie bundelt één of meer factuuritems van dezelfde klant tot één geheel.
           </p>
@@ -392,7 +392,7 @@ export default function HandleidingPage() {
       <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
         <div className="flex flex-col gap-3">
           <SectieKop label="Stap 6" titel="Klantenoverzicht" />
-          <p className="text-xs font-medium text-muted-foreground">Teamleider, Finance, Beheerder, Directie</p>
+          <p className="text-xs font-medium text-muted-foreground">Praktijkvoerder, Finance, Beheerder, Directie</p>
           <p className="text-sm text-muted-foreground">
             Via <strong className="text-foreground">Klanten</strong> zie je, per klant, hoeveel er ooit is
             gefactureerd — alleen definitieve factuuritems tellen mee, nog openstaand werk staat hier niet bij.
