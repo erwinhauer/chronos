@@ -22,7 +22,7 @@ export default async function FactuuritemsPerKlantPagina({
     (profile?.role === "teamleider" &&
       (await supabase.rpc("team_services_klant", { target_klant_id: klantId })).data === true);
 
-  const [{ data: klant }, { data: items }, { data: projecten }, landen] = await Promise.all([
+  const [{ data: klant }, { data: items }, { data: projecten }, landen, { data: alleMedewerkers }] = await Promise.all([
     supabase.from("klanten").select("naam, patricia_id, adres, valuta").eq("id", klantId).single(),
     supabase
       .from("factuuritems")
@@ -34,6 +34,10 @@ export default async function FactuuritemsPerKlantPagina({
       .order("datum", { ascending: false }),
     supabase.from("projecten").select("id, klant_id, naam, po_nummer").eq("klant_id", klantId).eq("actief", true).order("naam"),
     haalLandenMap(supabase),
+    // Alle actieve medewerkers, firmabreed en in een vaste volgorde (op naam)
+    // — nodig om elke medewerker een eigen, van elkaar te onderscheiden
+    // badge-kleur te geven die niet per klantpagina verschilt.
+    supabase.from("profiles").select("id").eq("actief", true).order("full_name"),
   ]);
 
   if (!klant) notFound();
@@ -112,6 +116,7 @@ export default async function FactuuritemsPerKlantPagina({
           magAllesBewerken={magAllesBewerken}
           huidigeGebruikerId={profile?.id}
           landen={landen}
+          medewerkerIds={(alleMedewerkers ?? []).map((m) => m.id)}
         />
       )}
     </div>

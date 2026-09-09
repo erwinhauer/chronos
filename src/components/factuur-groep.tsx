@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { FactuurItemStatus } from "@/lib/supabase/types";
-import { tagKleurStijl, VASTE_TAG_STIJL } from "@/lib/tag-kleur";
+import { medewerkerKleurStijl, VASTE_TAG_STIJL } from "@/lib/tag-kleur";
 
 type Project = { id: string; naam: string; po_nummer: string | null };
 
@@ -81,6 +81,7 @@ export function FactuurGroep({
   magAllesBewerken = false,
   huidigeGebruikerId,
   landen,
+  medewerkerIds = [],
 }: {
   klantId: string;
   klantNaam: string;
@@ -92,6 +93,7 @@ export function FactuurGroep({
   magAllesBewerken?: boolean;
   huidigeGebruikerId?: string;
   landen: LandenMap;
+  medewerkerIds?: string[];
 }) {
   const [zoekterm, setZoekterm] = useState("");
   const [groepeerOp, setGroepeerOp] = useState<Groepering>("project");
@@ -198,6 +200,7 @@ export function FactuurGroep({
                 magAllesBewerken={magAllesBewerken}
                 huidigeGebruikerId={huidigeGebruikerId}
                 landen={landen}
+                medewerkerIds={medewerkerIds}
               />
             ))}
           </div>
@@ -220,6 +223,7 @@ function ProjectSectieBlok({
   magAllesBewerken,
   huidigeGebruikerId,
   landen,
+  medewerkerIds,
 }: {
   klantId: string;
   valuta: string;
@@ -227,6 +231,7 @@ function ProjectSectieBlok({
   kleurIndex: number;
   groepeerOp: Groepering;
   projecten: Project[];
+  medewerkerIds: string[];
   toonHeader: boolean;
   toonMedewerker: boolean;
   kanFactureren: boolean;
@@ -343,6 +348,7 @@ function ProjectSectieBlok({
           onToggle={toggle}
           onToggleAlle={toggleAlle}
           landen={landen}
+          medewerkerIds={medewerkerIds}
         />
       </div>
     </div>
@@ -360,6 +366,7 @@ function FactuurItemsTabel({
   onToggle,
   onToggleAlle,
   landen,
+  medewerkerIds,
 }: {
   items: FactuurGroepItem[];
   valuta: string;
@@ -367,6 +374,7 @@ function FactuurItemsTabel({
   kanFactureren: boolean;
   magAllesBewerken: boolean;
   huidigeGebruikerId?: string;
+  medewerkerIds: string[];
   geselecteerd: Set<string>;
   onToggle: (id: string, checked: boolean) => void;
   onToggleAlle: (ids: string[], checked: boolean) => void;
@@ -499,7 +507,7 @@ function FactuurItemsTabel({
               {toonMedewerker && (
                 <TableCell>
                   {r.medewerkerInitialen && (
-                    <Badge variant="outline" style={tagKleurStijl(r.medewerkerId)}>
+                    <Badge variant="outline" style={medewerkerKleurStijl(r.medewerkerId, medewerkerIds)}>
                       {r.medewerkerInitialen}
                     </Badge>
                   )}
