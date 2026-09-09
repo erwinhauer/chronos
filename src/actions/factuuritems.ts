@@ -283,7 +283,9 @@ function valideerGedeeld(input: ReturnType<typeof parseInput>): string | null {
   if (input.prijstype !== "uren" && input.prijstype !== "vast_honorarium") {
     return "Kies of dit uren of een vast honorarium (fixed fee) is.";
   }
-  if (input.tarief === null || input.tarief < 0) {
+  // Negatief mag: zo kan een factuuritem ook crediteren (BR-05 laat dit toe,
+  // zie de aangepaste korting-check in de migratie hiervoor).
+  if (input.tarief === null) {
     return "Vul een geldige prijs in.";
   }
   if (input.korting_type === "percentage") {
@@ -323,9 +325,12 @@ export async function createFactuurItem(
     return { error: klantFout, success: false };
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [
+    {
+      data: { user },
+    },
+    profile,
+  ] = await Promise.all([supabase.auth.getUser(), getCurrentProfile()]);
   if (!user) {
     return { error: "Je sessie is verlopen. Log opnieuw in.", success: false };
   }
@@ -334,9 +339,22 @@ export async function createFactuurItem(
     return { error: "Ongeldig team gekozen.", success: false };
   }
 
+  // Alleen teamleider/beheerder mogen voor iemand anders dan zichzelf
+  // aanmaken — nooit de client vertrouwen, dus de rol hier opnieuw
+  // (server-side) checken. Bij elke andere rol wordt het altijd de
+  // ingelogde gebruiker zelf.
+  const magMedewerkerWijzigen = profile?.role === "teamleider" || profile?.role === "beheerder";
+  let medewerkerId = user.id;
+  if (magMedewerkerWijzigen && input.medewerker_id) {
+    if (!(await medewerkerBestaat(supabase, input.medewerker_id))) {
+      return { error: "De gekozen medewerker bestaat niet (meer).", success: false };
+    }
+    medewerkerId = input.medewerker_id;
+  }
+
   const { data: voorgesteldTarief } = await supabase.rpc("resolve_tarief", {
     p_klant_id: input.klant_id,
-    p_medewerker_id: user.id,
+    p_medewerker_id: medewerkerId,
     p_datum: input.datum,
   });
 
@@ -346,7 +364,9 @@ export async function createFactuurItem(
       ? round2(honorarium * ((input.korting_percentage ?? 0) / 100))
       : input.korting_bedrag_ingevoerd;
 
-  if (round2(korting) > round2(honorarium)) {
+  // Bij een negatief honorarium (crediteren) is een korting sowieso niet
+  // zinvol — dezelfde uitzondering als de check-constraint in de database.
+  if (round2(honorarium) >= 0 && round2(korting) > round2(honorarium)) {
     return { error: "Korting mag niet hoger zijn dan het honorarium.", success: false };
   }
 
@@ -358,7 +378,7 @@ export async function createFactuurItem(
       klant_id: input.klant_id,
       project_id: input.project_id,
       team_id: input.team_id,
-      medewerker_id: user.id,
+      medewerker_id: medewerkerId,
       datum: input.datum,
       omschrijving_klant: input.omschrijving_klant,
       interne_opmerking: input.interne_opmerking,
@@ -457,7 +477,9 @@ export async function updateFactuurItem(
       ? round2(honorarium * ((input.korting_percentage ?? 0) / 100))
       : input.korting_bedrag_ingevoerd;
 
-  if (round2(korting) > round2(honorarium)) {
+  // Bij een negatief honorarium (crediteren) is een korting sowieso niet
+  // zinvol — dezelfde uitzondering als de check-constraint in de database.
+  if (round2(honorarium) >= 0 && round2(korting) > round2(honorarium)) {
     return { error: "Korting mag niet hoger zijn dan het honorarium.", success: false };
   }
 

@@ -78,16 +78,45 @@ Deze lijst houd ik bij zodra ik iets naar `beta` push (toevoegen) en werk ik bij
 zodra `beta` naar `main` wordt gepromoot (verwijderen). Controleren of deze lijst
 nog klopt met de werkelijkheid kan altijd met `git log origin/main..origin/beta`.
 
-*Bijgewerkt 2026-09-03.* In-app Handleiding en Klanten-overzicht zijn beide
+*Bijgewerkt 2026-09-04.* In-app Handleiding en Klanten-overzicht zijn beide
 gepromoot naar `main`/LIVE op 2026-09-02 (na testen op BETA en expliciet
 akkoord). Daarna is de Handleiding verplaatst naar de zijbalk (boven "Profiel")
 en herontworpen met echte componenten (commit `7aaa3b1`) — ook getest op BETA
-en na akkoord gepromoot naar `main`/LIVE op 2026-09-02.
+en na akkoord gepromoot naar `main`/LIVE op 2026-09-02. Daarna is de fix voor
+het lege Medewerker-badge (commit `e440fc1`) getest op BETA en na akkoord
+gepromoot naar `main`/LIVE op 2026-09-03. Daarna is de dashboard-tegel "Nog te
+factureren werk van het team" uitgebreid met een uitsplitsing per teamlid
+(teamleider eerst, dan alfabetisch — commit `e00da57`) — ook getest op BETA en
+na akkoord gepromoot naar `main`/LIVE op 2026-09-04. Daarna is het
+Medewerker-veld bij "Factuuritems > Nieuw" altijd zichtbaar gemaakt (default
+de ingelogde gebruiker, wijzigbaar naar een teamgenoot voor teamleider/
+beheerder — commit `1882717`) — lokaal getest en op verzoek direct naar
+zowel `beta` als `main`/LIVE gepromoot op 2026-09-07. Daarna is de fix voor het
+niet kunnen verwijderen van een teamgenoot's niet-gefactureerd factuuritem
+door een teamleider (migratie `20260907120000_factuuritem_delete_teamleider.sql`,
+commit `3db1747`) getest op BETA en gepromoot naar `main`/LIVE op 2026-09-07 —
+inclusief handmatige correctie van het al geraakte Augusta Benelux B.V.-item.
+Daarna is een negatief bedrag op een factuuritem toegestaan, om deels te
+crediteren (tarief mag nu negatief; korting-check aangepast via migratie
+`20260908110000_factuuritem_negatief_bedrag.sql`, commit `60b31cd`) — lokaal
+end-to-end getest, gepusht naar `beta` en daar schoon gedeployed op
+2026-09-08. Daarna is de fix voor admin-gegenereerde magiclinks (o.a. een
+handmatige inloglink) die altijd op "/login?fout=verlopen" uitkwamen —
+nieuwe `/auth/confirm`-route, commit `c0b04fa` — getest op BETA en gepromoot
+naar `main`/LIVE op 2026-09-08. Daarna is ook de negatief-bedrag-feature
+zelf getest op BETA en na akkoord gepromoot naar `main`/LIVE op 2026-09-08.
+Daarna is de fix voor het bij "Factuuritems > Nieuw" gekozen teamlid dat
+altijd op de aanmaker terechtkwam (zowel een app-bug in `createFactuurItem`
+als een ontbrekende RLS insert-policy voor teamleider/beheerder, migratie
+`20260908130000_factuuritem_insert_teamleider_beheerder.sql`, commit
+`d55f9af`) getest op BETA en gepromoot naar `main`/LIVE op 2026-09-08.
+`main` en `beta` staan weer gelijk.
 
-- **Op BETA, nog niet gepromoot**: fix voor het Medewerker-badge in de
-  factuuritems-per-klant-tabel (commit `e440fc1`, 2026-09-03) — viel niet terug
-  op automatisch gesuggereerde initialen wanneer een gebruiker geen initialen
-  had ingesteld, waardoor het badge leeg bleef (o.a. bij Erwin zelf op BETA).
+Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
+Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
+dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de
+netwerkoplossing (Vercel ↔ Patricia) voordat dat zinvol getest kan worden op
+een gehoste omgeving.
 
 ## 1. Omgevingen-overzicht
 

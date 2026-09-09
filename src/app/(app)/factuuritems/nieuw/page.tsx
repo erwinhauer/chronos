@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { createFactuurItem } from "@/actions/factuuritems";
 import { FactuurItemForm } from "@/components/factuuritem-form";
 import { SetBreadcrumb } from "@/lib/breadcrumb-context";
 import { haalLandenMap } from "@/lib/landen";
+import { haalHerToewijsbareMedewerkers } from "@/lib/team-medewerkers";
 
 export default async function NieuwFactuurItemPage({
   searchParams,
@@ -12,9 +14,12 @@ export default async function NieuwFactuurItemPage({
 }) {
   const { klant_id, kopie_van } = await searchParams;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [
+    {
+      data: { user },
+    },
+    profile,
+  ] = await Promise.all([supabase.auth.getUser(), getCurrentProfile()]);
   if (!user) redirect("/login");
 
   const [
@@ -23,6 +28,7 @@ export default async function NieuwFactuurItemPage({
     landen,
     { data: teamLidmaatschappen },
     { data: laatsteItem },
+    medewerkers,
     { data: bronItem },
   ] = await Promise.all([
     supabase
@@ -41,6 +47,7 @@ export default async function NieuwFactuurItemPage({
       .order("datum", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    haalHerToewijsbareMedewerkers(supabase, profile?.role, user.id),
     // "Kopiëren": vult het formulier met de velden van een bestaand item, met
     // opzet zonder medewerker/team/datum — die horen bij wie/wanneer/voor
     // welk team de kopie wordt aangemaakt, niet bij het origineel.
@@ -90,8 +97,11 @@ export default async function NieuwFactuurItemPage({
         projectenPerKlant={projectenPerKlant}
         action={createFactuurItem}
         medewerkerId={user.id}
+        medewerkerNaam={profile?.full_name ?? "Onbekend"}
         voorgeselecteerdeKlantId={klant_id ?? bronItem?.klant_id}
         landen={landen}
+        medewerkers={medewerkers ?? undefined}
+        magMedewerkerWijzigen={profile?.role === "teamleider" || profile?.role === "beheerder"}
         teams={teams}
         standaardTeamId={laatsteItem?.team_id ?? null}
         initial={

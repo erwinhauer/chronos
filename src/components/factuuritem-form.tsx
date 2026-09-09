@@ -79,6 +79,7 @@ export function FactuurItemForm({
   action,
   initial,
   medewerkerId,
+  medewerkerNaam,
   voorgeselecteerdeKlantId,
   terugUrl = "/factuuritems",
   landen,
@@ -93,6 +94,9 @@ export function FactuurItemForm({
   action: (prevState: FactuurItemFormState, formData: FormData) => Promise<FactuurItemFormState>;
   initial?: Initial;
   medewerkerId: string;
+  // Naam van de ingelogde gebruiker — gebruikt als het Medewerker-veld niet
+  // bewerkbaar is (dan staat het altijd op de ingelogde gebruiker zelf).
+  medewerkerNaam: string;
   voorgeselecteerdeKlantId?: string;
   terugUrl?: string;
   landen?: LandenMap;
@@ -401,9 +405,9 @@ export function FactuurItemForm({
               )}
 
               <div className="grid gap-4 sm:grid-cols-2">
-                {initial && magMedewerkerWijzigen && medewerkers && (
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="medewerker">Medewerker</Label>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="medewerker">Medewerker</Label>
+                  {magMedewerkerWijzigen && medewerkers ? (
                     <NativeSelect
                       key={`medewerker-${selectResetKey}`}
                       id="medewerker"
@@ -416,8 +420,15 @@ export function FactuurItemForm({
                         </option>
                       ))}
                     </NativeSelect>
-                  </div>
-                )}
+                  ) : (
+                    <div
+                      id="medewerker"
+                      className="flex h-9 items-center rounded-lg border border-input bg-muted/40 px-2.5 text-sm"
+                    >
+                      {medewerkerNaam}
+                    </div>
+                  )}
+                </div>
                 {klantId && (
                   <div className="flex flex-col gap-2">
                     <div className="flex h-6 items-center justify-between">
@@ -569,7 +580,6 @@ export function FactuurItemForm({
                         id="tarief_input"
                         type="number"
                         step="0.01"
-                        min="0"
                         className="pl-6"
                         value={tarief ?? ""}
                         onChange={(e) => setTarief(e.target.value === "" ? null : Number(e.target.value))}
@@ -579,6 +589,11 @@ export function FactuurItemForm({
                     {prijstype === "uren" && voorgesteldTarief !== null && (
                       <p className="text-xs text-muted-foreground">
                         Voorgesteld tarief: {euro(voorgesteldTarief, klant?.valuta ?? "EUR")}
+                      </p>
+                    )}
+                    {tarief !== null && tarief < 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Negatief bedrag — dit factuuritem crediteert in plaats van declareert.
                       </p>
                     )}
                   </div>
@@ -638,6 +653,7 @@ export function FactuurItemForm({
                         className="pl-6"
                         value={kortingBedrag}
                         onChange={(e) => setKortingBedrag(Number(e.target.value))}
+                        disabled={honorarium < 0}
                       />
                     </div>
                   ) : (
@@ -649,10 +665,13 @@ export function FactuurItemForm({
                       max="100"
                       value={kortingPercentage}
                       onChange={(e) => setKortingPercentage(Number(e.target.value))}
+                      disabled={honorarium < 0}
                     />
                   )}
                   <p className="text-xs text-muted-foreground">
-                    Max. het honorarium ({euro(honorarium, klant?.valuta ?? "EUR")}), nooit over kosten van derden.
+                    {honorarium < 0
+                      ? "Niet van toepassing bij een negatief bedrag (crediteren)."
+                      : `Max. het honorarium (${euro(honorarium, klant?.valuta ?? "EUR")}), nooit over kosten van derden.`}
                   </p>
                   {kortingTeHoog && (
                     <p className="text-xs font-medium text-warning">
