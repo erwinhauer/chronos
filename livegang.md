@@ -115,7 +115,15 @@ omschrijving — commit `5e0a932`) en archiveerbaar gemaakt (verdwijnt uit de
 keuzelijst voor nieuwe factuuritems, bestaande items blijven ongewijzigd —
 geen echte delete i.v.m. de FK vanuit factuuritems/facturatiebatches, commit
 `e4a1ba7`) — lokaal end-to-end getest en gepromoot naar `main`/LIVE op
-2026-09-09. `main` en `beta` staan weer gelijk.
+2026-09-09. Daarna een batch kleinere optimalisaties: rol "Teamleider" overal
+hernoemd naar "Praktijkvoerder" (weergavetekst, interne rol-key ongewijzigd),
+groeperen op dossier (als schakelaar naast groeperen op project), zoeken op
+dossiernaam, land-tags allemaal dezelfde kleur / medewerker-badges juist per
+persoon een eigen kleur, een "B"-badge bij bureaukosten, uitklapbare
+meerdere-dossiers-op-één-regel, en het "Overzicht regel"-paneel in het
+factuuritem-formulier in de sidebarkleur (commits `c1d792b`, `496ef93`,
+`da4063f`) — lokaal getest en gepromoot naar `main`/LIVE op 2026-09-09.
+`main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
