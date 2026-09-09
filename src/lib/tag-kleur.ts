@@ -33,3 +33,23 @@ export const VASTE_TAG_STIJL = {
   borderColor: "color-mix(in oklch, var(--primary) 40%, transparent)",
   backgroundColor: "color-mix(in oklch, var(--primary) 12%, transparent)",
 };
+
+// Voor medewerker-badges: elke actieve medewerker moet een eigen, van elkaar
+// te onderscheiden kleur krijgen — een hash in de 5 categorische
+// tagKleur-kleuren (hierboven) botst zodra er meer dan 5 mensen zijn (bv. bij
+// 8 teamleden delen er standaard al 3 paren dezelfde kleur). In plaats daarvan
+// verdelen we de kleurencirkel gelijk over ALLE actieve medewerkers, op basis
+// van hun positie in `alleMedewerkerIds` (dezelfde, stabiele volgorde overal
+// doorgeven — bv. op naam gesorteerd — zodat iemands kleur niet per pagina
+// verschilt).
+export function medewerkerKleurStijl(medewerkerId: string, alleMedewerkerIds: string[]) {
+  const index = alleMedewerkerIds.indexOf(medewerkerId);
+  const totaal = alleMedewerkerIds.length;
+  const hue = totaal > 0 && index >= 0 ? Math.round((index / totaal) * 360) : 0;
+  const kleur = `hsl(${hue} 70% 38%)`;
+  return {
+    color: kleur,
+    borderColor: `hsl(${hue} 70% 38% / 40%)`,
+    backgroundColor: `hsl(${hue} 70% 38% / 12%)`,
+  };
+}
