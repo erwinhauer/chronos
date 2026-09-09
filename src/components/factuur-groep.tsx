@@ -8,6 +8,7 @@ import { euro, regelbedrag } from "@/lib/factuurbedragen";
 import type { LandenMap } from "@/lib/landen";
 import { VerplaatsProjectDialog } from "@/components/verplaats-project-dialog";
 import { EditProjectDialog } from "@/components/edit-project-dialog";
+import { ArchiveProjectDialog } from "@/components/archive-project-dialog";
 import { VerwijderFactuurItemDialog } from "@/components/verwijder-factuuritem-dialog";
 import { LinkButton } from "@/components/link-button";
 import { Button } from "@/components/ui/button";
@@ -261,12 +262,15 @@ function ProjectSectieBlok({
             <div className="flex items-center gap-2 text-sm font-medium">
               {sectie.projectNaam ?? "Geen project"}
               {kanFactureren && sectie.sleutel !== "__geen__" && huidigProjectId && (
-                <EditProjectDialog
-                  projectId={huidigProjectId}
-                  naam={sectie.projectNaam ?? ""}
-                  poNummer={sectie.projectPoNummer}
-                  omschrijving={sectie.projectOmschrijving}
-                />
+                <>
+                  <EditProjectDialog
+                    projectId={huidigProjectId}
+                    naam={sectie.projectNaam ?? ""}
+                    poNummer={sectie.projectPoNummer}
+                    omschrijving={sectie.projectOmschrijving}
+                  />
+                  <ArchiveProjectDialog projectId={huidigProjectId} projectNaam={sectie.projectNaam ?? ""} />
+                </>
               )}
               {sectie.projectPoNummer && (
                 <Badge

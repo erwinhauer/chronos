@@ -40,6 +40,28 @@ export async function createProject(
   return { error: null, success: true, project };
 }
 
+// Geen echte delete: factuuritems/facturatiebatches verwijzen naar
+// projecten.id (zonder on-delete-cascade) — een harde delete zou dus
+// mislukken zodra een project ooit gebruikt is, en zou anders de
+// facturatiehistorie van bestaande items breken. Zelfde soort "archiveren"
+// als klanten.status, zodat het project verdwijnt uit de keuzelijst voor
+// nieuwe factuuritems maar bestaande items hun projectnaam/PO-nummer blijven
+// tonen.
+export async function deactiveerProject(projectId: string): Promise<{ error: string | null; success: boolean }> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("projecten").update({ actief: false }).eq("id", projectId);
+
+  if (error) {
+    return {
+      error: error.code === "42501" ? "Alleen beheerders of teamleiders kunnen een project archiveren." : "Archiveren is mislukt.",
+      success: false,
+    };
+  }
+
+  revalidatePath("/factuuritems");
+  return { error: null, success: true };
+}
+
 export async function updateProject(
   projectId: string,
   _prevState: ProjectFormState,
