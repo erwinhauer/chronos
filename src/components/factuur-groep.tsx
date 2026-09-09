@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -170,24 +171,13 @@ export function FactuurGroep({
               className="pl-8"
             />
           </div>
-          <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/40 p-0.5">
-            <Button
-              type="button"
-              size="sm"
-              variant={groepeerOp === "project" ? "default" : "ghost"}
-              onClick={() => setGroepeerOp("project")}
-            >
-              Groeperen op project
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={groepeerOp === "dossier" ? "default" : "ghost"}
-              onClick={() => setGroepeerOp("dossier")}
-            >
-              Groeperen op dossier
-            </Button>
-          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <Switch
+              checked={groepeerOp === "dossier"}
+              onCheckedChange={(checked) => setGroepeerOp(checked ? "dossier" : "project")}
+            />
+            Groeperen op dossier
+          </label>
         </div>
         {secties.length === 0 ? (
           <p className="py-10 text-center text-sm text-muted-foreground">Geen factuuritems gevonden.</p>
