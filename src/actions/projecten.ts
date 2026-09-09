@@ -39,3 +39,36 @@ export async function createProject(
   revalidatePath("/factuuritems");
   return { error: null, success: true, project };
 }
+
+export async function updateProject(
+  projectId: string,
+  _prevState: ProjectFormState,
+  formData: FormData
+): Promise<ProjectFormState> {
+  const naam = String(formData.get("naam") ?? "").trim();
+  const po_nummer = String(formData.get("po_nummer") ?? "").trim();
+  const omschrijving = String(formData.get("omschrijving") ?? "").trim();
+
+  if (!naam) {
+    return { error: "Projectnaam is verplicht.", success: false };
+  }
+
+  const supabase = await createClient();
+  const { data: project, error } = await supabase
+    .from("projecten")
+    .update({
+      naam,
+      po_nummer: po_nummer || null,
+      omschrijving: omschrijving || null,
+    })
+    .eq("id", projectId)
+    .select("id, naam, po_nummer, omschrijving")
+    .single();
+
+  if (error || !project) {
+    return { error: "Wijzigen van het project is mislukt.", success: false };
+  }
+
+  revalidatePath("/factuuritems");
+  return { error: null, success: true, project };
+}
