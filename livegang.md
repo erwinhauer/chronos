@@ -123,7 +123,11 @@ persoon een eigen kleur, een "B"-badge bij bureaukosten, uitklapbare
 meerdere-dossiers-op-één-regel, en het "Overzicht regel"-paneel in het
 factuuritem-formulier in de sidebarkleur (commits `c1d792b`, `496ef93`,
 `da4063f`) — lokaal getest en gepromoot naar `main`/LIVE op 2026-09-09.
-`main` en `beta` staan weer gelijk.
+Daarna een fix voor medewerker-badges die soms dezelfde kleur kregen (een
+hash naar maar 5 kleuren botste met 8 actieve medewerkers) — nu gegarandeerd
+een eigen kleur per persoon, gelijk verdeeld over alle actieve medewerkers
+(commit `d5fb868`) — direct getest en gepromoot naar `main`/LIVE op
+2026-09-09. `main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
