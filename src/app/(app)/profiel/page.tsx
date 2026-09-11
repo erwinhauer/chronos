@@ -4,6 +4,7 @@ import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AvatarUpload } from "@/components/profiel/avatar-upload";
+import { LinkButton } from "@/components/link-button";
 import { ROLE_LABELS } from "@/lib/nav";
 import type { UserRole } from "@/lib/supabase/types";
 
@@ -80,6 +81,18 @@ export default async function ProfielPage() {
           <p className="text-xs text-muted-foreground">
             Naam, team en rol kunnen alleen door een beheerder aangepast worden.
           </p>
+        </CardContent>
+      </Card>
+
+      <Card className="max-w-lg">
+        <CardHeader>
+          <CardTitle>Wachtwoord</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <p className="text-sm text-muted-foreground">Wijzig hier je eigen wachtwoord.</p>
+          <LinkButton href="/wachtwoord-wijzigen" variant="outline" className="self-start">
+            Wachtwoord wijzigen
+          </LinkButton>
         </CardContent>
       </Card>
     </div>

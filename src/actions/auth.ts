@@ -6,6 +6,33 @@ import { createClient } from "@/lib/supabase/server";
 import { IMPERSONATIE_COOKIE } from "@/lib/impersonatie";
 
 export type MagicLinkState = { error: string | null; success: boolean };
+export type WachtwoordLoginState = { error: string | null };
+
+// Tijdelijk de primaire inlogmethode (i.p.v. magic link) i.v.m. de limiet op
+// het aantal mails dat Supabase kan versturen tijdens de teamtest. Zie
+// stuurMagicLink hieronder — die blijft intact voor als we hier later op
+// terugkomen (evt. i.c.m. 2FA, zie backlog).
+export async function logInMetWachtwoord(
+  _prevState: WachtwoordLoginState,
+  formData: FormData
+): Promise<WachtwoordLoginState> {
+  const email = String(formData.get("email") ?? "").trim();
+  const wachtwoord = String(formData.get("wachtwoord") ?? "");
+  const next = String(formData.get("next") ?? "/dashboard");
+
+  if (!email || !wachtwoord) {
+    return { error: "Vul je e-mailadres en wachtwoord in." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signInWithPassword({ email, password: wachtwoord });
+
+  if (error) {
+    return { error: "E-mailadres of wachtwoord is onjuist." };
+  }
+
+  redirect(next);
+}
 
 export async function stuurMagicLink(
   _prevState: MagicLinkState,

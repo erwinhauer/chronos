@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { IMPERSONATIE_COOKIE } from "@/lib/impersonatie";
+import { STANDAARD_WACHTWOORD } from "@/lib/wachtwoord-validatie";
 import type { UserRole } from "@/lib/supabase/types";
 
 export async function assertBeheerder() {
@@ -107,12 +108,15 @@ export async function createGebruiker(
   }
 
   const actieveRol = roles[0];
-  // Geen wachtwoord — gebruikers loggen uitsluitend in via magic link.
+  // Tijdelijk standaardwachtwoord i.p.v. magic link (zie logInMetWachtwoord) —
+  // must_change_password dwingt via de middleware af dat de gebruiker dit bij
+  // de eerste keer inloggen meteen door een eigen wachtwoord vervangt.
   const admin = createAdminClient();
   const { data, error } = await admin.auth.admin.createUser({
     email,
     email_confirm: true,
-    user_metadata: { voornaam, achternaam, role: actieveRol },
+    password: STANDAARD_WACHTWOORD,
+    user_metadata: { voornaam, achternaam, role: actieveRol, must_change_password: true },
   });
 
   if (error || !data.user) {
