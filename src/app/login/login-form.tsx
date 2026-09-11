@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { logInMetWachtwoord, type WachtwoordLoginState } from "@/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +27,12 @@ export function LoginForm({ next, foutmelding }: { next: string; foutmelding?: s
         />
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="wachtwoord">Wachtwoord</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="wachtwoord">Wachtwoord</Label>
+          <Link href="/wachtwoord-vergeten" className="text-xs text-muted-foreground underline-offset-4 hover:underline">
+            Wachtwoord vergeten?
+          </Link>
+        </div>
         <Input id="wachtwoord" name="wachtwoord" type="password" autoComplete="current-password" required />
       </div>
       {foutmelding === "verlopen" && (
