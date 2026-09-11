@@ -296,10 +296,6 @@ export async function createFactuurItem(
     return { error: "Je sessie is verlopen. Log opnieuw in.", success: false };
   }
 
-  if (!(await teamIdGeldigVoorMedewerker(supabase, input.team_id, user.id))) {
-    return { error: "Ongeldig team gekozen.", success: false };
-  }
-
   // Alleen teamleider/beheerder mogen voor iemand anders dan zichzelf
   // aanmaken — nooit de client vertrouwen, dus de rol hier opnieuw
   // (server-side) checken. Bij elke andere rol wordt het altijd de
@@ -311,6 +307,15 @@ export async function createFactuurItem(
       return { error: "De gekozen medewerker bestaat niet (meer).", success: false };
     }
     medewerkerId = input.medewerker_id;
+  }
+
+  // Pas ná de eventuele hertoewijzing checken — anders wordt het team hier
+  // getoetst tegen de aanmaker in plaats van de uiteindelijke medewerker, en
+  // slaagt deze check soms terwijl de RLS-insert-policy (die wél tegen de
+  // echte medewerker_id toetst) de insert daarna alsnog blokkeert. Dat gaf
+  // dan de misleidende foutmelding "al definitief/gefactureerd".
+  if (!(await teamIdGeldigVoorMedewerker(supabase, input.team_id, medewerkerId))) {
+    return { error: "Ongeldig team gekozen.", success: false };
   }
 
   const { data: voorgesteldTarief } = await supabase.rpc("resolve_tarief", {
