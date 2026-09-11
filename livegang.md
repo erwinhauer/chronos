@@ -127,7 +127,18 @@ Daarna een fix voor medewerker-badges die soms dezelfde kleur kregen (een
 hash naar maar 5 kleuren botste met 8 actieve medewerkers) — nu gegarandeerd
 een eigen kleur per persoon, gelijk verdeeld over alle actieve medewerkers
 (commit `d5fb868`) — direct getest en gepromoot naar `main`/LIVE op
-2026-09-09. `main` en `beta` staan weer gelijk.
+2026-09-09. Daarna, tijdelijk terug naar e-mail+wachtwoord-login i.p.v.
+magic link (Supabase's mail-limiet zou de teamtest anders in de weg zitten)
+— nieuwe/bestaande gebruikers krijgen het standaardwachtwoord `Chronos2026!`
+en moeten dat bij de eerste keer inloggen zelf vervangen (met live
+validatie: 8-25 tekens, hoofdletter, cijfer, speciaal teken); `stuurMagicLink`
+blijft in de code staan voor als we hierop terugkomen (commit `bf04925`) —
+lokaal en op BETA end-to-end getest en gepromoot naar `main`/LIVE op
+2026-09-11. Bij deze promotie zijn ook alle bestaande echte accounts op
+BETA (5) en LIVE (13, de eerste lichting Knijff-medewerkers) direct
+teruggezet op dit standaardwachtwoord + de verplichte-reset-vlag, anders
+zou niemand meer kunnen inloggen zodra magic link uit de UI verdween.
+`main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
