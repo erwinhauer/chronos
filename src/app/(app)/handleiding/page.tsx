@@ -172,7 +172,8 @@ export default function HandleidingPage() {
             <li>4. Je komt automatisch op het Dashboard terecht.</li>
           </ol>
           <p className="text-xs text-muted-foreground">
-            <em>Wachtwoord kwijt?</em> Vraag een beheerder om je account te resetten.
+            <em>Wachtwoord vergeten?</em> Klik op het loginscherm op &ldquo;Wachtwoord vergeten?&rdquo; en volg de link
+            die je per e-mail ontvangt.
           </p>
         </div>
         <StapMockup>

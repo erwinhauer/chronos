@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/auth/callback", "/auth/confirm"];
+const PUBLIC_PATHS = ["/login", "/wachtwoord-vergeten", "/auth/callback", "/auth/confirm"];
 const WACHTWOORD_WIJZIGEN_PATH = "/wachtwoord-wijzigen";
 
 export async function updateSession(request: NextRequest) {

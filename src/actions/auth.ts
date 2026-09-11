@@ -7,6 +7,7 @@ import { IMPERSONATIE_COOKIE } from "@/lib/impersonatie";
 
 export type MagicLinkState = { error: string | null; success: boolean };
 export type WachtwoordLoginState = { error: string | null };
+export type WachtwoordVergetenState = { error: string | null; success: boolean };
 
 // Tijdelijk de primaire inlogmethode (i.p.v. magic link) i.v.m. de limiet op
 // het aantal mails dat Supabase kan versturen tijdens de teamtest. Zie
@@ -63,6 +64,37 @@ export async function stuurMagicLink(
   // gebruikt worden om te achterhalen welke e-mailadressen geregistreerd zijn. Met
   // shouldCreateUser: false geeft Supabase voor een onbekend e-mailadres altijd een
   // foutmelding terug, die we hier bewust negeren.
+  return { error: null, success: true };
+}
+
+// Stuurt een wachtwoord-reset-mail — apart van stuurMagicLink hierboven,
+// maar zelfde soort e-mail (via Supabase's mailer, dus zelfde mail-limiet).
+// In tegenstelling tot magic link (die bij élke login een mail stuurt) is dit
+// alleen bij een daadwerkelijk vergeten wachtwoord, dus veel lagere volumes —
+// dat is precies waarom dit wél als self-service-mail kan blijven staan.
+export async function vraagWachtwoordResetAan(
+  _prevState: WachtwoordVergetenState,
+  formData: FormData
+): Promise<WachtwoordVergetenState> {
+  const email = String(formData.get("email") ?? "").trim();
+
+  if (!email) {
+    return { error: "Vul je e-mailadres in.", success: false };
+  }
+
+  const origin = (await headers()).get("origin");
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${origin}/auth/callback?next=/wachtwoord-wijzigen`,
+  });
+
+  if (error?.status === 429) {
+    return { error: "Je hebt net al een link aangevraagd. Wacht even en probeer het dan opnieuw.", success: false };
+  }
+
+  // Altijd succes tonen, ongeacht of het e-mailadres bestaat — zelfde reden
+  // als bij stuurMagicLink: anders is dit scherm te gebruiken om te
+  // achterhalen welke e-mailadressen geregistreerd zijn.
   return { error: null, success: true };
 }
 
