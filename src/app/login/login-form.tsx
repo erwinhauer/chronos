@@ -27,13 +27,14 @@ export function LoginForm({ next, foutmelding }: { next: string; foutmelding?: s
         />
       </div>
       <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="wachtwoord">Wachtwoord</Label>
-          <Link href="/wachtwoord-vergeten" className="text-xs text-muted-foreground underline-offset-4 hover:underline">
-            Wachtwoord vergeten?
-          </Link>
-        </div>
+        <Label htmlFor="wachtwoord">Wachtwoord</Label>
         <Input id="wachtwoord" name="wachtwoord" type="password" autoComplete="current-password" required />
+        <Link
+          href="/wachtwoord-vergeten"
+          className="self-start text-xs text-muted-foreground underline-offset-4 hover:underline"
+        >
+          Wachtwoord vergeten?
+        </Link>
       </div>
       {foutmelding === "verlopen" && (
         <p role="alert" className="text-sm text-destructive">
