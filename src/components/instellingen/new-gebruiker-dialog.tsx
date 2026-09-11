@@ -62,7 +62,8 @@ function GebruikerDialogBody({ teams, onDone }: { teams: { id: string; naam: str
         <DialogHeader>
           <DialogTitle>Gebruiker aangemaakt</DialogTitle>
           <DialogDescription>
-            {state.email} kan direct inloggen via een magic link op het loginscherm — een wachtwoord is niet nodig.
+            {state.email} kan direct inloggen met het tijdelijke wachtwoord &ldquo;Chronos2026!&rdquo; — daarna moet
+            die persoon zelf een eigen wachtwoord kiezen.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -76,7 +77,9 @@ function GebruikerDialogBody({ teams, onDone }: { teams: { id: string; naam: str
     <form action={formAction} className="flex flex-col gap-5">
       <DialogHeader>
         <DialogTitle>Nieuwe gebruiker aanmaken</DialogTitle>
-        <DialogDescription>Er wordt direct een account aangemaakt. Inloggen gaat via magic link.</DialogDescription>
+        <DialogDescription>
+          Er wordt direct een account aangemaakt met het tijdelijke wachtwoord &ldquo;Chronos2026!&rdquo;.
+        </DialogDescription>
       </DialogHeader>
 
       <div className="grid grid-cols-2 gap-4">

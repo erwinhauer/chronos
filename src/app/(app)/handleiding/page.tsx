@@ -23,8 +23,8 @@ import { ChronosMark } from "@/components/chronos-logo";
 const FEATURES = [
   {
     icon: Mail,
-    titel: "Inloggen zonder wachtwoord",
-    tekst: "Eén link per e-mail (magic link). Niets om te onthouden of te resetten.",
+    titel: "Inloggen met e-mailadres en wachtwoord",
+    tekst: "Log in met je eigen wachtwoord, dat je bij de eerste keer inloggen zelf hebt gekozen.",
   },
   {
     icon: LayoutDashboard,
@@ -162,13 +162,17 @@ export default function HandleidingPage() {
           <ol className="flex flex-col gap-2 text-sm text-muted-foreground">
             <li>1. Ga naar de Chronos-omgeving.</li>
             <li>
-              2. Vul je e-mailadres in en klik op <strong className="text-foreground">&ldquo;Stuur inloglink&rdquo;</strong>.
+              2. Vul je e-mailadres en wachtwoord in en klik op{" "}
+              <strong className="text-foreground">&ldquo;Inloggen&rdquo;</strong>.
             </li>
-            <li>3. Je ontvangt binnen enkele seconden een e-mail met een inloglink — geen wachtwoord nodig.</li>
+            <li>
+              3. Log je voor het eerst in? Dan krijg je meteen een scherm om je eigen wachtwoord te kiezen — dit
+              vervangt het tijdelijke wachtwoord dat je hebt gekregen.
+            </li>
             <li>4. Je komt automatisch op het Dashboard terecht.</li>
           </ol>
           <p className="text-xs text-muted-foreground">
-            <em>Geen mail ontvangen?</em> Check je spamfilter, en controleer of het juiste e-mailadres is gebruikt.
+            <em>Wachtwoord kwijt?</em> Vraag een beheerder om je account te resetten.
           </p>
         </div>
         <StapMockup>
