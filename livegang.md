@@ -164,7 +164,21 @@ item (migratie `20260915100000_factuuritem_select_team_scope.sql`), met
 het Factuuritems-overzicht scoopt nu ook voor finance/beheerder/directie
 altijd tot eigen items + eigen team(s), los van hun bredere RLS-rechten
 (commit `dca548d`) — lokaal gereproduceerd en gefixt bevestigd, direct
-gepromoot naar `main`/LIVE en `beta` op 2026-09-15.
+gepromoot naar `main`/LIVE en `beta` op 2026-09-15. Daarna nog drie kleinere
+fixes: (1) een teamleider/beheerder die bij "Factuuritems > Nieuw" voor een
+teamgenoot aanmaakte kreeg soms dezelfde misleidende "al definitief/
+gefactureerd"-foutmelding — de teamknoppen tonen altijd de EIGEN teams van
+de aanmaker, los van welke medewerker gekozen is, dus kon team_id een team
+zijn waar de gekozen medewerker geen lid van is. `haalHerToewijsbareMedewerkers`
+geeft nu ook de team_ids per medewerker terug; de teamkeuze wordt beperkt tot
+en automatisch gecorrigeerd naar de team(s) van de gekozen medewerker; (2)
+HubSpot-klantzoeken matcht nu ook op PNN ("Patricia ID") naast naam, voor een
+numerieke zoekterm (patriciaid is in HubSpot een number-property, dus een
+exacte EQ-match, geen wildcard); (3) landcode K4 (Koerdistan) toegevoegd —
+net als WW/WO/EU een pseudo-landcode die Patricia hanteert, geen officiële
+ISO 3166-1-code. Alle drie lokaal getest (het teamgenoot-scenario met Tom →
+Anna end-to-end, PNN-zoeken met een echte HubSpot-call) en gepromoot naar
+`main`/LIVE en `beta` op 2026-09-15.
 `main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de

@@ -40,7 +40,7 @@ type Klant = {
 type Project = { id: string; naam: string; po_nummer: string | null };
 type Team = { id: string; naam: string };
 
-type Medewerker = { id: string; full_name: string };
+type Medewerker = { id: string; full_name: string; team_ids: string[] };
 
 type Wijziging = { veld: string; oud: string | null; nieuw: string | null; aangemaaktOp: string; gewijzigdDoor: string };
 
@@ -175,6 +175,31 @@ export function FactuurItemForm({
     kortingPercentage: initial?.korting_percentage ?? 0,
     klantId: initial?.klant_id ?? "",
   }));
+
+  // Teams zijn standaard die van de ingelogde gebruiker (`teams`), maar een
+  // teamleider/beheerder kan dit factuuritem aanmaken/toewijzen voor een
+  // teamgenoot die niet in al diezelfde teams zit. Beperk de teamkeuze dan tot
+  // de team(s) waar de GEKOZEN medewerker ook echt lid van is — anders bleef
+  // de teamknop op een team staan waar die medewerker niet bij hoort, en
+  // liep je vast op de server-check ("Ongeldig team gekozen") zodra je voor
+  // een teamgenoot in maar één van je eigen meerdere teams aanmaakte.
+  const geselecteerdeMedewerker = medewerkers?.find((m) => m.id === medewerkerIdVeld);
+  const beschikbareTeams =
+    magMedewerkerWijzigen && geselecteerdeMedewerker
+      ? teams.filter((t) => geselecteerdeMedewerker.team_ids.includes(t.id))
+      : teams;
+
+  // Render-fase aanpassing (zelfde patroon als klantIdVoorReset hieronder):
+  // zodra de medewerker wijzigt en de huidige teamkeuze niet meer bij die
+  // medewerker past, automatisch corrigeren i.p.v. een ongeldige combinatie
+  // te laten staan tot de server dit afkeurt.
+  const [medewerkerIdVeldVoorReset, setMedewerkerIdVeldVoorReset] = useState(medewerkerIdVeld);
+  if (medewerkerIdVeld !== medewerkerIdVeldVoorReset) {
+    setMedewerkerIdVeldVoorReset(medewerkerIdVeld);
+    if (!beschikbareTeams.some((t) => t.id === teamId)) {
+      setTeamId(beschikbareTeams.length === 1 ? beschikbareTeams[0].id : "");
+    }
+  }
 
   const klant = klanten.find((k) => k.id === klantId);
   const projectenVoorKlant = useMemo(() => {
@@ -319,11 +344,11 @@ export function FactuurItemForm({
                 </div>
               )}
 
-              {teams.length > 1 && (
+              {beschikbareTeams.length > 1 && (
                 <div className="flex flex-col gap-2">
                   <Label>Team</Label>
                   <div className="flex flex-wrap gap-2">
-                    {teams.map((t) => (
+                    {beschikbareTeams.map((t) => (
                       <Button
                         key={t.id}
                         type="button"
@@ -670,7 +695,13 @@ export function FactuurItemForm({
               <Button type="button" variant="outline" className="flex-1" onClick={handleSluiten}>
                 Sluiten
               </Button>
-              <Button type="submit" disabled={pending || !klantId || dossierSelectie.length === 0} className="flex-1">
+              <Button
+                type="submit"
+                disabled={
+                  pending || !klantId || dossierSelectie.length === 0 || (beschikbareTeams.length > 1 && !teamId)
+                }
+                className="flex-1"
+              >
                 {pending ? "Bezig…" : initial?.id ? "Wijzigingen opslaan" : "Factuuritem aanmaken"}
               </Button>
             </CardFooter>
