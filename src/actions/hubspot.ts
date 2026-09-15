@@ -91,10 +91,12 @@ export async function zoekHubspotKlanten(zoekterm: string): Promise<HubspotZoekR
   // filterGroups zijn OR'd (elke groep zelf is een AND van zijn filters) — een
   // zoekterm die alleen cijfers is, matcht dus zowel op naam als op PNN
   // ("Patricia ID"), zodat je een klant ook kunt vinden door het Patricia-
-  // ACTOR_ID te plakken/typen in plaats van de naam te moeten weten.
+  // ACTOR_ID te plakken/typen in plaats van de naam te moeten weten. PNN is in
+  // HubSpot een number-property — dat kent geen CONTAINS_TOKEN/wildcard zoals
+  // naam, dus dit is altijd een exacte match (EQ) op het volledige PNN.
   const filterGroups = [{ filters: [{ propertyName: "name", operator: "CONTAINS_TOKEN", value: zoekwaarde }] }];
   if (/^\d+$/.test(term)) {
-    filterGroups.push({ filters: [{ propertyName: "patriciaid", operator: "CONTAINS_TOKEN", value: `${term}*` }] });
+    filterGroups.push({ filters: [{ propertyName: "patriciaid", operator: "EQ", value: term }] });
   }
 
   let companies: HubspotCompany[];
