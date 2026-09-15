@@ -10,6 +10,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 type FactuurRegel = {
   klant_id: string;
+  medewerker_id: string;
   datum: string;
   honorarium: number;
   externe_kosten: number;
@@ -74,7 +75,7 @@ export default async function FactuuritemsPage() {
     supabase
       .from("factuuritems")
       .select(
-        "id, klant_id, datum, honorarium, externe_kosten, korting, status, declarabel, team_id, klanten(naam, patricia_id, valuta)"
+        "id, klant_id, medewerker_id, datum, honorarium, externe_kosten, korting, status, declarabel, team_id, klanten(naam, patricia_id, valuta)"
       )
       .eq("status", "aangemaakt")
       .order("datum", { ascending: false }),
@@ -83,10 +84,21 @@ export default async function FactuuritemsPage() {
       : Promise.resolve({ data: null }),
   ]);
 
-  const alleItems = (items ?? []) as unknown as FactuurRegel[];
+  const opgehaaldeItems = (items ?? []) as unknown as FactuurRegel[];
   const mijnTeams = (teamLidmaatschappen ?? [])
     .map((tl) => tl.teams as unknown as { id: string; naam: string } | null)
     .filter((t): t is { id: string; naam: string } => t !== null);
+
+  // Finance/beheerder/directie mogen via RLS alle factuuritems van het hele
+  // kantoor zien (nodig voor andere schermen), maar dit overzicht is een
+  // persoonlijke werklijst — dus altijd scopen tot eigen items en items van
+  // de eigen team(s), ongeacht rol. Zonder dit zag zo'n rol hier ook items
+  // van een teamgenoot z'n ándere team, waar je zelf geen lid van bent.
+  const mijnTeamIds = new Set(mijnTeams.map((t) => t.id));
+  const alleItems = opgehaaldeItems.filter(
+    (item) =>
+      item.medewerker_id === profile?.id || (item.team_id !== null && mijnTeamIds.has(item.team_id))
+  );
 
   const scopeAlle = groepeerPerKlant(alleItems);
 
