@@ -78,7 +78,7 @@ Deze lijst houd ik bij zodra ik iets naar `beta` push (toevoegen) en werk ik bij
 zodra `beta` naar `main` wordt gepromoot (verwijderen). Controleren of deze lijst
 nog klopt met de werkelijkheid kan altijd met `git log origin/main..origin/beta`.
 
-*Bijgewerkt 2026-09-04.* In-app Handleiding en Klanten-overzicht zijn beide
+*Bijgewerkt 2026-09-15.* In-app Handleiding en Klanten-overzicht zijn beide
 gepromoot naar `main`/LIVE op 2026-09-02 (na testen op BETA en expliciet
 akkoord). Daarna is de Handleiding verplaatst naar de zijbalk (boven "Profiel")
 en herontworpen met echte componenten (commit `7aaa3b1`) — ook getest op BETA
@@ -138,6 +138,22 @@ lokaal en op BETA end-to-end getest en gepromoot naar `main`/LIVE op
 BETA (5) en LIVE (13, de eerste lichting Knijff-medewerkers) direct
 teruggezet op dit standaardwachtwoord + de verplichte-reset-vlag, anders
 zou niemand meer kunnen inloggen zodra magic link uit de UI verdween.
+Daarna een productiefix: een teamleider/beheerder die bij "Factuuritems >
+Nieuw" een nieuw item voor een teamgenoot aanmaakte kreeg soms de
+misleidende foutmelding "al definitief/gefactureerd" — de teamcheck in
+`createFactuurItem` toetste per ongeluk tegen de aanmaker in plaats van de
+uiteindelijke medewerker (commit `cd13b7a`) — direct gereproduceerd tegen
+echte LIVE-data, gefixt en met spoed gepromoot naar `main`/LIVE en `beta`
+op 2026-09-11. Daarna een self-service "wachtwoord vergeten"-flow (nieuwe
+route `/wachtwoord-vergeten`, gebruikt `resetPasswordForEmail` en de
+bestaande `/auth/callback`-route, commit `4f815c5`; de link staat onder
+i.p.v. boven het wachtwoordveld, commit `9ccdde7`) — lokaal end-to-end
+getest via Mailpit (inclusief het bestaande anti-enumeratiegedrag), en de
+Factuuritems-pagina toont voortaan tabs om te filteren per team zodra je
+lid bent van meer dan één team (op `team_id`, alleen zichtbaar bij 2+
+teamlidmaatschappen — commit `31a2f65`) — lokaal getest met een
+multi-team- en een single-team-account. Beide zijn getest en gepromoot
+naar `main`/LIVE en `beta` op 2026-09-15.
 `main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
