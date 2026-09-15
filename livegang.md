@@ -153,7 +153,18 @@ Factuuritems-pagina toont voortaan tabs om te filteren per team zodra je
 lid bent van meer dan één team (op `team_id`, alleen zichtbaar bij 2+
 teamlidmaatschappen — commit `31a2f65`) — lokaal getest met een
 multi-team- en een single-team-account. Beide zijn getest en gepromoot
-naar `main`/LIVE en `beta` op 2026-09-15.
+naar `main`/LIVE en `beta` op 2026-09-15. Daarna een productiefix, direct
+gemeld vanaf LIVE: een gebruiker zag daar factuuritems van een teamgenoot
+die voor een ánder team van die teamgenoot waren aangemaakt — de RLS-check
+`shares_team_with` toetste alleen of je íets van een team deelt met de
+aanmaker, niet of het item zelf bij dat gedeelde team hoort. Gefixt door
+`factuuritems_select_scope` te laten toetsen op het eigen `team_id` van het
+item (migratie `20260915100000_factuuritem_select_team_scope.sql`), met
+`shares_team_with` alleen nog als fallback voor oude rijen zonder team_id;
+het Factuuritems-overzicht scoopt nu ook voor finance/beheerder/directie
+altijd tot eigen items + eigen team(s), los van hun bredere RLS-rechten
+(commit `dca548d`) — lokaal gereproduceerd en gefixt bevestigd, direct
+gepromoot naar `main`/LIVE en `beta` op 2026-09-15.
 `main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
