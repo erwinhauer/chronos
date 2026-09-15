@@ -88,12 +88,21 @@ export async function zoekHubspotKlanten(zoekterm: string): Promise<HubspotZoekR
     .map((woord) => `${woord}*`)
     .join(" ");
 
+  // filterGroups zijn OR'd (elke groep zelf is een AND van zijn filters) — een
+  // zoekterm die alleen cijfers is, matcht dus zowel op naam als op PNN
+  // ("Patricia ID"), zodat je een klant ook kunt vinden door het Patricia-
+  // ACTOR_ID te plakken/typen in plaats van de naam te moeten weten.
+  const filterGroups = [{ filters: [{ propertyName: "name", operator: "CONTAINS_TOKEN", value: zoekwaarde }] }];
+  if (/^\d+$/.test(term)) {
+    filterGroups.push({ filters: [{ propertyName: "patriciaid", operator: "CONTAINS_TOKEN", value: `${term}*` }] });
+  }
+
   let companies: HubspotCompany[];
   try {
     const data = await hubspotFetch(token, "/crm/v3/objects/companies/search", {
       method: "POST",
       body: JSON.stringify({
-        filterGroups: [{ filters: [{ propertyName: "name", operator: "CONTAINS_TOKEN", value: zoekwaarde }] }],
+        filterGroups,
         properties: PROPERTIES.split(","),
         limit: 20,
       }),
