@@ -222,17 +222,17 @@ toont precies de juiste specificatie met alleen die regel) en gepusht naar
 met de wachtrij hierboven, ook op 2026-09-16.
 `main` en `beta` staan weer gelijk.
 
-Daarna een productiefix, direct gemeld vanaf LIVE: bij "Factuuritems >
-Nieuw" zag een beheerder in het Medewerker-veld het hele kantoor (alle 13
-actieve gebruikers) i.p.v. alleen de eigen teamgenoten — `haalHerToewijsbareMedewerkers`
-had voor beheerder bewust een aparte "zie iedereen"-tak. Die tak is
-verwijderd: beheerder gebruikt nu dezelfde teamgenoten-scoping als
-teamleider (member van minstens één team dat de gebruiker ook zelf lid van
-is); een beheerder zonder eigen teamlidmaatschap ziet in elk geval nog
-zichzelf, i.p.v. een lege keuzelijst — lokaal getest
-(Erwin, 0 teams → alleen zichzelf; Tom, teamleider → ongewijzigd zijn eigen
-teamgenoten) en met spoed gepromoot naar `main`/LIVE en `beta` op
-2026-09-16.
+Daarna een gemelde bug vanaf LIVE die achteraf toch gewenst gedrag bleek:
+bij "Factuuritems > Nieuw" zag een beheerder in het Medewerker-veld het
+hele kantoor i.p.v. alleen de eigen teamgenoten — dit is met spoed
+"gefixt" door beheerder dezelfde teamgenoten-scoping als teamleider te
+geven, en gepromoot naar `main`/LIVE en `beta`. Erwin gaf vrijwel meteen
+aan dat dit een verkeerde melding was (hij had zelf verkeerd gekeken) —
+**beheerder moet wél alle actieve gebruikers kunnen zien/selecteren**.
+`haalHerToewijsbareMedewerkers` is teruggedraaid naar de oorspronkelijke
+opzet: beheerder ziet iedereen, teamleider alleen de eigen teamgenoten
+(ongewijzigd). Lokaal opnieuw getest (Erwin ziet weer alle 8 lokale
+gebruikers) en teruggezet naar `main`/LIVE en `beta` op 2026-09-16.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
