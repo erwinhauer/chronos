@@ -6,9 +6,8 @@ import { groepeerPerProductgroep, groepeerPerLand } from "@/lib/omzet-aggregatie
 import { landNaamVoorIso } from "@/lib/dossiernummer";
 import { haalLandenMap } from "@/lib/landen";
 import { SetBreadcrumb } from "@/lib/breadcrumb-context";
-import { DownloadSpecificatieKnop } from "@/components/download-specificatie-knop";
+import { KlantSpecificatiesSectie } from "@/components/klant-specificaties-sectie";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import type { UserRole } from "@/lib/supabase/types";
 
@@ -25,7 +24,7 @@ export default async function KlantDetailPagina({ params }: { params: Promise<{ 
     supabase
       .from("factuuritems")
       .select(
-        "id, datum, omschrijving_klant, qty, eenheidstype, honorarium, externe_kosten, korting, factuuritem_dossiers(dossiernummer, type_dienst, land, matter_naam, volgorde)"
+        "id, datum, omschrijving_klant, qty, eenheidstype, honorarium, externe_kosten, korting, facturatiebatch_id, factuuritem_dossiers(dossiernummer, type_dienst, land, matter_naam, volgorde)"
       )
       .eq("klant_id", klantId)
       .eq("status", "definitief")
@@ -44,6 +43,21 @@ export default async function KlantDetailPagina({ params }: { params: Promise<{ 
   const totaalGefactureerd = alleItems.reduce((som, i) => som + regelbedrag(i), 0);
   const perCategorie = groepeerPerProductgroep(alleItems);
   const perLand = groepeerPerLand(alleItems, landen, 20);
+
+  // Factuuritems horen als subitems bij hun specificatie — groeperen op
+  // facturatiebatch_id. In de praktijk heeft elk definitief item er één (zie
+  // genereerSpecificatie), maar een eventuele uitzondering tonen we apart
+  // i.p.v. stilzwijgend te laten verdwijnen.
+  type FactuurRegel = (typeof alleItems)[number];
+  const itemsPerBatch: Record<string, FactuurRegel[]> = {};
+  const zonderSpecificatie: FactuurRegel[] = [];
+  for (const item of alleItems) {
+    if (item.facturatiebatch_id) {
+      (itemsPerBatch[item.facturatiebatch_id] ??= []).push(item);
+    } else {
+      zonderSpecificatie.push(item);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -110,86 +124,43 @@ export default async function KlantDetailPagina({ params }: { params: Promise<{ 
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Definitieve factuuritems</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-24">Datum</TableHead>
-                <TableHead className="w-40">Dossier</TableHead>
-                <TableHead className="w-32">Land</TableHead>
-                <TableHead>Omschrijving</TableHead>
-                <TableHead className="w-24">Qty</TableHead>
-                <TableHead className="w-28 text-right">Bedrag</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {alleItems.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
-                    Nog geen definitieve factuuritems.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                alleItems.map((item) => {
-                  const dossiers = (item.factuuritem_dossiers ?? []).slice().sort((a, b) => a.volgorde - b.volgorde);
-                  const landenOpRegel = Array.from(new Set(dossiers.map((d) => d.land).filter(Boolean))) as string[];
-                  return (
-                    <TableRow key={item.id}>
-                      <TableCell className="whitespace-nowrap text-muted-foreground">
-                        {new Date(item.datum).toLocaleDateString("nl-NL")}
-                      </TableCell>
-                      <TableCell className="whitespace-normal break-words">
-                        {dossiers.map((d) => d.dossiernummer).join(", ")}
-                      </TableCell>
-                      <TableCell className="whitespace-normal break-words">
-                        {landenOpRegel.map((iso) => landNaamVoorIso(iso, landen)).join(", ") || "—"}
-                      </TableCell>
-                      <TableCell className="whitespace-normal break-words">{item.omschrijving_klant}</TableCell>
-                      <TableCell className="tabular-figures">
-                        {item.qty} {item.eenheidstype}
-                      </TableCell>
-                      <TableCell className="text-right tabular-figures">{euro(regelbedrag(item), valuta)}</TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Specificaties</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          {(batches ?? []).length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nog geen specificaties.</p>
-          ) : (
-            (batches ?? []).map((batch) => (
-              <div key={batch.id} className="flex items-center justify-between gap-4 rounded-lg border border-border p-3">
-                <div>
-                  <p className="text-sm font-medium">
-                    {new Date(batch.periode_start).toLocaleDateString("nl-NL")} –{" "}
-                    {new Date(batch.periode_eind).toLocaleDateString("nl-NL")}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Vastgelegd op {new Date(batch.created_at).toLocaleDateString("nl-NL")}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="tabular-figures font-medium">{euro(batch.totaal_bedrag, valuta)}</span>
-                  <DownloadSpecificatieKnop specificatieId={batch.id} />
-                </div>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
+      <KlantSpecificatiesSectie
+        specificaties={(batches ?? []).map((batch) => ({
+          id: batch.id,
+          periodeStart: batch.periode_start,
+          periodeEind: batch.periode_eind,
+          createdAt: batch.created_at,
+          totaalBedrag: batch.totaal_bedrag,
+          items: (itemsPerBatch[batch.id] ?? []).map((item) => {
+            const dossiers = (item.factuuritem_dossiers ?? []).slice().sort((a, b) => a.volgorde - b.volgorde);
+            const landenOpRegel = Array.from(new Set(dossiers.map((d) => d.land).filter(Boolean))) as string[];
+            return {
+              id: item.id,
+              datum: item.datum,
+              omschrijvingKlant: item.omschrijving_klant,
+              qty: item.qty,
+              eenheidstype: item.eenheidstype,
+              bedrag: regelbedrag(item),
+              dossiernummers: dossiers.map((d) => d.dossiernummer),
+              dossiernamen: Array.from(new Set(dossiers.map((d) => d.matter_naam).filter(Boolean))) as string[],
+              landNamen: landenOpRegel.map((iso) => landNaamVoorIso(iso, landen)),
+            };
+          }),
+        }))}
+        zonderSpecificatie={zonderSpecificatie.map((item) => {
+          const dossiers = (item.factuuritem_dossiers ?? []).slice().sort((a, b) => a.volgorde - b.volgorde);
+          return {
+            id: item.id,
+            datum: item.datum,
+            omschrijvingKlant: item.omschrijving_klant,
+            qty: item.qty,
+            eenheidstype: item.eenheidstype,
+            bedrag: regelbedrag(item),
+            dossiernummers: dossiers.map((d) => d.dossiernummer),
+          };
+        })}
+        valuta={valuta}
+      />
     </div>
   );
 }
