@@ -5,6 +5,7 @@ import { SetBreadcrumb } from "@/lib/breadcrumb-context";
 import { FactuurSpecificatie, metSpecificatieDetailniveau } from "@/components/factuur-specificatie";
 import { FactuurVoorbeeldKaart } from "@/components/factuur-voorbeeld-kaart";
 import { DownloadSpecificatieKnop } from "@/components/download-specificatie-knop";
+import { KopieerDossiernummersKnop } from "@/components/kopieer-dossiernummers-knop";
 import { haalLandenMap } from "@/lib/landen";
 
 export default async function SpecificatiePagina({ params }: { params: Promise<{ id: string }> }) {
@@ -42,6 +43,19 @@ export default async function SpecificatiePagina({ params }: { params: Promise<{
     haalLandenMap(supabase),
   ]);
 
+  // Alle dossiernummers van deze specificatie, gededupliceerd en in
+  // volgorde van eerste voorkomen — om in één keer te kopiëren naar Patricia.
+  const dossiernummers = Array.from(
+    new Set(
+      (items ?? []).flatMap((item) =>
+        (item.factuuritem_dossiers ?? [])
+          .slice()
+          .sort((a, b) => a.volgorde - b.volgorde)
+          .map((d) => d.dossiernummer)
+      )
+    )
+  );
+
   const titel = klant.specificatietaal === "nl" ? "Specificatie" : "Fee Note";
   const magDownloaden =
     profile?.role === "finance" ||
@@ -69,7 +83,10 @@ export default async function SpecificatiePagina({ params }: { params: Promise<{
       />
       <div className="flex items-center justify-between print:hidden">
         <h2 className="text-2xl font-semibold tracking-tight">{titel}</h2>
-        {magDownloaden && <DownloadSpecificatieKnop specificatieId={batch.id} />}
+        <div className="flex items-center gap-2">
+          <KopieerDossiernummersKnop dossiernummers={dossiernummers} />
+          {magDownloaden && <DownloadSpecificatieKnop specificatieId={batch.id} />}
+        </div>
       </div>
 
       <p className="hidden text-sm text-muted-foreground print:block">

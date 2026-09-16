@@ -188,6 +188,27 @@ verwijderd. Op verzoek direct gepromoot naar `main`/LIVE en `beta` op
 op `beta` stonden).
 `main` en `beta` staan weer gelijk.
 
+Daarna, in één ronde (2026-09-16): (1) Klanten > klantpagina toonde al elke
+specificatie met vastleggingsdatum (bestond al, geen wijziging nodig) — de
+specificatiepagina zelf kreeg er een "Kopieer dossiernummers"-knop bij, die
+alle dossiernummers van die specificatie (gededupliceerd, `; `-gescheiden)
+naar het klembord zet, met een fallback (`execCommand`) en foutmelding als de
+Clipboard-API niet beschikbaar is; (2) standaard uurtarief (geen specifieke
+klant-/medewerkerafspraak) van €250 naar €330 — de oude `tarieven`-rij kreeg
+een einddatum, een nieuwe geldt vanaf 16 sept. (bestaande registraties raakt
+dit nooit, zie de tabelcomment); (3) changelog (`productchangelog`, via
+`scripts/release-changelog.mjs`) stond al drie weken stil op v0.26.0 —
+bijgewerkt met één inhaalslag-entry **v1.0.0** ("Bèta-lancering") die alles
+sinds 0.26.0 samenvat; `package.json`-versienummer ook naar 1.0.0; (4) nieuw:
+Instellingen > Auditlog (alleen beheerder) — leest de al bestaande
+`auditlog`-tabel (RLS was al beheerder-only) met een leesbaar per-veld-diff,
+60-dagen-retentie via een nieuwe `pg_cron`-job (migratie
+`20260916110000_auditlog_retentie_en_opslaggrootte.sql`) en de actuele
+opslaggrootte via een nieuwe `auditlog_opslaggrootte()`-functie. Alles lokaal
+getest (specificatiepagina, tarief-lookup, auditlog-tab met echte diffs en
+opslaggrootte) en gepusht naar `beta` op 2026-09-16 — nog niet gepromoot naar
+`main`/LIVE, wacht op akkoord.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de

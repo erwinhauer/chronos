@@ -852,6 +852,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      auditlog_opslaggrootte: { Args: never; Returns: number }
       current_role_name: {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]

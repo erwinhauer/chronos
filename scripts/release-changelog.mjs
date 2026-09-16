@@ -6,33 +6,40 @@ import { createClient } from "@supabase/supabase-js";
 
 // Vóór elke commit bijwerken met de wijzigingen van die release.
 const CHANGELOG_ENTRY = {
-  versienummer: "0.26.0",
-  releasedatum: "2026-08-26",
-  titel: "Magic-link inloggen, teamkeuze bij factuuritems, dashboard-KPI's voor teamleider/medewerker",
+  versienummer: "1.0.0",
+  releasedatum: "2026-09-16",
+  titel: "Bèta-lancering (v1.0): inloggen met wachtwoord, teams filteren, auditlog voor beheerder",
   nieuwe_functies: [
-    "Inloggen gaat voortaan via een magic link naar je e-mailadres (5 minuten geldig) — wachtwoorden zijn overal verdwenen",
-    "Nieuwe klant: valuta (EUR/USD) instelbaar bij aanmaken, en wisselbaar vanaf het factuuritem-scherm — net als de taal",
-    "Dossiernummer: nieuwe landcode 'MI' (Multisearch), voor gebruik bij Onderzoeken",
-    "Instellingen > Gebruikers: Actief/Inactief-tabblad; een niet-actieve gebruiker zonder enige overgebleven historie wordt automatisch definitief verwijderd",
-    "Nieuw factuuritem: een medewerker in meerdere teams kiest nu expliciet voor welk team het item is (verschijnt alleen als je in meer dan 1 team zit)",
-    "Dashboard (teamleider/medewerker): per team een nieuwe indeling — gefactureerd (YTD), nog te factureren werk van het team, omzet deze maand (MTD) en een donutchart t.o.v. het maandtarget, plus vierkante KPI-tegels per teamlid (uren/niet-uren, MTD en YTD, teamleider eerst)",
-    "Dashboard: 'Omzet per klant', 'per productgroep' en 'per land/regio' zijn nu elk onafhankelijk filterbaar (YTD/MTD/maand/kwartaal)",
+    "Inloggen gaat voortaan via e-mail + wachtwoord i.p.v. een magic link, met een 'Wachtwoord vergeten?'-link op het inlogscherm die je zelf een nieuw wachtwoord laat instellen",
+    "Factuuritems-overzicht: filteren per team via tabs, zodra je in meerdere teams zit",
+    "Nieuw factuuritem: dossiernaam (merk) per dossier zelf invullen, en een klant zoeken op naam óf op PNN (Patricia ID)",
+    "Specificatie: alle dossiernummers van die specificatie in één keer kopiëren (gescheiden door '; '), handig om ze in Patricia bij de juiste dossiers te zetten",
+    "Klanten > klantpagina: alle specificaties van die klant staan bij elkaar, met de datum waarop ze zijn vastgelegd",
+    "Projecten zijn na aanmaken ook wijzigbaar (naam, PO-nummer, omschrijving) en archiveerbaar",
+    "Factuuritem crediteren met een negatief bedrag, voor deelcredits",
+    "Instellingen > Auditlog (nieuw, alleen zichtbaar voor beheerder): wie heeft wat aangemaakt of gewijzigd op klanten, factuuritems, specificaties en tarieven — 60 dagen bewaard, met de actuele opslaggrootte erbij",
   ],
   wijzigingen: [
-    "Instellingen > Gebruikers: 'Verwijderen' heet nu 'Deactiveren' (deed altijd al hetzelfde — op inactief zetten, nooit een echte verwijdering)",
-    "Nieuwe gebruiker aanmaken: geen tijdelijk wachtwoord meer — een net aangemaakte gebruiker logt direct in via magic link",
+    "Rol 'Teamleider' heet overal 'Praktijkvoerder' (alleen de naam, niet de rechten)",
+    "Factuuritems groeperen op dossier (schakelaar naast groeperen op project) en zoeken op dossiernaam",
+    "Land-tags en medewerker-badges hebben nu allemaal hun eigen, consistente kleur",
+    "Standaard uurtarief (zonder specifieke klant- of medewerkerafspraak) van €250 naar €330",
   ],
-  bugfixes: [],
+  bugfixes: [
+    "Een factuuritem aanmaken voor een teamgenoot gaf soms de onterechte foutmelding 'al definitief/gefactureerd'",
+    "Je kon soms factuuritems zien van een teamgenoot die voor een ánder team van die teamgenoot waren aangemaakt, waar je zelf geen lid van bent",
+    "Medewerker-badges kregen bij meer dan 5 actieve medewerkers soms dezelfde kleur",
+    "Een teamleider kon een nog niet gefactureerd factuuritem van een teamgenoot niet verwijderen",
+  ],
   bekende_beperkingen: [
     "Netto-omzet is nog een tijdelijke placeholder (67% van de bruto-omzet) — de echte netto-omzet per regel kan nog niet uit Chronos worden afgeleid, dat rekent Finance vooralsnog zelf maandelijks uit",
-    "Matter (dossieromschrijving) staat nog niet op nieuwe factuuritems — dat komt pas mee zodra de echte Patricia-koppeling er is; op de specificatie staat dan tijdelijk een '—'",
+    "Dossiernaam (merk) vul je nog zelf in — de automatische koppeling met Patricia is in ontwikkeling, nog niet live",
     "Matter type wordt nog steeds afgeleid uit het dossiernummer; in de praktijk kan hetzelfde dossier bij verschillende werkzaamheden een andere matter type hebben — dat is nog niet per factuurregel instelbaar",
-    "HubSpot-import haalt alleen naam, adres en PNN op — overige klantgegevens vul je zelf aan, er is geen scherm meer om die te bewerken",
-    "'Inloggen als' is eenrichtingsverkeer: terug naar je eigen account gaat via uitloggen en opnieuw inloggen, er is geen 'terug naar beheerder'-snelkoppeling",
-    "Teamkeuze bij een factuuritem geldt alleen voor nieuwe items; bestaande items kregen bij deze release alleen automatisch een team als de medewerker op dat moment in precies 1 team zat",
+    "HubSpot-import/zoeken haalt alleen naam, adres en PNN op — overige klantgegevens vul je zelf aan, en Chronos maakt zelf geen nieuwe klanten meer aan (alleen ophalen uit HubSpot)",
+    "'Inloggen als' is eenrichtingsverkeer: terug naar je eigen account gaat via uitloggen en opnieuw inloggen",
   ],
   gebruikersactie:
-    "Je logt vanaf nu in met een magic link i.p.v. een wachtwoord: vul je e-mailadres in en klik op de link die je per e-mail ontvangt (5 minuten geldig).",
+    "Je logt voortaan in met e-mailadres + wachtwoord i.p.v. een magic link. Als je nog niet eerder met een wachtwoord hebt ingelogd: gebruik het tijdelijke wachtwoord dat je via een beheerder hebt gekregen, of klik op 'Wachtwoord vergeten?' op het inlogscherm om er zelf een nieuwe in te stellen.",
 };
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;

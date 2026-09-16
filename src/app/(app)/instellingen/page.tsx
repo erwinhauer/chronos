@@ -7,6 +7,7 @@ import { GebruikersTab } from "@/components/instellingen/gebruikers-tab";
 import { TeamsTab } from "@/components/instellingen/teams-tab";
 import { ChangelogTab } from "@/components/instellingen/changelog-tab";
 import { LandenTab } from "@/components/instellingen/landen-tab";
+import { AuditlogTab, type AuditlogRij } from "@/components/instellingen/auditlog-tab";
 import type { UserRole } from "@/lib/supabase/types";
 
 export default async function InstellingenPage() {
@@ -25,6 +26,8 @@ export default async function InstellingenPage() {
     { data: teamdoelen },
     { data: profileRoles },
     { data: landen },
+    { data: auditRijen, count: auditAantal },
+    { data: opslaggrootteBytes },
   ] = await Promise.all([
     supabase.from("profiles").select("id, full_name, voornaam, achternaam, email, role, actief, initialen").order("full_name"),
     supabase.from("teams").select("id, naam, email").order("naam"),
@@ -33,6 +36,14 @@ export default async function InstellingenPage() {
     supabase.from("teamdoelen").select("team_id, bruto_bedrag, netto_bedrag").eq("jaar", jaar),
     supabase.from("profile_roles").select("profile_id, role"),
     supabase.from("landcodes").select("iso_code, naam_nl, naam_en").order("naam_nl"),
+    supabase
+      .from("auditlog")
+      .select("id, actie, object_type, object_id, oude_waarde, nieuwe_waarde, created_at, profiles(full_name)", {
+        count: "exact",
+      })
+      .order("created_at", { ascending: false })
+      .limit(200),
+    supabase.rpc("auditlog_opslaggrootte"),
   ]);
 
   const teamIdsPerProfile: Record<string, string[]> = {};
@@ -50,6 +61,17 @@ export default async function InstellingenPage() {
     (rolIdsPerProfile[row.profile_id] ??= []).push(row.role);
   }
 
+  const auditlogRijen: AuditlogRij[] = (auditRijen ?? []).map((r) => ({
+    id: r.id,
+    actie: r.actie,
+    object_type: r.object_type,
+    object_id: r.object_id,
+    oude_waarde: r.oude_waarde as Record<string, unknown> | null,
+    nieuwe_waarde: r.nieuwe_waarde as Record<string, unknown> | null,
+    created_at: r.created_at,
+    gebruikerNaam: (r.profiles as unknown as { full_name: string } | null)?.full_name ?? null,
+  }));
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -62,6 +84,7 @@ export default async function InstellingenPage() {
           <TabsTrigger value="teams">Teams</TabsTrigger>
           <TabsTrigger value="landen">Landen</TabsTrigger>
           <TabsTrigger value="changelog">Changelog</TabsTrigger>
+          <TabsTrigger value="auditlog">Auditlog</TabsTrigger>
         </TabsList>
         <TabsContent value="gebruikers">
           <GebruikersTab
@@ -86,6 +109,13 @@ export default async function InstellingenPage() {
         </TabsContent>
         <TabsContent value="changelog">
           <ChangelogTab entries={changelog ?? []} />
+        </TabsContent>
+        <TabsContent value="auditlog">
+          <AuditlogTab
+            rijen={auditlogRijen}
+            totaalAantal={auditAantal ?? auditlogRijen.length}
+            opslaggrootteBytes={opslaggrootteBytes ?? null}
+          />
         </TabsContent>
       </Tabs>
     </div>

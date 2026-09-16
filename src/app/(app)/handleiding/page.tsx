@@ -150,7 +150,8 @@ export default function HandleidingPage() {
           </Table>
           <p className="text-xs text-muted-foreground">
             Een beheerder kan via <strong>Instellingen → Gebruikers → &ldquo;Inloggen als&rdquo;</strong> tijdelijk een
-            andere rol bekijken.
+            andere rol bekijken. Via <strong>Instellingen → Auditlog</strong> zie je wie wat heeft aangemaakt of
+            gewijzigd op klanten, factuuritems, specificaties en tarieven (60 dagen bewaard).
           </p>
         </CardContent>
       </Card>
@@ -358,6 +359,11 @@ export default function HandleidingPage() {
             <li>
               5. Tevreden? Klik &ldquo;Bevestigen en specificatie maken&rdquo;. Hierna staat de specificatie vast —
               het factureren zelf gebeurt handmatig, buiten Chronos om.
+            </li>
+            <li>
+              6. Op de vastgelegde specificatie: &ldquo;Kopieer dossiernummers&rdquo; zet alle dossiernummers van die
+              specificatie (gescheiden door &ldquo;; &rdquo;) op je klembord, om ze in Patricia bij de juiste
+              dossiers te zetten.
             </li>
           </ol>
         </div>
