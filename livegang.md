@@ -207,7 +207,18 @@ Instellingen > Auditlog (alleen beheerder) — leest de al bestaande
 opslaggrootte via een nieuwe `auditlog_opslaggrootte()`-functie. Alles lokaal
 getest (specificatiepagina, tarief-lookup, auditlog-tab met echte diffs en
 opslaggrootte) en gepusht naar `beta` op 2026-09-16 — nog niet gepromoot naar
-`main`/LIVE, wacht op akkoord.
+`main`/LIVE, wacht op akkoord. Daarna, op verzoek (nog steeds 2026-09-16, nog
+op `beta`): de "Kopieer dossiernummers"-knop staat nu ook op de klantpagina
+zelf, naast elke "Download specificatie (PDF)" — niet alleen op de losse
+specificatiepagina. En op de klantpagina staan de definitieve factuuritems
+niet meer als losse platte lijst, maar als subitems onder hun eigen
+specificatie (in-/uitklapbaar per specificatie, met een aparte val voor het
+zeldzame geval dat een definitief item geen specificatie heeft); een nieuw
+zoekveld filtert op dossier, dossiernaam, land of omschrijving — bij een
+zoekterm klappen alleen de specificaties met een match open, met alleen de
+matchende regels. Lokaal getest (uit-/inklappen, zoeken op "frankrijk"
+toont precies de juiste specificatie met alleen die regel) en gepusht naar
+`beta` — nog niet gepromoot naar `main`/LIVE.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
