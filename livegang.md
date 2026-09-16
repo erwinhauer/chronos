@@ -177,8 +177,15 @@ numerieke zoekterm (patriciaid is in HubSpot een number-property, dus een
 exacte EQ-match, geen wildcard); (3) landcode K4 (Koerdistan) toegevoegd —
 net als WW/WO/EU een pseudo-landcode die Patricia hanteert, geen officiële
 ISO 3166-1-code. Alle drie lokaal getest (het teamgenoot-scenario met Tom →
-Anna end-to-end, PNN-zoeken met een echte HubSpot-call) en gepromoot naar
-`main`/LIVE en `beta` op 2026-09-15.
+Anna end-to-end, PNN-zoeken met een echte HubSpot-call) en gepusht naar
+`beta` op 2026-09-15 — nog niet gepromoot naar `main`/LIVE, wacht op akkoord.
+Daarna is bij "Factuuritems > Bewerken" de "Nieuwe klant aanmaken"-knop in
+het klant-zoekveld verwijderd: Chronos mag klanten niet zelfstandig aanmaken,
+alleen ophalen uit HubSpot (en straks Patricia) — `createKlant` en
+`NewKlantDialog` waren daarmee ook nergens anders meer gebruikt en zijn
+verwijderd. Op verzoek direct gepromoot naar `main`/LIVE en `beta` op
+2026-09-16, samen met de drie eerdere fixes hierboven (die tot dan toe alleen
+op `beta` stonden).
 `main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de

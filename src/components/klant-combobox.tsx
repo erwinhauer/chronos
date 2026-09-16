@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Building2, Plus, Search, Trash2 } from "lucide-react";
-import { NewKlantDialog } from "@/components/new-klant-dialog";
+import { Building2, Search, Trash2 } from "lucide-react";
 import { zoekHubspotKlanten, importeerHubspotKlant, type HubspotZoekresultaat } from "@/actions/hubspot";
 import { deactiveerKlant, type NieuweKlant } from "@/actions/klanten";
 import { fuzzyFilter } from "@/lib/fuzzy-match";
@@ -253,24 +252,6 @@ export function KlantCombobox({
           {getoondeHubspotFout && (
             <p className="px-2.5 py-1.5 text-sm text-destructive">Zoeken in HubSpot mislukt: {getoondeHubspotFout}</p>
           )}
-
-          <div className="mt-1 border-t border-border pt-1" onMouseDown={(e) => e.preventDefault()}>
-            <NewKlantDialog
-              initialNaam={invoer.trim()}
-              onCreated={(klant) => {
-                onKlantAangemaakt(klant);
-                onChange(klant.id);
-                setInvoer("");
-                setOpen(false);
-              }}
-              trigger={
-                <>
-                  <Plus className="h-4 w-4" />
-                  Nieuwe klant aanmaken{invoer.trim() ? ` "${invoer.trim()}"` : ""}
-                </>
-              }
-            />
-          </div>
         </div>
       )}
     </div>
