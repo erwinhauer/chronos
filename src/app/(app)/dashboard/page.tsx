@@ -12,7 +12,7 @@ import { JaarSelect } from "@/components/jaar-select";
 import { MedewerkerPeriodeSelect } from "@/components/medewerker-periode-select";
 import { TabelPeriodeSelect } from "@/components/tabel-periode-select";
 import { MaandomzetDonut } from "@/components/maandomzet-donut";
-import { TeamlidKpiTegel, type TeamlidKpi } from "@/components/teamlid-kpi-tegel";
+import type { TeamlidKpi } from "@/components/teamlid-kpi-tegel";
 import { HeroTile } from "@/components/hero-tile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SegmentedProgress } from "@/components/segmented-progress";
@@ -522,6 +522,11 @@ export default async function DashboardPage({
         </LinkButton>
       </div>
 
+      <div className="grid gap-4 sm:grid-cols-2">
+        <HeroTile label={`Gefactureerd dit jaar (YTD)`} value={euro(jaarBrutoOmzet)} icon={ArrowUpRight} />
+        <HeroTile label="Onderhanden werk" value={euro(ohwTotaalGroep)} icon={Briefcase} variant="coral" />
+      </div>
+
       <div className="flex flex-wrap items-center justify-end gap-2">
         <span className="text-sm text-muted-foreground">Periode:</span>
         <PeriodeSelect />
@@ -776,7 +781,7 @@ export default async function DashboardPage({
                         Nettotarget {gekozenJaar}: {t.nettoDoel !== null ? euro(t.nettoDoel) : "nog niet ingesteld"}
                       </p>
 
-                      <div className="grid gap-4 border-t border-border pt-4 sm:grid-cols-2">
+                      <div className="grid gap-4 border-t border-border pt-4 sm:grid-cols-3">
                         <div className="flex items-center gap-3">
                           <StatIcon icon={TrendingUp} tint="primary" />
                           <div>
@@ -794,6 +799,12 @@ export default async function DashboardPage({
                             </p>
                             <p className="text-xl font-semibold tabular-figures">{euro(t.urenOmzetTeam)}</p>
                           </div>
+                        </div>
+                        <div className="flex flex-col items-center justify-center gap-1">
+                          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                            Maandomzet vs. target
+                          </p>
+                          <MaandomzetDonut omzet={t.gefactureerdMtd} target={t.maandTargetBruto} ohw={t.nogTeFactureren} />
                         </div>
                       </div>
 
@@ -880,46 +891,7 @@ export default async function DashboardPage({
                   </Card>
                 ) : (
                   <>
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                      <Card className="rounded-2xl">
-                        <CardContent className="flex items-center gap-4">
-                          <StatIcon icon={ArrowUpRight} tint="primary" className="h-11 w-11" />
-                          <div>
-                            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                              Gefactureerd dit jaar (YTD)
-                            </p>
-                            <div className="text-xl font-semibold tabular-figures">{euro(t.gefactureerdDitJaar)}</div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                      <Card className="rounded-2xl">
-                        <CardContent className="flex flex-col gap-3">
-                          <div className="flex items-center gap-4">
-                            <StatIcon icon={Briefcase} tint="warning" className="h-11 w-11" />
-                            <div>
-                              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                                Nog te factureren werk van het team
-                              </p>
-                              <div className="text-xl font-semibold tabular-figures text-warning">
-                                {euro(t.nogTeFactureren)}
-                              </div>
-                            </div>
-                          </div>
-                          {t.ohwPerTeamlid.length > 0 && (
-                            <div className="flex flex-col gap-1 border-t border-border pt-2">
-                              {t.ohwPerTeamlid.map((lid) => (
-                                <div key={lid.naam} className="flex items-center justify-between text-xs">
-                                  <span className="text-muted-foreground">
-                                    {lid.naam}
-                                    {lid.isTeamleider && " (Praktijkvoerder)"}
-                                  </span>
-                                  <span className="tabular-figures font-medium">{euro(lid.bedrag)}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
+                    <div className="grid gap-4 sm:grid-cols-2">
                       <Card className="rounded-2xl">
                         <CardContent className="flex items-center gap-4">
                           <StatIcon icon={CalendarDays} tint="success" className="h-11 w-11" />
@@ -936,24 +908,78 @@ export default async function DashboardPage({
                           <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                             Maandomzet vs. target
                           </p>
-                          <MaandomzetDonut omzet={t.gefactureerdMtd} target={t.maandTargetBruto} />
+                          <MaandomzetDonut omzet={t.gefactureerdMtd} target={t.maandTargetBruto} ohw={t.nogTeFactureren} />
                         </CardContent>
                       </Card>
                     </div>
 
-                    <div className="flex flex-col gap-3">
-                      <div className="flex items-center justify-between gap-4">
-                        <p className="text-sm font-medium text-muted-foreground">
-                          Per teamlid · {periodeLabel(teamlidPeriode)}
+                    {t.ohwPerTeamlid.length > 0 && (
+                      <div className="flex flex-col gap-1 rounded-lg border border-border p-3">
+                        <p className="mb-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                          Nog te factureren werk van het team, per teamlid
                         </p>
-                        <TabelPeriodeSelect paramNaam="teamlidPeriode" />
-                      </div>
-                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                        {t.teamlidKpiRijen.map((lid) => (
-                          <TeamlidKpiTegel key={lid.naam} lid={lid} />
+                        {t.ohwPerTeamlid.map((lid) => (
+                          <div key={lid.naam} className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">
+                              {lid.naam}
+                              {lid.isTeamleider && " (Praktijkvoerder)"}
+                            </span>
+                            <span className="tabular-figures font-medium">{euro(lid.bedrag)}</span>
+                          </div>
                         ))}
                       </div>
-                    </div>
+                    )}
+
+                    <Card className="rounded-2xl">
+                      <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
+                        <CardTitle className="text-base">Per teamlid · {periodeLabel(teamlidPeriode)}</CardTitle>
+                        <TabelPeriodeSelect paramNaam="teamlidPeriode" />
+                      </CardHeader>
+                      <CardContent className="p-0">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Teamlid</TableHead>
+                              <TableHead className="text-right">Fixed fee</TableHead>
+                              <TableHead className="text-right">Uren</TableHead>
+                              <TableHead className="text-right">Totaal</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {t.teamlidKpiRijen.length === 0 ? (
+                              <TableRow>
+                                <TableCell colSpan={4} className="py-10 text-center text-sm text-muted-foreground">
+                                  Nog geen omzet in deze periode.
+                                </TableCell>
+                              </TableRow>
+                            ) : (
+                              t.teamlidKpiRijen.map((lid) => (
+                                <TableRow key={lid.naam}>
+                                  <TableCell>
+                                    <span className="font-medium">{lid.naam}</span>
+                                    {lid.isTeamleider && (
+                                      <Badge variant="outline" className="ml-2 text-[10px]">
+                                        Praktijkvoerder
+                                      </Badge>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="text-right tabular-figures">{euro(lid.nietUrenBedrag)}</TableCell>
+                                  <TableCell className="text-right tabular-figures">
+                                    {euro(lid.urenBedrag)}
+                                    <span className="ml-1 text-xs text-muted-foreground">
+                                      ({lid.urenAantal.toFixed(1)} u)
+                                    </span>
+                                  </TableCell>
+                                  <TableCell className="text-right font-medium tabular-figures">
+                                    {euro(lid.urenBedrag + lid.nietUrenBedrag)}
+                                  </TableCell>
+                                </TableRow>
+                              ))
+                            )}
+                          </TableBody>
+                        </Table>
+                      </CardContent>
+                    </Card>
                   </>
                 )}
               </TabsContent>

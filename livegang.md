@@ -234,6 +234,39 @@ opzet: beheerder ziet iedereen, teamleider alleen de eigen teamgenoten
 (ongewijzigd). Lokaal opnieuw getest (Erwin ziet weer alle 8 lokale
 gebruikers) en teruggezet naar `main`/LIVE en `beta` op 2026-09-16.
 
+Daarna een dashboard-restyling (Teams én Directie, 2026-09-16): (1)
+`MaandomzetDonut` toont voortaan gefactureerd (blauw, `--chart-1`) én
+onderhanden werk (koraal, `--coral`) als twee segmenten van het
+maandtarget, met een kleine legenda eronder — het percentage in het
+midden is nu "op schema" (gefactureerd + onderhanden werk t.o.v. target),
+een volledig groene ring blijft gereserveerd voor het target puur met
+gefactureerde omzet gehaald. Deze tegel stond alleen in de teamleider/
+medewerker-weergave; nu ook toegevoegd aan de gedetailleerde Directie-
+teamkaart (die hem nog niet had). (2) Helemaal boven aan de hele pagina
+(vóór de periodeselector, voor iedere rol) een nieuw tegelpaar:
+"Gefactureerd dit jaar (YTD)" (donkerblauw, `HeroTile` — nu met een
+`variant`-prop, "primary" of "coral") en "Onderhanden werk" (koraal) —
+beide een kale som van wat RLS deze gebruiker al laat zien (`jaarBrutoOmzet`/
+`ohwTotaalGroep`), dus vanzelf bedrijfsbreed voor directie/finance/beheerder
+en eigen-team(s) voor teamleider/medewerker, zonder extra rolcode. De twee
+tegels die dit vervangt (`Gefactureerd dit jaar (YTD)` en `Nog te
+factureren werk van het team`, tot nu toe per teamtabblad) zijn uit de
+teamleider/medewerker-weergave gehaald; de onderliggende "per teamlid"-
+uitsplitsing van onderhanden werk bleef staan, nu als kleine lijst zonder
+de grote kaart. (3) "Per teamlid" (teamleider/medewerker-weergave) is een
+tabel geworden (Teamlid / Fixed fee / Uren / Totaal) i.p.v. een grid van
+vierkante tegels — `TeamlidKpiTegel` was daardoor nergens anders meer
+gebruikt en is verwijderd (het type `TeamlidKpi` blijft bestaan).
+Bijvangst tijdens het verifiëren: de bestaande "Onderhanden werk per
+team"-kaarten (boven de Teams-tabs) tellen een factuuritem van een
+medewerker in twee teams dubbel (ze groeperen op teamlidmaatschap van de
+medewerker, niet op het eigen `team_id`-veld van het item — dezelfde soort
+fout die `team_id` destijds moest oplossen, hier nooit doorgevoerd). Niet
+meegefixt in deze ronde — apart oppakken. Lokaal getest (Erwin/Directie en
+Tom/teamleider, beide teamtabs, kleuren en legenda kloppen, nieuwe
+topcijfers kloppen met de som van de losse teamkaarten) en gepusht naar
+`beta` op 2026-09-16 — nog niet gepromoot naar `main`/LIVE.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de
