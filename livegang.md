@@ -218,7 +218,21 @@ zoekveld filtert op dossier, dossiernaam, land of omschrijving — bij een
 zoekterm klappen alleen de specificaties met een match open, met alleen de
 matchende regels. Lokaal getest (uit-/inklappen, zoeken op "frankrijk"
 toont precies de juiste specificatie met alleen die regel) en gepusht naar
-`beta` — nog niet gepromoot naar `main`/LIVE.
+`beta` op 2026-09-16 — daarna op verzoek gepromoot naar `main`/LIVE, samen
+met de wachtrij hierboven, ook op 2026-09-16.
+`main` en `beta` staan weer gelijk.
+
+Daarna een productiefix, direct gemeld vanaf LIVE: bij "Factuuritems >
+Nieuw" zag een beheerder in het Medewerker-veld het hele kantoor (alle 13
+actieve gebruikers) i.p.v. alleen de eigen teamgenoten — `haalHerToewijsbareMedewerkers`
+had voor beheerder bewust een aparte "zie iedereen"-tak. Die tak is
+verwijderd: beheerder gebruikt nu dezelfde teamgenoten-scoping als
+teamleider (member van minstens één team dat de gebruiker ook zelf lid van
+is); een beheerder zonder eigen teamlidmaatschap ziet in elk geval nog
+zichzelf, i.p.v. een lege keuzelijst — lokaal getest
+(Erwin, 0 teams → alleen zichzelf; Tom, teamleider → ongewijzigd zijn eigen
+teamgenoten) en met spoed gepromoot naar `main`/LIVE en `beta` op
+2026-09-16.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
