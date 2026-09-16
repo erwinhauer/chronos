@@ -22,6 +22,24 @@ schrijft data.*
   een live koppeling vanuit Chronos is een VPN-tunnel of gateway naar buiten
   nodig. Dit geldt evengoed voor KIP/OTMIS als die niet op het Knijff-netwerk
   draaien.
+- **Meerdere databases op deze server — welke is welke (bevestigd door
+  Erwin, 2026-09-16).** Op `10.171.174.204` staan naast `Patricia` ook nog
+  `Patricia_Upgrade`, `Patricia_Intermediate` en `Patricia_Clean` — allemaal
+  op dezelfde, enkele SQL Server 2019-instantie (geen apart geversieerde
+  servers). Van de eerste twee is nu bekend wat ze zijn:
+  - **`Patricia`** = de echte LIVE-database van Knijff. Nooit op aansluiten
+    voor development/testen — een fout hierin raakt de productiedata direct.
+  - **`Patricia_Upgrade`** = een testdatabase, maar met de **volledige**
+    dataset (dus representatief voor echt testen, niet een lege/dummy-kopie).
+  - `Patricia_Intermediate` en `Patricia_Clean`: doel nog niet bevestigd.
+
+  **Aanbeveling voor de eerste live Chronos↔Patricia-koppeling: sluit eerst
+  aan op `Patricia_Upgrade`, niet op `Patricia`** — zo kan een fout tijdens
+  het testen (query, connectiebeheer, load) nooit per ongeluk de LIVE-data
+  raken. Pas overstappen naar `Patricia` als de koppeling bewezen stabiel is.
+  Let op: `PATRICIA_DB_NAME` staat nu nog hardcoded op `Patricia` in
+  `.env.example`/`.env.local` (en zou dat ook zijn op Vercel) — die moet
+  voor het eerste testen naar `Patricia_Upgrade` gewijzigd worden.
 - **Snelheid.** Met een warme connectie is een enkele lookup (2-3 tabellen
   joinen op CASE_ID) **~10-15ms**. Een koude connectie opzetten kost ~180ms.
   Ruim snel genoeg voor live gebruik zolang de connectie/pool wordt hergebruikt
