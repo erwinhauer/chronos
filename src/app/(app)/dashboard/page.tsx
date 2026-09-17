@@ -1,4 +1,4 @@
-import { Plus, ArrowUpRight, TrendingUp, TrendingDown, Clock, Briefcase, CalendarDays } from "lucide-react";
+import { Plus, Euro, TrendingUp, TrendingDown, Clock, Briefcase, CalendarDays } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { euro, isGefactureerd, isNogTeFactureren, regelbedrag, nettoOmzetPlaceholder } from "@/lib/factuurbedragen";
@@ -541,7 +541,7 @@ export default async function DashboardPage({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <HeroTile label={`Gefactureerd dit jaar (YTD)`} value={euro(jaarBrutoOmzet)} icon={ArrowUpRight} />
+        <HeroTile label={`Gefactureerd dit jaar (YTD)`} value={euro(jaarBrutoOmzet)} icon={Euro} />
         <HeroTile label="Onderhanden werk" value={euro(ohwTotaalGroep)} icon={Briefcase} variant="coral" />
       </div>
 
@@ -551,7 +551,7 @@ export default async function DashboardPage({
         <JaarSelect huidigJaar={gekozenJaar} />
       </div>
 
-      <HeroTile label={`Gefactureerd · ${periodeLabel(periode)}`} value={euro(gefactureerd)} icon={ArrowUpRight} />
+      <HeroTile label={`Gefactureerd · ${periodeLabel(periode)}`} value={euro(gefactureerd)} icon={Euro} />
 
       <div className="flex flex-col gap-3">
         <h3 className="text-lg font-semibold tracking-tight">Onderhanden werk · {periodeLabel(periode)}</h3>

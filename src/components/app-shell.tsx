@@ -28,16 +28,23 @@ export function AppShell({
   profile,
   toegekendeRollen,
   impersonatieDoor,
+  versienummer,
   children,
 }: {
   profile: Profile;
   toegekendeRollen: UserRole[];
   impersonatieDoor?: string | null;
+  versienummer?: string | null;
   children: React.ReactNode;
 }) {
   return (
     <BreadcrumbProvider>
-      <AppShellContent profile={profile} toegekendeRollen={toegekendeRollen} impersonatieDoor={impersonatieDoor}>
+      <AppShellContent
+        profile={profile}
+        toegekendeRollen={toegekendeRollen}
+        impersonatieDoor={impersonatieDoor}
+        versienummer={versienummer}
+      >
         {children}
       </AppShellContent>
     </BreadcrumbProvider>
@@ -110,11 +117,13 @@ function AppShellContent({
   profile,
   toegekendeRollen,
   impersonatieDoor,
+  versienummer,
   children,
 }: {
   profile: Profile;
   toegekendeRollen: UserRole[];
   impersonatieDoor?: string | null;
+  versienummer?: string | null;
   children: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -148,6 +157,9 @@ function AppShellContent({
         <div className="border-t border-sidebar-border px-3 py-3">
           <RolWisselaar profile={profile} toegekendeRollen={toegekendeRollen} />
         </div>
+        {versienummer && (
+          <div className="px-3 pb-3 text-center text-[11px] text-sidebar-foreground/40">Chronos v{versienummer}</div>
+        )}
       </aside>
 
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>

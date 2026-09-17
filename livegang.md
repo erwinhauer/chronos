@@ -312,6 +312,47 @@ en verdwijnt bij €400; B-badge-kleur geverifieerd in de DOM;
 "TM104803K400" parseert nu naar "Merken · Koerdistan" en is toe te voegen.
 Gepusht naar `beta` — nog niet gepromoot naar `main`/LIVE.
 
+Daarna een negenpuntsbatch optimalisaties (2026-09-17): (1)+(2) een
+medewerker mag nu ook een factuuritem van een teamgenoot bekijken/bewerken
+(niet alleen eigen items) en het naar een ander project verplaatsen — nieuwe
+RLS-policy `factuuritems_update_teamgenoot` (migratie
+`20260918100000_factuuritem_update_teamgenoot.sql`, scoped op het gedeelde
+`team_id`) plus een losse policy voor de dossierregels zelf (migratie
+`20260918110000_factuuritem_dossiers_teamgenoot.sql` — die tabel heeft haar
+eigen RLS, werd bij de eerste migratie over het hoofd gezien, waardoor
+opslaan met de foutmelding "Bijwerken van de dossiernummers is mislukt"
+faalde). Ook `updateFactuurItem`'s server-side check voor "mag medewerker
+wijzigen" uitgebreid met dit teamgenoot-geval (was alleen teamleider/
+beheerder); zonder die fix negeerde de server een medewerkerwissel door een
+medewerker stilzwijgend. Het factuuritem blijft standaard op de
+oorspronkelijke medewerker staan (niet automatisch de bewerkende gebruiker),
+wijzigingen komen gewoon in het wijzigingenlog. (3) Het datumveld bij
+factuuritems toont voortaan altijd dd-mm-jjjj, ongeacht OS/browserlocale —
+nieuwe `DatumInput`-component (tekstveld met auto-maskering, met een
+kalender-icoon dat de native datepicker opent via `showPicker()`) i.p.v. een
+kale `<input type="date">`, die zijn eigen weergave liet bepalen door de
+locale van de gebruiker. (4) "Nieuw factuuritem" vanuit een klantpagina
+vulde de klant al automatisch in (bestond al, geen wijziging nodig). (5) De
+vlag-in-cirkel bij "Omzet per klant"/"per land" op het dashboard oogde niet
+gecentreerd — `CountryFlag`'s twee vlag-varianten misten `flex items-center
+justify-center` (de Globe-fallback had dit al); nu bij alle drie gelijk.
+(6) KPI-tegel "Gefactureerd" had een verwarrend pijl-icoon; vervangen door
+een €-icoon (beide "Gefactureerd"-tegels op het dashboard). (7) De
+specificatie (concept-voorbeeld én de vastgelegde weergave) heeft een
+nieuwe schakelaar "Groeperen op dossier" naast de standaard datumvolgorde —
+`FactuurSpecificatie` is hiervoor een client component geworden;
+`metSpecificatieDetailniveau` (nodig door server-only aanroepers) is
+losgetrokken naar een nieuwe `src/lib/specificatie-detailniveau.ts` om geen
+server/client-grens te doorkruisen. (8) Het Chronos-versienummer (laatste
+`productchangelog`-entry) staat nu onderaan de zijbalk. (9) Handleiding
+bijgewerkt: de rollentabel en Stap 4 vermelden nu teamgenoten-toegang en
+"Verplaats naar project", Stap 5 vermeldt de nieuwe groeperen-op-dossier-
+schakelaar. Lokaal end-to-end getest met een medewerker- (Anna) en een
+teamleider-account (Tom in Team Benelux): een teamgenoot-item bekijken,
+bewerken zonder ongewenste medewerkerwissel, verplaatsen naar project, en
+het wijzigingenlog controleren (`gewijzigd_door` = de bewerkende
+medewerker). Gepusht naar `beta` — nog niet gepromoot naar `main`/LIVE.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de

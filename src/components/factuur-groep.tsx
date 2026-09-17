@@ -51,6 +51,7 @@ export type FactuurGroepItem = {
   kantoorkostenVanToepassing: boolean;
   status: FactuurItemStatus;
   medewerkerId: string;
+  teamId: string | null;
   medewerkerNaam: string | null;
   medewerkerInitialen: string | null;
   laatstBewerktDoor: string | null;
@@ -78,7 +79,9 @@ export function FactuurGroep({
   projecten,
   toonMedewerker,
   kanFactureren,
+  magVerplaatsen,
   magAllesBewerken = false,
+  eigenTeamIds = [],
   huidigeGebruikerId,
   landen,
   medewerkerIds = [],
@@ -90,7 +93,9 @@ export function FactuurGroep({
   projecten: Project[];
   toonMedewerker: boolean;
   kanFactureren: boolean;
+  magVerplaatsen: boolean;
   magAllesBewerken?: boolean;
+  eigenTeamIds?: string[];
   huidigeGebruikerId?: string;
   landen: LandenMap;
   medewerkerIds?: string[];
@@ -197,7 +202,9 @@ export function FactuurGroep({
                 groepeerOp={groepeerOp}
                 toonMedewerker={toonMedewerker}
                 kanFactureren={kanFactureren}
+                magVerplaatsen={magVerplaatsen}
                 magAllesBewerken={magAllesBewerken}
+                eigenTeamIds={eigenTeamIds}
                 huidigeGebruikerId={huidigeGebruikerId}
                 landen={landen}
                 medewerkerIds={medewerkerIds}
@@ -220,7 +227,9 @@ function ProjectSectieBlok({
   groepeerOp,
   toonMedewerker,
   kanFactureren,
+  magVerplaatsen,
   magAllesBewerken,
+  eigenTeamIds,
   huidigeGebruikerId,
   landen,
   medewerkerIds,
@@ -235,7 +244,9 @@ function ProjectSectieBlok({
   toonHeader: boolean;
   toonMedewerker: boolean;
   kanFactureren: boolean;
+  magVerplaatsen: boolean;
   magAllesBewerken: boolean;
+  eigenTeamIds: string[];
   huidigeGebruikerId?: string;
   landen: LandenMap;
 }) {
@@ -270,28 +281,31 @@ function ProjectSectieBlok({
     });
   }
 
-  const acties = kanFactureren && (
+  const acties = (magVerplaatsen || kanFactureren) && (
     <div className="flex flex-wrap items-center gap-2">
-      <VerplaatsProjectDialog
-        klantId={klantId}
-        itemIds={selectie.map((s) => s.id)}
-        projecten={projecten}
-        huidigProjectId={huidigProjectId}
-      />
-      {selectie.length === 0 ? (
-        <Button size="sm" disabled>
-          <Receipt className="h-4 w-4" />
-          Specificatie maken (0)
-        </Button>
-      ) : (
-        <LinkButton
-          size="sm"
-          href={`/specificaties/nieuw?klant_id=${klantId}&item_ids=${selectie.map((s) => s.id).join(",")}`}
-        >
-          <Receipt className="h-4 w-4" />
-          Specificatie maken ({selectie.length})
-        </LinkButton>
+      {magVerplaatsen && (
+        <VerplaatsProjectDialog
+          klantId={klantId}
+          itemIds={selectie.map((s) => s.id)}
+          projecten={projecten}
+          huidigProjectId={huidigProjectId}
+        />
       )}
+      {kanFactureren &&
+        (selectie.length === 0 ? (
+          <Button size="sm" disabled>
+            <Receipt className="h-4 w-4" />
+            Specificatie maken (0)
+          </Button>
+        ) : (
+          <LinkButton
+            size="sm"
+            href={`/specificaties/nieuw?klant_id=${klantId}&item_ids=${selectie.map((s) => s.id).join(",")}`}
+          >
+            <Receipt className="h-4 w-4" />
+            Specificatie maken ({selectie.length})
+          </LinkButton>
+        ))}
     </div>
   );
 
@@ -341,8 +355,9 @@ function ProjectSectieBlok({
           items={sectie.items}
           valuta={valuta}
           toonMedewerker={toonMedewerker}
-          kanFactureren={kanFactureren}
+          magVerplaatsen={magVerplaatsen}
           magAllesBewerken={magAllesBewerken}
+          eigenTeamIds={eigenTeamIds}
           huidigeGebruikerId={huidigeGebruikerId}
           geselecteerd={geselecteerd}
           onToggle={toggle}
@@ -359,8 +374,9 @@ function FactuurItemsTabel({
   items,
   valuta,
   toonMedewerker,
-  kanFactureren,
+  magVerplaatsen,
   magAllesBewerken,
+  eigenTeamIds,
   huidigeGebruikerId,
   geselecteerd,
   onToggle,
@@ -371,8 +387,9 @@ function FactuurItemsTabel({
   items: FactuurGroepItem[];
   valuta: string;
   toonMedewerker: boolean;
-  kanFactureren: boolean;
+  magVerplaatsen: boolean;
   magAllesBewerken: boolean;
+  eigenTeamIds: string[];
   huidigeGebruikerId?: string;
   medewerkerIds: string[];
   geselecteerd: Set<string>;
@@ -406,7 +423,7 @@ function FactuurItemsTabel({
       <Table className="w-auto min-w-full table-fixed">
         <TableHeader>
         <TableRow>
-          {kanFactureren && (
+          {magVerplaatsen && (
             <TableHead className="w-8">
               {selecteerbareIds.length > 0 && (
                 <Checkbox
@@ -431,14 +448,22 @@ function FactuurItemsTabel({
       </TableHeader>
       <TableBody>
         {items.map((r) => {
-          const bewerkbaar = (r.medewerkerId === huidigeGebruikerId || magAllesBewerken) && r.status === "aangemaakt";
+          // Bewerken mag ook bij een teamgenoot-item (team_id van het item is
+          // een van mijn eigen teams) — zelfde scoping als de
+          // factuuritems_update_teamgenoot-RLS-policy. Verwijderen blijft
+          // beperkt tot eigen items/magAllesBewerken: daar is bewust geen
+          // teamgenoot-policy voor toegevoegd.
+          const isEigenOfAllesBewerken = r.medewerkerId === huidigeGebruikerId || magAllesBewerken;
+          const magTeamBewerken = r.teamId !== null && eigenTeamIds.includes(r.teamId);
+          const magVerwijderen = isEigenOfAllesBewerken && r.status === "aangemaakt";
+          const bewerkbaar = (isEigenOfAllesBewerken || magTeamBewerken) && r.status === "aangemaakt";
           const bedrag = regelbedrag(r);
           const [eerste, ...rest] = r.dossiers;
           const landen_op_regel = Array.from(new Set(r.dossiers.map((d) => d.land).filter(Boolean))) as string[];
 
           return (
             <TableRow key={r.id}>
-              {kanFactureren && (
+              {magVerplaatsen && (
                 <TableCell>
                   {r.status === "aangemaakt" && (
                     <Checkbox
@@ -558,7 +583,7 @@ function FactuurItemsTabel({
                       <Copy className="h-4 w-4" />
                       Kopiëren
                     </DropdownMenuItem>
-                    {bewerkbaar && (
+                    {magVerwijderen && (
                       <DropdownMenuItem
                         variant="destructive"
                         onClick={() => {

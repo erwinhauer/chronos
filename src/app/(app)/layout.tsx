@@ -14,12 +14,20 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   const supabase = await createClient();
-  const { data: profileRoles } = await supabase.from("profile_roles").select("role").eq("profile_id", profile.id);
+  const [{ data: profileRoles }, { data: laatsteRelease }] = await Promise.all([
+    supabase.from("profile_roles").select("role").eq("profile_id", profile.id),
+    supabase.from("productchangelog").select("versienummer").order("releasedatum", { ascending: false }).limit(1).maybeSingle(),
+  ]);
   const toegekendeRollen: UserRole[] = (profileRoles ?? []).map((r) => r.role);
   const impersonatieDoor = (await cookies()).get(IMPERSONATIE_COOKIE)?.value ?? null;
 
   return (
-    <AppShell profile={profile} toegekendeRollen={toegekendeRollen} impersonatieDoor={impersonatieDoor}>
+    <AppShell
+      profile={profile}
+      toegekendeRollen={toegekendeRollen}
+      impersonatieDoor={impersonatieDoor}
+      versienummer={laatsteRelease?.versienummer ?? null}
+    >
       {children}
     </AppShell>
   );

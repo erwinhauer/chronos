@@ -22,12 +22,22 @@ export default async function FactuuritemsPerKlantPagina({
     (profile?.role === "teamleider" &&
       (await supabase.rpc("team_services_klant", { target_klant_id: klantId })).data === true);
 
+  // Voor een medewerker is "mag bewerken" niet blanket voor de hele pagina
+  // (zoals bij teamleider/beheerder), maar per item: alleen als dat item bij
+  // een team hoort waar de kijker zelf ook lid van is (zelfde scoping als de
+  // factuuritems_update_teamgenoot-RLS-policy) — vandaar hier op te halen en
+  // per rij in FactuurGroep te toetsen i.p.v. hier al tot één boolean te maken.
+  const eigenTeamIds =
+    profile?.role === "medewerker"
+      ? new Set((await supabase.from("team_members").select("team_id").eq("profile_id", profile.id)).data?.map((t) => t.team_id))
+      : new Set<string>();
+
   const [{ data: klant }, { data: items }, { data: projecten }, landen, { data: alleMedewerkers }] = await Promise.all([
     supabase.from("klanten").select("naam, patricia_id, adres, valuta").eq("id", klantId).single(),
     supabase
       .from("factuuritems")
       .select(
-        "id, datum, omschrijving_klant, interne_opmerking, eenheidstype, qty, honorarium, externe_kosten, korting, status, declarabel, kantoorkosten_van_toepassing, medewerker_id, klant_id, project_id, projecten(naam, po_nummer, omschrijving), profiles!factuuritems_medewerker_id_fkey(full_name, initialen), laatst_bewerkt_door_profiel:profiles!factuuritems_laatst_bewerkt_door_fkey(full_name), factuuritem_dossiers(dossiernummer, type_dienst, land, matter_naam, volgorde)"
+        "id, datum, omschrijving_klant, interne_opmerking, eenheidstype, qty, honorarium, externe_kosten, korting, status, declarabel, kantoorkosten_van_toepassing, medewerker_id, klant_id, project_id, team_id, projecten(naam, po_nummer, omschrijving), profiles!factuuritems_medewerker_id_fkey(full_name, initialen), laatst_bewerkt_door_profiel:profiles!factuuritems_laatst_bewerkt_door_fkey(full_name), factuuritem_dossiers(dossiernummer, type_dienst, land, matter_naam, volgorde)"
       )
       .eq("klant_id", klantId)
       .eq("status", "aangemaakt")
@@ -36,15 +46,23 @@ export default async function FactuuritemsPerKlantPagina({
     haalLandenMap(supabase),
     // Alle actieve medewerkers, firmabreed en in een vaste volgorde (op naam)
     // — nodig om elke medewerker een eigen, van elkaar te onderscheiden
-    // badge-kleur te geven die niet per klantpagina verschilt.
+    // badge-kleur die niet per klantpagina verschilt.
     supabase.from("profiles").select("id").eq("actief", true).order("full_name"),
   ]);
 
   if (!klant) notFound();
 
-  const toonMedewerker = profile?.role !== "medewerker";
+  // Iedereen mag nu zien wie een item heeft aangemaakt — een medewerker ziet
+  // hier ook teamgenoten-items, dus het is juist nuttig om te kunnen zien van
+  // wie welk item is.
+  const toonMedewerker = true;
   const kanFactureren =
     profile?.role === "finance" || profile?.role === "beheerder" || profile?.role === "teamleider";
+  // "Verplaats naar project" is geen facturatie-actie — een medewerker mag dit
+  // ook voor eigen/teamgenoten-items, los van kanFactureren (dat blijft voor
+  // "Specificatie maken" en projectbeheer voorbehouden aan finance/beheerder/
+  // teamleider).
+  const magVerplaatsen = kanFactureren || profile?.role === "medewerker";
 
   const genormaliseerd: FactuurGroepItem[] = (items ?? []).map((item) => {
     const project = item.projecten as unknown as {
@@ -71,6 +89,7 @@ export default async function FactuuritemsPerKlantPagina({
       kantoorkostenVanToepassing: item.kantoorkosten_van_toepassing,
       status: item.status,
       medewerkerId: item.medewerker_id,
+      teamId: item.team_id,
       medewerkerNaam: medewerker?.full_name ?? null,
       medewerkerInitialen: medewerker ? medewerker.initialen || suggestInitialen(medewerker.full_name) : null,
       laatstBewerktDoor,
@@ -113,7 +132,9 @@ export default async function FactuuritemsPerKlantPagina({
           projecten={projecten ?? []}
           toonMedewerker={toonMedewerker}
           kanFactureren={kanFactureren}
+          magVerplaatsen={magVerplaatsen}
           magAllesBewerken={magAllesBewerken}
+          eigenTeamIds={Array.from(eigenTeamIds)}
           huidigeGebruikerId={profile?.id}
           landen={landen}
           medewerkerIds={(alleMedewerkers ?? []).map((m) => m.id)}

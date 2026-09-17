@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { genereerSpecificatiePdf } from "@/lib/specificatie-pdf";
-import { metSpecificatieDetailniveau } from "@/components/factuur-specificatie";
+import { metSpecificatieDetailniveau } from "@/lib/specificatie-detailniveau";
 import { haalLandenMap } from "@/lib/landen";
 import { berekenFactuurtotalen, round2 } from "@/lib/factuurbedragen";
 

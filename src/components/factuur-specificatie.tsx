@@ -1,6 +1,11 @@
+"use client";
+
+import { Fragment, useMemo, useState } from "react";
 import { landNaamVoorIso } from "@/lib/dossiernummer";
 import type { LandenMap } from "@/lib/landen";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Switch } from "@/components/ui/switch";
+import { metSpecificatieDetailniveau, type FactuurSpecificatieKlant } from "@/lib/specificatie-detailniveau";
 
 const LABELS = {
   nl: {
@@ -22,6 +27,7 @@ const LABELS = {
     extraKorting: "Extra korting",
     subtotaal: "Subtotaal",
     totaal: "Totaal",
+    groeperenOpDossier: "Groeperen op dossier",
   },
   en: {
     titel: "Specification invoice",
@@ -42,42 +48,12 @@ const LABELS = {
     extraKorting: "Additional discount",
     subtotaal: "Subtotal",
     totaal: "Total",
+    groeperenOpDossier: "Group by matter",
   },
 };
 
-export type FactuurSpecificatieKlant = {
-  naam: string;
-  adres: string | null;
-  specificatietaal: "nl" | "en";
-  kolom_matter_type_land_zichtbaar: boolean;
-  kolom_persoon_zichtbaar: boolean;
-  kolom_uren_zichtbaar: boolean;
-  kolom_tarief_zichtbaar: boolean;
-  kolom_externe_kosten_zichtbaar: boolean;
-  kolom_korting_zichtbaar: boolean;
-};
-
-// De keuze om "Kosten van derden" en/of "Korting" te tonen (per specificatie
-// gekozen, zie NieuweSpecificatieForm) bepaalt ook of Tarief en Aantal (Qty)
-// zichtbaar zijn: in de simpele specificatie (geen van beide aan) hoort geen
-// van beide te staan, in de uitgebreide specificatie horen beide er juist bij
-// — samen met Kosten van derden/Korting laten ze zien hoe het regelbedrag is
-// opgebouwd. Eén plek voor deze afleiding, gebruikt door zowel de
-// preview/concept (nieuwe-specificatie-form.tsx) als de bevroren, al-
-// vastgelegde specificatie (specificaties/[id]/page.tsx, specificatie-download.ts).
-export function metSpecificatieDetailniveau<T extends FactuurSpecificatieKlant>(
-  klant: T,
-  detail: { kolom_externe_kosten_zichtbaar: boolean; kolom_korting_zichtbaar: boolean }
-): T {
-  const uitgebreid = detail.kolom_externe_kosten_zichtbaar || detail.kolom_korting_zichtbaar;
-  return {
-    ...klant,
-    kolom_tarief_zichtbaar: klant.kolom_tarief_zichtbaar && uitgebreid,
-    kolom_uren_zichtbaar: klant.kolom_uren_zichtbaar || uitgebreid,
-    kolom_externe_kosten_zichtbaar: detail.kolom_externe_kosten_zichtbaar,
-    kolom_korting_zichtbaar: detail.kolom_korting_zichtbaar,
-  };
-}
+export type { FactuurSpecificatieKlant };
+export { metSpecificatieDetailniveau };
 
 export type FactuurSpecificatieItem = {
   id: string;
@@ -167,6 +143,37 @@ export function FactuurSpecificatie({
   const toontKortingKolom = klant.kolom_korting_zichtbaar && items.some((i) => i.korting > 0);
   const projectRegel = poEnProjectRegel(project);
 
+  // Standaard blijft de specificatie een platte, op datum gesorteerde lijst
+  // (de volgorde waarin `items` al binnenkomt). Met de switch aan wordt
+  // dezelfde lijst gegroepeerd per dossier — het EERSTE dossier van een item
+  // bepaalt de groep, zelfde vereenvoudiging als bij "Groeperen op dossier"
+  // op de factuuritems-per-klant-pagina (een item met meerdere dossiers hoort
+  // maar bij één groep, anders zou het totaal per groep niet meer kloppen).
+  const [groepeerOpDossier, setGroepeerOpDossier] = useState(false);
+  const secties = useMemo(() => {
+    if (!groepeerOpDossier) return [{ dossiernummer: null as string | null, matterNaam: null as string | null, items }];
+    const map = new Map<string, { dossiernummer: string; matterNaam: string | null; items: FactuurSpecificatieItem[] }>();
+    for (const item of items) {
+      const dossiers = item.dossiers.slice().sort((a, b) => a.volgorde - b.volgorde);
+      const eerste = dossiers[0];
+      const sleutel = eerste?.dossiernummer ?? "—";
+      const bestaand = map.get(sleutel);
+      if (bestaand) bestaand.items.push(item);
+      else map.set(sleutel, { dossiernummer: sleutel, matterNaam: eerste?.matter_naam ?? null, items: [item] });
+    }
+    return Array.from(map.values()).sort((a, b) => a.dossiernummer.localeCompare(b.dossiernummer));
+  }, [items, groepeerOpDossier]);
+
+  const kolomAantal =
+    2 +
+    (klant.kolom_matter_type_land_zichtbaar ? 1 : 0) +
+    1 +
+    (klant.kolom_uren_zichtbaar ? 1 : 0) +
+    (klant.kolom_tarief_zichtbaar ? 1 : 0) +
+    (klant.kolom_externe_kosten_zichtbaar ? 1 : 0) +
+    (toontKortingKolom ? 1 : 0) +
+    1;
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-start justify-between gap-8">
@@ -192,6 +199,11 @@ export function FactuurSpecificatie({
         />
       </div>
 
+      <label className="flex items-center gap-2 self-end text-sm print:hidden">
+        <Switch checked={groepeerOpDossier} onCheckedChange={setGroepeerOpDossier} />
+        {t.groeperenOpDossier}
+      </label>
+
       <Table className="[&_td]:px-1.5 [&_th]:px-1.5 [&_td]:text-xs [&_th]:text-xs">
         <TableHeader>
           <TableRow>
@@ -211,39 +223,53 @@ export function FactuurSpecificatie({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {items.map((item) => {
-            const dossiers = item.dossiers.slice().sort((a, b) => a.volgorde - b.volgorde);
-            const eerste = dossiers[0];
-            const matterNamen = Array.from(new Set(dossiers.map((d) => d.matter_naam ?? "—")));
-            return (
-              <TableRow key={item.id}>
-                <TableCell className="whitespace-nowrap">{formatDatum(item.datum, taal)}</TableCell>
-                <TableCell className="whitespace-normal break-words">
-                  <div>{dossiers.map((d) => d.dossiernummer).join("; ")}</div>
-                  <div className="text-muted-foreground">{matterNamen.join(", ")}</div>
-                </TableCell>
-                {klant.kolom_matter_type_land_zichtbaar && (
-                  <TableCell className="whitespace-normal">{landNaamVoorIso(eerste?.land ?? null, landen)}</TableCell>
-                )}
-                <TableCell className="whitespace-normal break-words">{item.omschrijving_klant}</TableCell>
-                {klant.kolom_uren_zichtbaar && (
-                  <TableCell className="text-right tabular-figures">{item.qty}</TableCell>
-                )}
-                {klant.kolom_tarief_zichtbaar && (
-                  <TableCell className="text-right tabular-figures">{item.tarief !== null ? euro(item.tarief) : "—"}</TableCell>
-                )}
-                {klant.kolom_externe_kosten_zichtbaar && (
-                  <TableCell className="text-right tabular-figures">{euro(item.externe_kosten)}</TableCell>
-                )}
-                {toontKortingKolom && (
-                  <TableCell className="text-right tabular-figures">{euro(item.korting)}</TableCell>
-                )}
-                <TableCell className="text-right tabular-figures">
-                  {euro(item.honorarium + item.externe_kosten - item.korting)}
-                </TableCell>
-              </TableRow>
-            );
-          })}
+          {secties.map((sectie) => (
+            <Fragment key={sectie.dossiernummer ?? "__alles__"}>
+              {groepeerOpDossier && (
+                <TableRow className="bg-muted/40 hover:bg-muted/40">
+                  <TableCell colSpan={kolomAantal} className="font-semibold">
+                    {sectie.dossiernummer}
+                    {sectie.matterNaam ? ` — ${sectie.matterNaam}` : ""}
+                  </TableCell>
+                </TableRow>
+              )}
+              {sectie.items.map((item) => {
+                const dossiers = item.dossiers.slice().sort((a, b) => a.volgorde - b.volgorde);
+                const eerste = dossiers[0];
+                const matterNamen = Array.from(new Set(dossiers.map((d) => d.matter_naam ?? "—")));
+                return (
+                  <TableRow key={item.id}>
+                    <TableCell className="whitespace-nowrap">{formatDatum(item.datum, taal)}</TableCell>
+                    <TableCell className="whitespace-normal break-words">
+                      <div>{dossiers.map((d) => d.dossiernummer).join("; ")}</div>
+                      <div className="text-muted-foreground">{matterNamen.join(", ")}</div>
+                    </TableCell>
+                    {klant.kolom_matter_type_land_zichtbaar && (
+                      <TableCell className="whitespace-normal">{landNaamVoorIso(eerste?.land ?? null, landen)}</TableCell>
+                    )}
+                    <TableCell className="whitespace-normal break-words">{item.omschrijving_klant}</TableCell>
+                    {klant.kolom_uren_zichtbaar && (
+                      <TableCell className="text-right tabular-figures">{item.qty}</TableCell>
+                    )}
+                    {klant.kolom_tarief_zichtbaar && (
+                      <TableCell className="text-right tabular-figures">
+                        {item.tarief !== null ? euro(item.tarief) : "—"}
+                      </TableCell>
+                    )}
+                    {klant.kolom_externe_kosten_zichtbaar && (
+                      <TableCell className="text-right tabular-figures">{euro(item.externe_kosten)}</TableCell>
+                    )}
+                    {toontKortingKolom && (
+                      <TableCell className="text-right tabular-figures">{euro(item.korting)}</TableCell>
+                    )}
+                    <TableCell className="text-right tabular-figures">
+                      {euro(item.honorarium + item.externe_kosten - item.korting)}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </Fragment>
+          ))}
         </TableBody>
       </Table>
 
