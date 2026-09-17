@@ -378,6 +378,30 @@ juiste klant als het juiste project voorgeselecteerd. Op verzoek gepromoot
 naar `main`/LIVE op 2026-09-18.
 `main` en `beta` staan weer gelijk.
 
+Daarna een gemelde discrepantie vanaf LIVE (2026-09-18): de kale KPI-tegel
+"Onderhanden werk" helemaal boven het dashboard (vóór de periode-selector,
+naast de al-onbeperkte "Gefactureerd dit jaar (YTD)") toonde afgerond €57K,
+terwijl "Factuuritems" > "Totaal openstaand" ruim €59K liet zien. Oorzaak:
+die kale tegel deelde zijn berekening met de doelbewust periode-gefilterde
+sectie "Onderhanden werk · {periode}" eronder (voor de per-team-uitsplitsing)
+— daardoor viel nog niet gefactureerd werk van vóór het gekozen jaar/periode
+(bv. iets dat in 2025 is gelogd en nooit gefactureerd) stil uit de kale tegel,
+terwijl de code-comment daar al zei dat OHW juist "over nú openstaand werk"
+moet gaan, niet over een periode. Losgetrokken in een eigen, onbeperkte
+`ohwTotaalOnbeperkt`, gebruikt voor die ene kale tegel; de periode-gefilterde
+`ohwTotaalGroep`/`ohwPerTeam` en de rest van die sectie blijven ongewijzigd
+(bewust periode-scoped, correct gelabeld). Los daarvan bleek Factuuritems'
+"Totaal openstaand" toch geen betrouwbare vergelijkingsbasis: die pagina
+scoopt bewust (ongeacht rol, bestaande keuze) tot eigen items + eigen
+team(s) — voor een beheerder zonder teamlidmaatschap dus een veel kleinere,
+persoonlijke deelverzameling, niet het kantoorbrede totaal. Lokaal
+gereproduceerd met een fictief nog-niet-gefactureerd item uit 2025: de kale
+tegel steeg meteen zodra dat item meetelde, de periode-gefilterde sectie
+eronder bleef terecht ongewijzigd. Getest met medewerker-, teamleider- en
+beheerderaccount, geen console-/servererrors. Op verzoek direct gepromoot
+naar `main`/LIVE en `beta` op 2026-09-18.
+`main` en `beta` staan weer gelijk.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de

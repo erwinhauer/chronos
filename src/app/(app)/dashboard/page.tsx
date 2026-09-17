@@ -259,6 +259,17 @@ export default async function DashboardPage({
   // aan factuuritems is toegevoegd (zie de kolomcomment op die tabel).
   const ohwRows = rows.filter((r) => isNogTeFactureren(r.status, r.declarabel) && inPeriode(r.datum, periode, gekozenJaar));
   const ohwTotaalGroep = ohwRows.reduce((sum, r) => sum + regelbedrag(r), 0);
+  // Losstaand van hierboven: de kale KPI-tegel "Onderhanden werk" (helemaal
+  // boven de pagina, vóór de periode-selector, naast de al-onbeperkte
+  // "Gefactureerd dit jaar (YTD)") hoort — net als bij Factuuritems > "Totaal
+  // openstaand" — al het nog niet gefactureerde werk te tonen, hoe oud ook.
+  // ohwTotaalGroep hierboven is bewust WEL periode-gefilterd (voor de sectie
+  // "Onderhanden werk · {periode}" met de per-team-uitsplitsing eronder) —
+  // die twee mogen niet dezelfde variabele delen, anders verschuift de kale
+  // KPI-tegel mee met de periode-select terwijl hij daar niet naast staat.
+  const ohwTotaalOnbeperkt = rows
+    .filter((r) => isNogTeFactureren(r.status, r.declarabel))
+    .reduce((sum, r) => sum + regelbedrag(r), 0);
   const ohwPerTeam = (teamsBasis ?? []).map((team) => {
     const bedrag = ohwRows.filter((r) => r.team_id === team.id).reduce((sum, r) => sum + regelbedrag(r), 0);
     return { teamId: team.id, teamNaam: team.naam, bedrag };
@@ -542,7 +553,7 @@ export default async function DashboardPage({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <HeroTile label={`Gefactureerd dit jaar (YTD)`} value={euro(jaarBrutoOmzet)} icon={Euro} />
-        <HeroTile label="Onderhanden werk" value={euro(ohwTotaalGroep)} icon={Briefcase} variant="coral" />
+        <HeroTile label="Onderhanden werk" value={euro(ohwTotaalOnbeperkt)} icon={Briefcase} variant="coral" />
       </div>
 
       <div className="flex flex-wrap items-center justify-end gap-2">
