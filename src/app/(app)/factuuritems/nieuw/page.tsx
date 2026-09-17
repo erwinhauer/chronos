@@ -80,7 +80,7 @@ export default async function NieuwFactuurItemPage({
   if (klant_id && !alleKlanten.some((k) => k.id === klant_id)) {
     const { data: klantUitUrl } = await supabase
       .from("klanten")
-      .select("id, naam, adres, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal, valuta")
+      .select("id, naam, adres, patricia_id, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal, valuta")
       .eq("id", klant_id)
       .maybeSingle();
     if (klantUitUrl) alleKlanten.push(klantUitUrl);
