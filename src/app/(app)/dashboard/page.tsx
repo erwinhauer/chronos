@@ -36,6 +36,7 @@ function firstName(fullName: string) {
 type FactuurRegel = {
   medewerker_id: string;
   klant_id: string;
+  team_id: string | null;
   honorarium: number;
   externe_kosten: number;
   korting: number;
@@ -208,7 +209,7 @@ export default async function DashboardPage({
       supabase
         .from("factuuritems")
         .select(
-          "medewerker_id, klant_id, honorarium, externe_kosten, korting, qty, status, declarabel, datum, prijstype, klanten(naam), factuuritem_dossiers(type_dienst, land, volgorde)"
+          "medewerker_id, klant_id, team_id, honorarium, externe_kosten, korting, qty, status, declarabel, datum, prijstype, klanten(naam), factuuritem_dossiers(type_dienst, land, volgorde)"
         ),
       supabase.from("teamdoelen").select("bruto_bedrag, netto_bedrag, teams(id, naam)").eq("jaar", gekozenJaar),
       supabase.from("team_members").select("team_id, profile_id"),
@@ -251,11 +252,15 @@ export default async function DashboardPage({
   // gefactureerd is, per team. Los van teamdoelen (die pas bestaan als er voor
   // dat jaar een target is ingevuld) — OHW gaat over nú openstaand werk, dus
   // gebaseerd op de volledige teamlijst.
+  //
+  // Groeperen op het eigen team_id van het item, NIET op teamlidmaatschap van
+  // de medewerker — anders telt een item van iemand in meerdere teams dubbel
+  // mee (eens bij elk van zijn teams). Zelfde reden waarom team_id destijds
+  // aan factuuritems is toegevoegd (zie de kolomcomment op die tabel).
   const ohwRows = rows.filter((r) => isNogTeFactureren(r.status, r.declarabel) && inPeriode(r.datum, periode, gekozenJaar));
   const ohwTotaalGroep = ohwRows.reduce((sum, r) => sum + regelbedrag(r), 0);
   const ohwPerTeam = (teamsBasis ?? []).map((team) => {
-    const leden = ledenPerTeam.get(team.id) ?? new Set();
-    const bedrag = ohwRows.filter((r) => leden.has(r.medewerker_id)).reduce((sum, r) => sum + regelbedrag(r), 0);
+    const bedrag = ohwRows.filter((r) => r.team_id === team.id).reduce((sum, r) => sum + regelbedrag(r), 0);
     return { teamId: team.id, teamNaam: team.naam, bedrag };
   });
   const eigenOhwPerTeam = ohwPerTeam.filter((t) => eigenTeamIds.has(t.teamId));
@@ -263,6 +268,15 @@ export default async function DashboardPage({
   const persoonlijkeOhw = ohwRows
     .filter((r) => r.medewerker_id === profile?.id)
     .reduce((sum, r) => sum + regelbedrag(r), 0);
+  // Rijen zonder team_id (oude, niet-teruggevulde items) horen niet bij één
+  // specifiek team — apart tonen i.p.v. laten verdwijnen uit de per-team-
+  // optelling. Voor de eigen-teams-kaarten (teamleider) alleen de eigen
+  // items, net als de "Geen team"-tab bij Factuuritems; directie/finance/
+  // beheerder zien via RLS toch al alles, dus daar alle rijen zonder team.
+  const ohwGeenTeamRowsAlle = ohwRows.filter((r) => r.team_id === null);
+  const ohwGeenTeamAlle = ohwGeenTeamRowsAlle.reduce((sum, r) => sum + regelbedrag(r), 0);
+  const ohwGeenTeamRowsEigen = ohwGeenTeamRowsAlle.filter((r) => r.medewerker_id === profile?.id);
+  const ohwGeenTeamEigen = ohwGeenTeamRowsEigen.reduce((sum, r) => sum + regelbedrag(r), 0);
 
   const teamKaarten = (teamdoelen ?? [])
     .map((d) => {
@@ -270,13 +284,17 @@ export default async function DashboardPage({
       if (!team) return null;
       if (!zietAlleTeams && !eigenTeamIds.has(team.id)) return null;
 
+      // Groeperen op het eigen team_id van het item, niet op teamlidmaatschap
+      // van de medewerker — anders telt het werk van iemand in meerdere teams
+      // dubbel mee (eens bij elk van zijn teams). `leden` blijft wel nodig om
+      // per teamlid een rij te tonen, ook als die (nog) niets heeft gedaan.
       const leden = ledenPerTeam.get(team.id) ?? new Set();
       const gefactureerdDitJaar = ditJaar
-        .filter((r) => leden.has(r.medewerker_id))
+        .filter((r) => r.team_id === team.id)
         .reduce((sum, r) => sum + regelbedrag(r), 0);
 
-      const teamItemsInPeriode = inGekozenPeriode.filter((r) => leden.has(r.medewerker_id));
-      const teamItemsUrenInPeriode = inGekozenPeriodeUren.filter((r) => leden.has(r.medewerker_id));
+      const teamItemsInPeriode = inGekozenPeriode.filter((r) => r.team_id === team.id);
+      const teamItemsUrenInPeriode = teamItemsInPeriode.filter((r) => r.prijstype === "uren");
       const teamItemsStuksInPeriode = teamItemsInPeriode.filter((r) => r.prijstype === "vast_honorarium");
       const brutoOmzetTeam = teamItemsInPeriode.reduce((sum, r) => sum + regelbedrag(r), 0);
       const urenOmzetTeam = teamItemsUrenInPeriode.reduce((sum, r) => sum + regelbedrag(r), 0);
@@ -303,24 +321,24 @@ export default async function DashboardPage({
       const perProductgroep = groepeerPerProductgroep(teamItemsInPeriode);
       const perLandRegio = groepeerPerLand(teamItemsInPeriode, landenMap, 20);
 
-      const teamLeden = ditJaar.filter((r) => leden.has(r.medewerker_id));
+      const teamLeden = ditJaar.filter((r) => r.team_id === team.id);
       const { chartData, medewerkerNamen } = buildOmzetGrafiekData(teamLeden, namenPerId);
 
       // Nieuwe teamleider/medewerker-KPI's: vaste MTD-vensters voor de rij-1-
       // tegel/donut, los van de globale periode-select hierboven.
-      const teamItemsMtd = ditJaarMtd.filter((r) => leden.has(r.medewerker_id));
+      const teamItemsMtd = ditJaarMtd.filter((r) => r.team_id === team.id);
       const gefactureerdMtd = teamItemsMtd.reduce((sum, r) => sum + regelbedrag(r), 0);
       const maandTargetBruto = d.bruto_bedrag / 12;
       // "Per teamlid"-tegels: één, onafhankelijk filterbaar venster (teamlidPeriode).
       const teamItemsInTeamlidPeriode = ditJaar.filter(
-        (r) => leden.has(r.medewerker_id) && inPeriode(r.datum, teamlidPeriode, gekozenJaar)
+        (r) => r.team_id === team.id && inPeriode(r.datum, teamlidPeriode, gekozenJaar)
       );
       const teamlidKpiRijen = berekenTeamlidKpiRijen(teamItemsInTeamlidPeriode, leden, namenPerId, teamleiderIds);
       // Zelfde periode-filter als de "Nog te factureren werk van het team"-tegel
       // hieronder (ohwRows, gefilterd op de globale periode/jaar) — de uitsplitsing
       // per teamlid moet optellen tot precies het bedrag dat die tegel toont.
       const ohwPerTeamlid = berekenOhwPerTeamlid(
-        ohwRows.filter((r) => leden.has(r.medewerker_id)),
+        ohwRows.filter((r) => r.team_id === team.id),
         leden,
         namenPerId,
         teamleiderIds
@@ -551,22 +569,48 @@ export default async function DashboardPage({
                   </CardContent>
                 </Card>
               ))}
+              {ohwGeenTeamRowsAlle.length > 0 && (
+                <Card className="rounded-2xl">
+                  <CardContent className="flex items-center gap-4">
+                    <StatIcon icon={Briefcase} tint="warning" className="h-11 w-11" />
+                    <div>
+                      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Geen team</p>
+                      <div className="text-xl font-semibold tabular-figures text-warning">{euro(ohwGeenTeamAlle)}</div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
               <HeroTile label="Onderhanden werk · Groep" value={euro(ohwTotaalGroep)} icon={Briefcase} />
             </>
           ) : eigenOhwPerTeam.length > 0 ? (
-            eigenOhwPerTeam.map((t) => (
-              <Card key={t.teamId} className="rounded-2xl">
-                <CardContent className="flex items-center gap-4">
-                  <StatIcon icon={Briefcase} tint="warning" className="h-11 w-11" />
-                  <div>
-                    <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                      Onderhanden werk · {t.teamNaam}
-                    </p>
-                    <div className="text-xl font-semibold tabular-figures text-warning">{euro(t.bedrag)}</div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+            <>
+              {eigenOhwPerTeam.map((t) => (
+                <Card key={t.teamId} className="rounded-2xl">
+                  <CardContent className="flex items-center gap-4">
+                    <StatIcon icon={Briefcase} tint="warning" className="h-11 w-11" />
+                    <div>
+                      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                        Onderhanden werk · {t.teamNaam}
+                      </p>
+                      <div className="text-xl font-semibold tabular-figures text-warning">{euro(t.bedrag)}</div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              {ohwGeenTeamRowsEigen.length > 0 && (
+                <Card className="rounded-2xl">
+                  <CardContent className="flex items-center gap-4">
+                    <StatIcon icon={Briefcase} tint="warning" className="h-11 w-11" />
+                    <div>
+                      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                        Onderhanden werk · Geen team
+                      </p>
+                      <div className="text-xl font-semibold tabular-figures text-warning">{euro(ohwGeenTeamEigen)}</div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </>
           ) : (
             <Card className="rounded-2xl">
               <CardContent className="flex items-center gap-4">

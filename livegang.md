@@ -261,11 +261,31 @@ Bijvangst tijdens het verifiëren: de bestaande "Onderhanden werk per
 team"-kaarten (boven de Teams-tabs) tellen een factuuritem van een
 medewerker in twee teams dubbel (ze groeperen op teamlidmaatschap van de
 medewerker, niet op het eigen `team_id`-veld van het item — dezelfde soort
-fout die `team_id` destijds moest oplossen, hier nooit doorgevoerd). Niet
-meegefixt in deze ronde — apart oppakken. Lokaal getest (Erwin/Directie en
-Tom/teamleider, beide teamtabs, kleuren en legenda kloppen, nieuwe
-topcijfers kloppen met de som van de losse teamkaarten) en gepusht naar
-`beta` op 2026-09-16 — nog niet gepromoot naar `main`/LIVE.
+fout die `team_id` destijds moest oplossen, hier nooit doorgevoerd). Lokaal
+getest (Erwin/Directie en Tom/teamleider, beide teamtabs, kleuren en
+legenda kloppen, nieuwe topcijfers kloppen met de som van de losse
+teamkaarten) en gepusht naar `beta` op 2026-09-16.
+
+Diezelfde dag bleek de bijvangst pervasiever dan gemeld: dezelfde
+teamlidmaatschap-i.p.v.-team_id-fout zat in bijna elke per-team-berekening
+binnen `teamKaarten` (7 plekken) — niet alleen onderhanden werk, ook
+Brutotarget-voortgang, bruto-/uren-omzet team, de omzet-per-medewerker-lijst,
+de trendgrafiek, de MTD-tegel/donut én de gloednieuwe "Per teamlid"-tabel.
+Voor élk team met een gedeeld (multi-team) teamlid gaf dit een te hoog
+bedrag bij ieder van zijn teams. Alle 7 plekken consistent omgezet naar
+`r.team_id === team.id`; rijen zonder team_id (nu leeg in de lokale data,
+maar niet gegarandeerd op BETA/LIVE) tellen daardoor terecht nergens
+specifieks meer mee — voor onderhanden werk expliciet zichtbaar gemaakt via
+een "Geen team"-kaart (bedrijfsbreed voor directie/finance/beheerder, alleen
+eigen items voor teamleider — zelfde onderscheid als de "Geen team"-tab bij
+Factuuritems); voor de omzettabellen niet, want daar komt dat lokaal
+(nog) niet voor. Lokaal opnieuw getest (Tom's eigen teamloze creditregel
+verdween terecht uit beide teamtabs en verscheen alleen nog in "Geen team";
+Team Benelux en Team International tellen nu allebei alleen hun eigen werk)
+en gepusht naar `beta`, daarna op verzoek direct gepromoot naar `main`/LIVE
+en `beta`, samen met de dashboard-restyling hierboven — beide op
+2026-09-17.
+`main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
