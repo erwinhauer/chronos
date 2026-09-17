@@ -56,12 +56,19 @@ export default async function FactuuritemsPerKlantPagina({
   // hier ook teamgenoten-items, dus het is juist nuttig om te kunnen zien van
   // wie welk item is.
   const toonMedewerker = true;
+  // "Specificatie maken" mag nu ook een medewerker (net als teamleider, maar
+  // beperkt tot een klant die zijn eigen team ook echt bedient — team_
+  // services_klant hierboven, zelfde RLS-scoping als op facturatiebatches).
   const kanFactureren =
     profile?.role === "finance" || profile?.role === "beheerder" || profile?.role === "teamleider";
+  const magSpecificatieMaken =
+    kanFactureren ||
+    (profile?.role === "medewerker" &&
+      (await supabase.rpc("team_services_klant", { target_klant_id: klantId })).data === true);
   // "Verplaats naar project" is geen facturatie-actie — een medewerker mag dit
-  // ook voor eigen/teamgenoten-items, los van kanFactureren (dat blijft voor
-  // "Specificatie maken" en projectbeheer voorbehouden aan finance/beheerder/
-  // teamleider).
+  // ook voor eigen/teamgenoten-items, los van kanFactureren/magSpecificatieMaken
+  // (die blijven voor projectbeheer voorbehouden aan finance/beheerder/
+  // teamleider, en voor specificaties aan wie de klant ook echt bedient).
   const magVerplaatsen = kanFactureren || profile?.role === "medewerker";
 
   const genormaliseerd: FactuurGroepItem[] = (items ?? []).map((item) => {
@@ -132,6 +139,7 @@ export default async function FactuuritemsPerKlantPagina({
           projecten={projecten ?? []}
           toonMedewerker={toonMedewerker}
           kanFactureren={kanFactureren}
+          magSpecificatieMaken={magSpecificatieMaken}
           magVerplaatsen={magVerplaatsen}
           magAllesBewerken={magAllesBewerken}
           eigenTeamIds={Array.from(eigenTeamIds)}

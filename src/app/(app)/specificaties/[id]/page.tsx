@@ -62,7 +62,8 @@ export default async function SpecificatiePagina({ params }: { params: Promise<{
     profile?.role === "finance" ||
     profile?.role === "beheerder" ||
     profile?.role === "directie" ||
-    profile?.role === "teamleider";
+    profile?.role === "teamleider" ||
+    profile?.role === "medewerker";
 
   const totalen = {
     totaal_honorarium: batch.totaal_honorarium,

@@ -417,8 +417,39 @@ lijst staat. Lokaal gereproduceerd door een klant (met een openstaand item)
 tijdelijk op inactief te zetten en vanaf zijn klantpagina op "Nieuw
 factuuritem" te klikken (zowel de algemene knop als de nieuwe per-project-
 knop) — vóór de fix bleef het klantveld leeg, na de fix niet meer. Getest
-met teamleider- en beheerderaccount, geen console-/servererrors. Gepusht
-naar `beta` — nog niet gepromoot naar `main`/LIVE.
+met teamleider- en beheerderaccount, geen console-/servererrors. Op
+verzoek direct gepromoot naar `main`/LIVE op 2026-09-18 (deze regel was
+per ongeluk niet bijgewerkt op het moment zelf).
+`main` en `beta` staan weer gelijk.
+
+Daarna, in reactie op de eigen dashboard-cijfers (2026-09-18): het oudste
+openstaande item bleek 9-4-2026 — dus wél al binnen "Dit jaar (YTD)"), dus
+"oude jaren"-items (de eerdere OHW-fix) verklaren dit specifieke verschil
+niet. Nog niet verder uitgezocht — vermoedelijk team-scoping (het bovenste
+KPI-cijfer trekt via RLS alles wat de huidige ACTIEVE rol mag zien, de
+sectie eronder alleen het eigen team), maar dit vereist LIVE-data om te
+bevestigen; hier geen toegang toe vanaf deze werkplek. Blijft open.
+
+Daarna een functie-uitbreiding op verzoek (2026-09-18): een medewerker
+mag nu ook een specificatie maken (was alleen finance/beheerder/
+teamleider) — mits het eigen team die klant ook echt bedient
+(`team_services_klant`, zelfde functie en scoping als teamleider al
+had). Op vier plekken gefixt: (1) de "Specificatie maken"-knop op de
+klantpagina (nieuwe `magSpecificatieMaken`, losgetrokken van
+`kanFactureren` dat voor projectbeheer wél beperkt blijft tot finance/
+beheerder/teamleider); (2) de harde rolcheck in `genereerSpecificatie`
+zelf; (3) de rolcheck op de `/specificaties/nieuw`-voorbeeldpagina (die
+redirectte een medewerker anders al weg vóór het formulier); (4) het
+concept-PDF en het finale PDF-downloadpad. RLS op `facturatiebatches`
+had zijn eigen policies (select/insert) die medewerker nog niet kenden —
+nieuwe migratie `20260918120000_facturatiebatches_medewerker.sql`
+breidt die uit met dezelfde `team_services_klant`-voorwaarde. Lokaal
+end-to-end getest als medewerker (Anna, Team Benelux): knop verschijnt,
+concept-PDF downloaden werkt, specificatie aanmaken lukt (redirect naar
+de vastgelegde pagina), en daar ook het finale PDF-downloaden — geen
+enkele stap gaf een rolfout. Teamleider (Tom) opnieuw gecontroleerd:
+knop en projectbeheer-icoontjes staan er nog steeds, geen regressie.
+Gepusht naar `beta` — nog niet gepromoot naar `main`/LIVE.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,

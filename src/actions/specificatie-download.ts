@@ -28,7 +28,8 @@ export async function genereerSpecificatiePdfBase64(specificatieId: string): Pro
     profile?.role !== "finance" &&
     profile?.role !== "beheerder" &&
     profile?.role !== "directie" &&
-    profile?.role !== "teamleider"
+    profile?.role !== "teamleider" &&
+    profile?.role !== "medewerker"
   ) {
     return { base64: null, filename: null, error: "Geen toegang tot specificaties." };
   }
@@ -126,7 +127,12 @@ export async function genereerConceptSpecificatiePdfBase64(input: {
   kolom_korting_zichtbaar?: boolean;
 }): Promise<SpecificatiePdfResultaat> {
   const profile = await getCurrentProfile();
-  if (profile?.role !== "finance" && profile?.role !== "beheerder" && profile?.role !== "teamleider") {
+  if (
+    profile?.role !== "finance" &&
+    profile?.role !== "beheerder" &&
+    profile?.role !== "teamleider" &&
+    profile?.role !== "medewerker"
+  ) {
     return { base64: null, filename: null, error: "Geen toegang tot specificaties." };
   }
   if (!input.klant_id || input.itemIds.length === 0) {
