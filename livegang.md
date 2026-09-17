@@ -449,7 +449,8 @@ concept-PDF downloaden werkt, specificatie aanmaken lukt (redirect naar
 de vastgelegde pagina), en daar ook het finale PDF-downloaden — geen
 enkele stap gaf een rolfout. Teamleider (Tom) opnieuw gecontroleerd:
 knop en projectbeheer-icoontjes staan er nog steeds, geen regressie.
-Gepusht naar `beta` — nog niet gepromoot naar `main`/LIVE.
+Op verzoek gepromoot naar `main`/LIVE op 2026-09-18.
+`main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
