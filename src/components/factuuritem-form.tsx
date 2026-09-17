@@ -91,6 +91,7 @@ export function FactuurItemForm({
   medewerkerId,
   medewerkerNaam,
   voorgeselecteerdeKlantId,
+  voorgeselecteerdeProjectId,
   terugUrl = "/factuuritems",
   landen,
   medewerkers,
@@ -108,6 +109,7 @@ export function FactuurItemForm({
   // bewerkbaar is (dan staat het altijd op de ingelogde gebruiker zelf).
   medewerkerNaam: string;
   voorgeselecteerdeKlantId?: string;
+  voorgeselecteerdeProjectId?: string;
   terugUrl?: string;
   landen?: LandenMap;
   medewerkers?: Medewerker[];
@@ -141,7 +143,7 @@ export function FactuurItemForm({
   }, [klantenProp, extraKlanten]);
   const [extraProjecten, setExtraProjecten] = useState<Record<string, Project[]>>({});
 
-  const [projectId, setProjectId] = useState(initial?.project_id ?? "");
+  const [projectId, setProjectId] = useState(initial?.project_id ?? voorgeselecteerdeProjectId ?? "");
   const [dossierSelectie, setDossierSelectie] = useState<string[]>(initial?.dossiernummers ?? []);
   const [dossiernamen, setDossiernamen] = useState<Record<string, string>>(initial?.dossiernamenPerNummer ?? {});
   const [klantId, setKlantId] = useState(initial?.klant_id ?? voorgeselecteerdeKlantId ?? "");

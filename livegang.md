@@ -360,6 +360,23 @@ Handleiding renderen goed voor beide rollen, geen console- of
 servererrors. Op verzoek gepromoot naar `main`/LIVE op 2026-09-17.
 `main` en `beta` staan weer gelijk.
 
+Daarna een gemelde bug vanaf LIVE (2026-09-18): item 4 uit de vorige batch
+("Nieuw factuuritem" vult de klant al in vanuit de klantpagina) werkte niet
+zoals bedoeld bij een klant met factuuritems onder meerdere projecten — de
+klant werd wel voorgevuld, maar niet het project, waardoor de context bij
+2+ projecten niet compleet aanvoelde (bij precies één project viel dat toe-
+vallig niet op). Elke projectsectie op de klantpagina heeft nu zijn eigen
+"Nieuw factuuritem"-knop (naast de bestaande, projectloze knop boven de hele
+pagina), die zowel `klant_id` als `project_id` meegeeft; `/factuuritems/nieuw`
+valideert dat het meegegeven project ook echt bij die klant hoort voordat
+het wordt voorgeselecteerd. Alleen zichtbaar bij groeperen op project (geen
+project-concept bij groeperen op dossier), en verder in geen enkel opzicht
+rolafhankelijk. Lokaal gereproduceerd met een klant met twee projecten en
+getest met een medewerker- (Anna), teamleider- (Tom) en beheerderaccount
+(Erwin) — alle drie krijgen bij een klik vanuit een projectsectie zowel de
+juiste klant als het juiste project voorgeselecteerd. Gepusht naar `beta` —
+nog niet gepromoot naar `main`/LIVE.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de
