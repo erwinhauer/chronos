@@ -351,7 +351,14 @@ schakelaar. Lokaal end-to-end getest met een medewerker- (Anna) en een
 teamleider-account (Tom in Team Benelux): een teamgenoot-item bekijken,
 bewerken zonder ongewenste medewerkerwissel, verplaatsen naar project, en
 het wijzigingenlog controleren (`gewijzigd_door` = de bewerkende
-medewerker). Gepusht naar `beta` — nog niet gepromoot naar `main`/LIVE.
+medewerker). Daarna ook getest als teamleider (Tom) en beheerder (Erwin) —
+beide bestaande blanket-rechten (teamleider via `team_services_klant`,
+beheerder onvoorwaardelijk) bleven intact, medewerker-dropdown toont voor
+Tom zijn teamgenoten in beide teams en voor Erwin alle 8 actieve
+gebruikers, Instellingen > Changelog (de bron van het versienummer) en de
+Handleiding renderen goed voor beide rollen, geen console- of
+servererrors. Op verzoek gepromoot naar `main`/LIVE op 2026-09-17.
+`main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
