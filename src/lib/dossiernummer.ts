@@ -150,6 +150,7 @@ const LANDNAMEN: Record<string, string> = {
   JM: "Jamaica",
   JO: "Jordanië",
   JP: "Japan",
+  K4: "Koerdistan",
   KE: "Kenia",
   KG: "Kirgizië",
   KH: "Cambodja",
@@ -335,7 +336,11 @@ export const PRODUCTGROEP_CODES = ["TM", "D", "I", "O", "CA", "S", "W", "@"];
 // eerst genoemde, specifiek gedesigneerde land (CN), niet WO — de optionele
 // "WO" erna is puur een markering dat het via die registratie loopt.
 function tryParsePrefix(code: string, rest: string): DossiernummerParseResult | null {
-  const pattern = new RegExp(`^(\\d+)([A-Z]{2})(?:WO)?(\\d*)$`);
+  // Landcode is meestal 2 letters, maar Patricia kent ook pseudo-landcodes
+  // met een cijfer erin (bv. "K4" = Koerdistan) — vereis alleen dat het
+  // eerste teken een letter is, anders zou een dossiernummer zonder
+  // landcode (enkel cijfers) hier ook al matchen.
+  const pattern = new RegExp(`^(\\d+)([A-Z][A-Z0-9])(?:WO)?(\\d*)$`);
   const match = pattern.exec(rest);
   if (!match) return null;
   const [, nummer, landIso, suffix] = match;

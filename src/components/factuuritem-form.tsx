@@ -73,6 +73,15 @@ type Initial = {
 
 const initialState: FactuurItemFormState = { error: null, success: false };
 
+// Standaard uurtarief van het kantoor (zie de wildcard-rij in `tarieven`,
+// klant_id/medewerker_id beide null) — hier ook als vaste ondergrens
+// gebruikt voor de "voorgesteld tarief"-nudge: een oudere, lagere
+// klant-/medewerkerspecifieke afspraak in `tarieven` blijft gewoon geldig
+// (en vult het veld nog steeds automatisch in), maar de gebruiker krijgt
+// per regel een duwtje richting het huidige standaardtarief i.p.v. dat
+// alleen via een aparte, kantoorbrede tariefwijziging op te lossen.
+const STANDAARD_UURTARIEF = 330;
+
 export function FactuurItemForm({
   klanten: klantenProp,
   projectenPerKlant,
@@ -217,7 +226,6 @@ export function FactuurItemForm({
   const [kortingPercentage, setKortingPercentage] = useState(initial?.korting_percentage ?? 0);
   const [kantoorkostenActief, setKantoorkostenActief] = useState(initial?.kantoorkosten_van_toepassing ?? true);
   const [declarabel, setDeclarabel] = useState(initial?.declarabel ?? true);
-  const [voorgesteldTarief, setVoorgesteldTarief] = useState<number | null>(null);
   const [toonSluitenBevestiging, setToonSluitenBevestiging] = useState(false);
 
   // Momentopname van de startwaarden (leeg bij een nieuw item, de geladen
@@ -274,15 +282,14 @@ export function FactuurItemForm({
     return Array.from(map.values());
   }, [projectenPerKlant, extraProjecten, klantId]);
 
-  // Wanneer de klant wijzigt: kantoorkosten-standaard overnemen, de oude
-  // tariefsuggestie laten vervallen en het projectveld resetten (projecten
-  // horen bij een klant). Render-fase aanpassing (React-patroon), geen effect:
-  // voorkomt een extra commit/re-render t.o.v. useEffect.
+  // Wanneer de klant wijzigt: kantoorkosten-standaard overnemen en het
+  // projectveld resetten (projecten horen bij een klant). Render-fase
+  // aanpassing (React-patroon), geen effect: voorkomt een extra commit/
+  // re-render t.o.v. useEffect.
   const [klantIdVoorReset, setKlantIdVoorReset] = useState(klantId);
   if (klantId !== klantIdVoorReset) {
     setKlantIdVoorReset(klantId);
     setKantoorkostenActief(klant?.kantoorkosten_actief ?? true);
-    setVoorgesteldTarief(null);
     setProjectId("");
   }
 
@@ -294,7 +301,6 @@ export function FactuurItemForm({
       .rpc("resolve_tarief", { p_klant_id: klantId, p_medewerker_id: medewerkerId, p_datum: datum })
       .then(({ data }) => {
         if (cancelled) return;
-        setVoorgesteldTarief(typeof data === "number" ? data : null);
         if (!initial && typeof data === "number" && tarief === null) {
           setTarief(data);
         }
@@ -611,9 +617,9 @@ export function FactuurItemForm({
                         required
                       />
                     </div>
-                    {prijstype === "uren" && voorgesteldTarief !== null && (
+                    {prijstype === "uren" && tarief !== null && tarief < STANDAARD_UURTARIEF && (
                       <p className="text-xs text-muted-foreground">
-                        Voorgesteld tarief: {euro(voorgesteldTarief, klant?.valuta ?? "EUR")}
+                        Voorgesteld tarief: {euro(STANDAARD_UURTARIEF, klant?.valuta ?? "EUR")}
                       </p>
                     )}
                     {tarief !== null && tarief < 0 && (

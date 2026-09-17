@@ -533,7 +533,7 @@ function FactuurItemsTabel({
                   <span className="flex h-4 w-4 shrink-0 items-center justify-center">
                     {r.kantoorkostenVanToepassing && (
                       <span
-                        className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-muted text-[10px] leading-none font-bold text-muted-foreground"
+                        className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-success/15 text-[10px] leading-none font-bold text-success"
                         title="Bureaukosten zijn gerekend bij dit factuuritem."
                       >
                         B
