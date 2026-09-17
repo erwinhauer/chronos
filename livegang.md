@@ -287,6 +287,31 @@ en `beta`, samen met de dashboard-restyling hierboven — beide op
 2026-09-17.
 `main` en `beta` staan weer gelijk.
 
+Daarna nog drie kleinere fixes (2026-09-17): (1) "Voorgesteld tarief" bij
+Nieuw factuuritem toonde altijd de opgehaalde klant-/medewerkerspecifieke
+`tarieven`-rij (bv. €250 voor een klant met een oude, lagere afspraak) —
+dat vult het veld nog steeds automatisch, maar de tekst erboven toont nu
+alleen nog "Voorgesteld tarief: €330,00" (het kantoorstandaard, hardcoded
+als `STANDAARD_UURTARIEF`) en alleen wanneer het ingevulde bedrag onder
+die €330 ligt — een duwtje richting het huidige standaardtarief zonder de
+historische `tarieven`-rij zelf aan te passen. De losstaande
+`voorgesteldTarief`-state was daardoor nergens anders meer nodig en is
+verwijderd. (2) Het bureaukosten-"B"-badge (achter het bedrag van een
+factuuritem) was een grijze cirkel met grijze "B" — viel niet op. Nu een
+lichtgroene cirkel (`bg-success/15`) met donkergroene "B" (`text-success`).
+(3) Dossiernummer "TM104803K400" (Koerdistan, landcode "K4") gaf "Onbekend
+dossiernummer" — de parse-regex in `dossiernummer.ts` eiste altijd 2
+letters voor de landcode (`[A-Z]{2}`), terwijl Patricia soms een cijfer in
+die landcode gebruikt. Regex aangepast naar "eerste teken een letter,
+tweede letter of cijfer" (`[A-Z][A-Z0-9]`) — sluit een dossiernummer zonder
+landcode (enkel cijfers) nog steeds uit. "K4" ook toegevoegd aan de
+statische `LANDNAMEN`-fallbacklijst (moet 1-op-1 gelijk blijven aan de
+`landcodes`-tabel, was er bij het toevoegen van K4 aan die tabel niet ook
+bijgewerkt). Lokaal getest: tarief-nudge verschijnt bij €170 (Lipton-tarief)
+en verdwijnt bij €400; B-badge-kleur geverifieerd in de DOM;
+"TM104803K400" parseert nu naar "Merken · Koerdistan" en is toe te voegen.
+Gepusht naar `beta` — nog niet gepromoot naar `main`/LIVE.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de
