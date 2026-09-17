@@ -70,6 +70,22 @@ export default async function NieuwFactuurItemPage({
     alleKlanten.push(bronKlant);
   }
 
+  // Zelfde reden als hierboven, maar dan voor de klant_id die vanuit een
+  // klantpagina wordt meegegeven (de "Nieuw factuuritem"-knop daar): die
+  // klant kan inmiddels inactief zijn (bv. nog openstaand werk bij een
+  // klant die niet meer actief is) en stond dan niet in de al-opgehaalde
+  // (alleen-actieve) lijst — de combobox toonde de naam dan niet, ook al
+  // was klant_id zelf wel goed doorgegeven. Alleen een extra query als dit
+  // zich echt voordoet (niet op elke normale, actieve-klant-navigatie).
+  if (klant_id && !alleKlanten.some((k) => k.id === klant_id)) {
+    const { data: klantUitUrl } = await supabase
+      .from("klanten")
+      .select("id, naam, adres, kantoorkosten_actief, kantoorkosten_percentage, specificatietaal, valuta")
+      .eq("id", klant_id)
+      .maybeSingle();
+    if (klantUitUrl) alleKlanten.push(klantUitUrl);
+  }
+
   const projectenPerKlant: Record<string, { id: string; naam: string; po_nummer: string | null }[]> = {};
   for (const p of projecten ?? []) {
     (projectenPerKlant[p.klant_id] ??= []).push({ id: p.id, naam: p.naam, po_nummer: p.po_nummer });
