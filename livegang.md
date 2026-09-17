@@ -402,6 +402,24 @@ beheerderaccount, geen console-/servererrors. Op verzoek direct gepromoot
 naar `main`/LIVE en `beta` op 2026-09-18.
 `main` en `beta` staan weer gelijk.
 
+Daarna nog een gemelde bug vanaf LIVE (2026-09-18): de klant-pre-fill werkte
+alsnog niet — "Factuuritems > Klant (bv. Lipton) > Nieuw factuuritem" liet
+het klantveld leeg. Oorzaak: `factuuritems/nieuw` haalt de klantenlijst voor
+de combobox alleen bij status "actief" op; de klant van het bronitem bij
+"Kopiëren" kreeg al langer een fallback als hij inmiddels inactief was
+("zelfde regel als op het bewerkscherm", staat letterlijk in de code-
+comment), maar de klant_id die je vanuit een klantpagina meekrijgt niet —
+een klant met nog openstaand werk kan intussen best inactief zijn gezet.
+De combobox toont dan niets (`geselecteerd?.naam ?? ""`), ook al staat
+klant_id zelf wél goed. Dezelfde fallback nu ook voor dit geval toegevoegd
+— één extra query, alleen als de meegegeven klant niet al in de actieve
+lijst staat. Lokaal gereproduceerd door een klant (met een openstaand item)
+tijdelijk op inactief te zetten en vanaf zijn klantpagina op "Nieuw
+factuuritem" te klikken (zowel de algemene knop als de nieuwe per-project-
+knop) — vóór de fix bleef het klantveld leeg, na de fix niet meer. Getest
+met teamleider- en beheerderaccount, geen console-/servererrors. Gepusht
+naar `beta` — nog niet gepromoot naar `main`/LIVE.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de
