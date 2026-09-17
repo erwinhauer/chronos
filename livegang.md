@@ -374,8 +374,9 @@ project-concept bij groeperen op dossier), en verder in geen enkel opzicht
 rolafhankelijk. Lokaal gereproduceerd met een klant met twee projecten en
 getest met een medewerker- (Anna), teamleider- (Tom) en beheerderaccount
 (Erwin) — alle drie krijgen bij een klik vanuit een projectsectie zowel de
-juiste klant als het juiste project voorgeselecteerd. Gepusht naar `beta` —
-nog niet gepromoot naar `main`/LIVE.
+juiste klant als het juiste project voorgeselecteerd. Op verzoek gepromoot
+naar `main`/LIVE op 2026-09-18.
+`main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
