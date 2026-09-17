@@ -19,8 +19,16 @@ export async function genereerSpecificatie(
   formData: FormData
 ): Promise<SpecificatieFormState> {
   const profile = await getCurrentProfile();
-  if (profile?.role !== "finance" && profile?.role !== "beheerder" && profile?.role !== "teamleider") {
-    return { error: "Alleen finance, beheerder en teamleider kunnen een specificatie maken.", success: false };
+  if (
+    profile?.role !== "finance" &&
+    profile?.role !== "beheerder" &&
+    profile?.role !== "teamleider" &&
+    profile?.role !== "medewerker"
+  ) {
+    return {
+      error: "Alleen finance, beheerder, teamleider en medewerker kunnen een specificatie maken.",
+      success: false,
+    };
   }
 
   const klant_id = String(formData.get("klant_id") ?? "");

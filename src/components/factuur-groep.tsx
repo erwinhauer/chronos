@@ -79,6 +79,7 @@ export function FactuurGroep({
   projecten,
   toonMedewerker,
   kanFactureren,
+  magSpecificatieMaken,
   magVerplaatsen,
   magAllesBewerken = false,
   eigenTeamIds = [],
@@ -93,6 +94,7 @@ export function FactuurGroep({
   projecten: Project[];
   toonMedewerker: boolean;
   kanFactureren: boolean;
+  magSpecificatieMaken: boolean;
   magVerplaatsen: boolean;
   magAllesBewerken?: boolean;
   eigenTeamIds?: string[];
@@ -202,6 +204,7 @@ export function FactuurGroep({
                 groepeerOp={groepeerOp}
                 toonMedewerker={toonMedewerker}
                 kanFactureren={kanFactureren}
+                magSpecificatieMaken={magSpecificatieMaken}
                 magVerplaatsen={magVerplaatsen}
                 magAllesBewerken={magAllesBewerken}
                 eigenTeamIds={eigenTeamIds}
@@ -227,6 +230,7 @@ function ProjectSectieBlok({
   groepeerOp,
   toonMedewerker,
   kanFactureren,
+  magSpecificatieMaken,
   magVerplaatsen,
   magAllesBewerken,
   eigenTeamIds,
@@ -244,6 +248,7 @@ function ProjectSectieBlok({
   toonHeader: boolean;
   toonMedewerker: boolean;
   kanFactureren: boolean;
+  magSpecificatieMaken: boolean;
   magVerplaatsen: boolean;
   magAllesBewerken: boolean;
   eigenTeamIds: string[];
@@ -281,7 +286,7 @@ function ProjectSectieBlok({
     });
   }
 
-  const acties = (magVerplaatsen || kanFactureren) && (
+  const acties = (magVerplaatsen || magSpecificatieMaken) && (
     <div className="flex flex-wrap items-center gap-2">
       {magVerplaatsen && (
         <VerplaatsProjectDialog
@@ -291,7 +296,7 @@ function ProjectSectieBlok({
           huidigProjectId={huidigProjectId}
         />
       )}
-      {kanFactureren &&
+      {magSpecificatieMaken &&
         (selectie.length === 0 ? (
           <Button size="sm" disabled>
             <Receipt className="h-4 w-4" />
