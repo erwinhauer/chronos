@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Receipt, Pencil, Copy, Trash2, MoreVertical, Search, ChevronDown, ChevronUp } from "lucide-react";
+import { Receipt, Pencil, Copy, Trash2, MoreVertical, Search, ChevronDown, ChevronUp, Plus } from "lucide-react";
 import { landNaamVoorIso } from "@/lib/dossiernummer";
 import { euro, regelbedrag } from "@/lib/factuurbedragen";
 import type { LandenMap } from "@/lib/landen";
@@ -345,7 +345,19 @@ function ProjectSectieBlok({
               <p className="text-xs text-muted-foreground">{sectie.projectOmschrijving}</p>
             )}
           </div>
-          {acties}
+          <div className="flex flex-wrap items-center gap-2">
+            {groepeerOp === "project" && sectie.sleutel !== "__geen__" && huidigProjectId && (
+              <LinkButton
+                size="sm"
+                variant="outline"
+                href={`/factuuritems/nieuw?klant_id=${klantId}&project_id=${huidigProjectId}`}
+              >
+                <Plus className="h-4 w-4" />
+                Nieuw factuuritem
+              </LinkButton>
+            )}
+            {acties}
+          </div>
         </div>
       ) : (
         acties && <div className="flex justify-end px-4 pt-4">{acties}</div>

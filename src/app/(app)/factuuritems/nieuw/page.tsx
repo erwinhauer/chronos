@@ -10,9 +10,9 @@ import { haalHerToewijsbareMedewerkers } from "@/lib/team-medewerkers";
 export default async function NieuwFactuurItemPage({
   searchParams,
 }: {
-  searchParams: Promise<{ klant_id?: string; kopie_van?: string }>;
+  searchParams: Promise<{ klant_id?: string; project_id?: string; kopie_van?: string }>;
 }) {
-  const { klant_id, kopie_van } = await searchParams;
+  const { klant_id, project_id, kopie_van } = await searchParams;
   const supabase = await createClient();
   const [
     {
@@ -79,6 +79,15 @@ export default async function NieuwFactuurItemPage({
     .map((tl) => tl.teams as unknown as { id: string; naam: string } | null)
     .filter((t): t is { id: string; naam: string } => t !== null);
 
+  // Alleen vooraf invullen als dit project ook echt bij de meegegeven klant
+  // hoort — voorkomt dat een verkeerd/verlopen project_id in de URL een
+  // ander project zou selecteren dan de klant die je net had opgezocht.
+  const voorgeselecteerdKlantIdVoorProject = klant_id ?? bronItem?.klant_id;
+  const voorgeselecteerdeProjectId =
+    project_id && voorgeselecteerdKlantIdVoorProject
+      ? projectenPerKlant[voorgeselecteerdKlantIdVoorProject]?.find((p) => p.id === project_id)?.id
+      : undefined;
+
   const dossiersOpBron = (bronItem?.factuuritem_dossiers ?? []).slice().sort((a, b) => a.volgorde - b.volgorde);
 
   return (
@@ -99,6 +108,7 @@ export default async function NieuwFactuurItemPage({
         medewerkerId={user.id}
         medewerkerNaam={profile?.full_name ?? "Onbekend"}
         voorgeselecteerdeKlantId={klant_id ?? bronItem?.klant_id}
+        voorgeselecteerdeProjectId={voorgeselecteerdeProjectId}
         landen={landen}
         medewerkers={medewerkers ?? undefined}
         magMedewerkerWijzigen={profile?.role === "teamleider" || profile?.role === "beheerder"}
