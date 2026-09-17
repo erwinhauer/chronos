@@ -2,11 +2,11 @@ import { createClient } from "@/lib/supabase/server";
 
 export type HerToewijsbareMedewerker = { id: string; full_name: string; team_ids: string[] };
 
-// Beheerder mag uit alle actieve medewerkers kiezen; een teamleider alleen uit
-// zijn eigen teamgenoten (member van minstens één team dat de teamleider ook zelf
-// lid van is). Gebruikt zowel bij het aanmaken als het bewerken van een
-// factuuritem, zodat een teamleider/beheerder het altijd aan een teamgenoot kan
-// toewijzen — niet alleen achteraf.
+// Beheerder mag uit alle actieve medewerkers kiezen; een teamleider of
+// medewerker alleen uit zijn eigen teamgenoten (member van minstens één team
+// dat de gebruiker ook zelf lid van is). Gebruikt zowel bij het aanmaken als
+// het bewerken van een factuuritem, zodat je het altijd aan een teamgenoot
+// kan toewijzen — niet alleen achteraf.
 //
 // `team_ids` per medewerker gaat mee zodat het formulier de teamkeuze kan
 // beperken tot de team(s) waar de GEKOZEN medewerker ook echt lid van is —
@@ -30,7 +30,7 @@ export async function haalHerToewijsbareMedewerkers(
     }
     return (profielen ?? []).map((p) => ({ ...p, team_ids: teamIdsPerProfiel.get(p.id) ?? [] }));
   }
-  if (role === "teamleider") {
+  if (role === "teamleider" || role === "medewerker") {
     const { data: eigenTeams } = await supabase.from("team_members").select("team_id").eq("profile_id", gebruikerId);
     const teamIds = (eigenTeams ?? []).map((t) => t.team_id);
     if (teamIds.length === 0) return [];

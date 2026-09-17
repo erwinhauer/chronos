@@ -59,7 +59,11 @@ const FEATURES = [
 ];
 
 const ROLLEN = [
-  { rol: "Medewerker", kan: "Eigen factuuritems aanmaken, bewerken, kopiëren", ziet: "Eigen cijfers" },
+  {
+    rol: "Medewerker",
+    kan: "Eigen en teamgenoten-factuuritems aanmaken, bewerken, kopiëren, verplaatsen naar project",
+    ziet: "Eigen cijfers",
+  },
   { rol: "Praktijkvoerder", kan: "Factuuritems van het eigen team; specificaties maken", ziet: "Team-dashboard" },
   { rol: "Finance", kan: "Specificaties maken over alle klanten", ziet: "Financieel overzicht" },
   { rol: "Beheerder", kan: "Alles, plus gebruikers-, team- en instellingenbeheer", ziet: "Alles" },
@@ -274,13 +278,16 @@ export default function HandleidingPage() {
         <div className="flex flex-col gap-3">
           <SectieKop label="Stap 4" titel="Factuuritems bekijken, bewerken, kopiëren" />
           <p className="text-sm text-muted-foreground">
-            Via <strong className="text-foreground">Factuuritems</strong> zie je alle klanten met openstaand werk.
-            Achter elke regel staat een menu (⋮) met drie acties:
+            Via <strong className="text-foreground">Factuuritems</strong> zie je alle klanten met openstaand werk —
+            als medewerker inclusief het openstaande werk van je teamgenoten, niet alleen je eigen items. Achter elke
+            regel staat een menu (⋮) met drie acties:
           </p>
           <ul className="flex flex-col gap-2 text-sm text-muted-foreground">
             <li>
               <strong className="text-foreground">Bewerken</strong> — alleen zolang een item nog niet gefactureerd
-              is. Elke wijziging komt in het wijzigingenlog te staan.
+              is. Een teamgenoot-item bewerken verandert niet automatisch wie het item als medewerker heeft — dat
+              blijft staan op wie het oorspronkelijk aanmaakte, tenzij je dat zelf wijzigt. Elke wijziging komt in het
+              wijzigingenlog te staan.
             </li>
             <li>
               <strong className="text-foreground">Kopiëren</strong> — een nieuw factuuritem, vooringevuld met alle
@@ -288,10 +295,15 @@ export default function HandleidingPage() {
               Werkt ook op al gefactureerde regels.
             </li>
             <li>
-              <strong className="text-foreground">Verwijderen</strong> — alleen zolang nog niet gefactureerd; vraagt
-              eerst om bevestiging.
+              <strong className="text-foreground">Verwijderen</strong> — alleen eigen items, en alleen zolang nog
+              niet gefactureerd; vraagt eerst om bevestiging.
             </li>
           </ul>
+          <p className="text-sm text-muted-foreground">
+            Selecteer één of meer regels met de selectievakjes om ze met{" "}
+            <strong className="text-foreground">&ldquo;Verplaats naar project&rdquo;</strong> aan een ander project
+            te koppelen.
+          </p>
           <p className="text-xs text-muted-foreground">
             Een oranje bolletje met uitroepteken achter een dossiernummer betekent: er staat een interne opmerking op
             die regel — hover erover om te lezen.
@@ -355,7 +367,11 @@ export default function HandleidingPage() {
               omschrijving, aantal en totaal. Vink &ldquo;Kosten van derden&rdquo; en/of &ldquo;Korting als aparte
               kolom tonen&rdquo; aan voor de volledige uitsplitsing.
             </li>
-            <li>4. Controleer het live voorbeeld, en download eventueel een concept (PDF) — nog niets vastgelegd.</li>
+            <li>
+              4. Controleer het live voorbeeld, en download eventueel een concept (PDF) — nog niets vastgelegd.
+              Standaard staat de specificatie op datum; zet de schakelaar &ldquo;Groeperen op dossier&rdquo; aan om
+              dezelfde regels per dossier gegroepeerd te tonen.
+            </li>
             <li>
               5. Tevreden? Klik &ldquo;Bevestigen en specificatie maken&rdquo;. Hierna staat de specificatie vast —
               het factureren zelf gebeurt handmatig, buiten Chronos om.
@@ -363,7 +379,7 @@ export default function HandleidingPage() {
             <li>
               6. Op de vastgelegde specificatie: &ldquo;Kopieer dossiernummers&rdquo; zet alle dossiernummers van die
               specificatie (gescheiden door &ldquo;; &rdquo;) op je klembord, om ze in Patricia bij de juiste
-              dossiers te zetten.
+              dossiers te zetten. Ook hier kun je wisselen tussen op datum en op dossier gegroepeerd.
             </li>
           </ol>
         </div>

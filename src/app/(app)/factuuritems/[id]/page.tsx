@@ -34,10 +34,21 @@ export default async function FactuurItemBewerkenPage({
   const laatstBewerktDoor = (item.laatst_bewerkt_door_profiel as unknown as { full_name: string } | null)?.full_name;
   const dossiersOpItem = (item.factuuritem_dossiers ?? []).slice().sort((a, b) => a.volgorde - b.volgorde);
 
+  // Een medewerker mag ook een item van een teamgenoot bewerken — niet alleen
+  // zien (dat kon al via factuuritems_select_scope). Beperkt tot items met
+  // een team_id die ook echt bij een eigen team van de kijker hoort (zelfde
+  // scoping als de nieuwe factuuritems_update_teamgenoot-RLS-policy).
+  const eigenTeamIds =
+    profile?.role === "medewerker"
+      ? new Set((await supabase.from("team_members").select("team_id").eq("profile_id", user.id)).data?.map((t) => t.team_id))
+      : null;
+  const magTeamgenootBewerken = eigenTeamIds !== null && item.team_id !== null && eigenTeamIds.has(item.team_id);
+
   const magAllesBewerken =
     profile?.role === "beheerder" ||
     (profile?.role === "teamleider" &&
-      (await supabase.rpc("team_services_klant", { target_klant_id: item.klant_id })).data === true);
+      (await supabase.rpc("team_services_klant", { target_klant_id: item.klant_id })).data === true) ||
+    magTeamgenootBewerken;
 
   const bewerkbaar = (item.medewerker_id === user.id || magAllesBewerken) && item.status === "aangemaakt";
   if (!bewerkbaar) {

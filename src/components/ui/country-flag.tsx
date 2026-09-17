@@ -22,7 +22,10 @@ export function CountryFlag({ iso, naam, className }: { iso: string | null; naam
   const lokaal = iso ? LOKALE_VLAG[iso.toUpperCase()] : undefined;
   if (lokaal) {
     return (
-      <div className={cn("h-8 w-8 shrink-0 overflow-hidden rounded-full bg-muted", className)} title={naam}>
+      <div
+        className={cn("flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted", className)}
+        title={naam}
+      >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={lokaal} alt="" className="h-full w-full object-cover" />
       </div>
@@ -44,8 +47,11 @@ export function CountryFlag({ iso, naam, className }: { iso: string | null; naam
     );
   }
   return (
-    <div className={cn("h-8 w-8 shrink-0 overflow-hidden rounded-full bg-muted", className)} title={naam}>
-      <span className={`fi fis fi-${code} block`} style={{ fontSize: "2rem" }} />
+    <div
+      className={cn("flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted", className)}
+      title={naam}
+    >
+      <span className={`fi fis fi-${code} block shrink-0`} style={{ fontSize: "2rem" }} />
     </div>
   );
 }

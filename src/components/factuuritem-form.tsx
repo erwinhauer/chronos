@@ -13,6 +13,7 @@ import { NewProjectDialog } from "@/components/new-project-dialog";
 import type { LandenMap } from "@/lib/landen";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatumInput } from "@/components/ui/datum-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -481,13 +482,7 @@ export function FactuurItemForm({
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="datum">Datum</Label>
-                  <Input
-                    id="datum"
-                    type="date"
-                    value={datum}
-                    onChange={(e) => setDatum(e.target.value)}
-                    required
-                  />
+                  <DatumInput id="datum" value={datum} onChange={setDatum} required />
                 </div>
                 {klant && <TaalVeld klant={klant} />}
                 {klant && <ValutaVeld klant={klant} />}

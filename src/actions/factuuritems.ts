@@ -450,10 +450,18 @@ export async function updateFactuurItem(
 
   const afwijkend = input.prijstype === "uren" && tariefWijktAf(voorgesteldTarief, input.tarief);
 
-  // Alleen teamleider/beheerder mogen wie het item heeft aangemaakt wijzigen —
-  // nooit de client vertrouwen, dus de rol hier opnieuw (server-side) checken.
-  // Bij elke andere rol blijft medewerker_id gewoon ongewijzigd.
-  const magMedewerkerWijzigen = profile?.role === "teamleider" || profile?.role === "beheerder";
+  // Teamleider/beheerder mogen dit altijd wijzigen; een medewerker alleen als
+  // het item (zoals het NU is, vóór deze wijziging) bij een team hoort waar
+  // hijzelf ook lid van is — zelfde teamgenoot-scoping als de
+  // factuuritems_update_teamgenoot-RLS-policy. Nooit de client vertrouwen,
+  // dus de rol hier opnieuw (server-side) checken. Bij elke andere situatie
+  // blijft medewerker_id gewoon ongewijzigd.
+  const magMedewerkerWijzigen =
+    profile?.role === "teamleider" ||
+    profile?.role === "beheerder" ||
+    (profile?.role === "medewerker" &&
+      voor?.team_id != null &&
+      (await teamIdGeldigVoorMedewerker(supabase, voor.team_id, user.id)));
   let medewerkerUpdate: { medewerker_id?: string } = {};
   if (magMedewerkerWijzigen && input.medewerker_id) {
     if (!(await medewerkerBestaat(supabase, input.medewerker_id))) {
