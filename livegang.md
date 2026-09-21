@@ -481,7 +481,8 @@ klopt met de som van zijn specificaties; dashboard-tegel toont €226,20
 (2026 YTD) voor zowel beheerder als directie, wisselt correct naar €30,00
 bij Heel jaar 2025 (klopt met de enige specificatie die daarin valt), en
 is terecht onzichtbaar voor teamleider. Geen console-/servererrors.
-Gepusht naar `beta` — nog niet gepromoot naar `main`/LIVE.
+Op verzoek gepromoot naar `main`/LIVE op 2026-09-21.
+`main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
