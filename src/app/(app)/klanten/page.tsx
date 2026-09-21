@@ -17,7 +17,7 @@ export default async function KlantenPage() {
       .from("factuuritems")
       .select("klant_id, honorarium, externe_kosten, korting, klanten(naam, valuta)")
       .eq("status", "definitief"),
-    supabase.from("facturatiebatches").select("id, klant_id"),
+    supabase.from("facturatiebatches").select("id, klant_id, totaal_kantoorkosten"),
   ]);
 
   const perKlant = new Map<string, KlantOmzetRij>();
@@ -37,7 +37,14 @@ export default async function KlantenPage() {
   }
   for (const b of batches ?? []) {
     const bestaand = perKlant.get(b.klant_id);
-    if (bestaand) bestaand.aantalSpecificaties += 1;
+    if (bestaand) {
+      bestaand.aantalSpecificaties += 1;
+      // Bureaukosten horen bij de omzet van de klant, maar staan per
+      // specificatie vast (incl. de min. €15/max. €200-afronding) — niet
+      // per factuuritem te herleiden, dus hier los bij de itemsom optellen
+      // i.p.v. via regelbedrag().
+      bestaand.gefactureerd += b.totaal_kantoorkosten;
+    }
   }
   const klanten = Array.from(perKlant.values());
 

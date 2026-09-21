@@ -31,7 +31,7 @@ export default async function KlantDetailPagina({ params }: { params: Promise<{ 
       .order("datum", { ascending: false }),
     supabase
       .from("facturatiebatches")
-      .select("id, periode_start, periode_eind, totaal_bedrag, created_at")
+      .select("id, periode_start, periode_eind, totaal_bedrag, totaal_kantoorkosten, created_at")
       .eq("klant_id", klantId)
       .order("periode_start", { ascending: false }),
     haalLandenMap(supabase),
@@ -40,7 +40,13 @@ export default async function KlantDetailPagina({ params }: { params: Promise<{ 
 
   const alleItems = items ?? [];
   const valuta = klant.valuta;
-  const totaalGefactureerd = alleItems.reduce((som, i) => som + regelbedrag(i), 0);
+  // Bureaukosten horen bij de omzet van deze klant, maar staan per
+  // specificatie vast (incl. de min. €15/max. €200-afronding) — niet per
+  // factuuritem/dossiertype/land te herleiden, dus alleen in dit totaal
+  // meegenomen, niet in de "Per categorie"/"Per land"-uitsplitsing hieronder
+  // (die blijft daarom lager dan dit totaal, met dit verschil).
+  const totaalKantoorkosten = (batches ?? []).reduce((som, b) => som + b.totaal_kantoorkosten, 0);
+  const totaalGefactureerd = alleItems.reduce((som, i) => som + regelbedrag(i), 0) + totaalKantoorkosten;
   const perCategorie = groepeerPerProductgroep(alleItems);
   const perLand = groepeerPerLand(alleItems, landen, 20);
 
@@ -75,6 +81,7 @@ export default async function KlantDetailPagina({ params }: { params: Promise<{ 
           <p className="text-3xl font-semibold tabular-figures">{euro(totaalGefactureerd, valuta)}</p>
           <p className="text-sm text-muted-foreground">
             {alleItems.length} definitieve factuuritems · {(batches ?? []).length} specificaties
+            {totaalKantoorkosten > 0 && <> · waarvan {euro(totaalKantoorkosten, valuta)} bureaukosten</>}
           </p>
         </CardContent>
       </Card>
