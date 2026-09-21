@@ -452,6 +452,37 @@ knop en projectbeheer-icoontjes staan er nog steeds, geen regressie.
 Op verzoek gepromoot naar `main`/LIVE op 2026-09-18.
 `main` en `beta` staan weer gelijk.
 
+Daarna een functie-uitbreiding op verzoek (2026-09-21): bureaukosten
+horen bij de omzet van een klant, maar telden nergens mee — ze staan per
+specificatie vast (incl. de min. €15/max. €200-afronding uit
+`berekenFactuurtotalen`) en zijn dus niet per factuuritem/dossiertype/
+land te herleiden. (1) Klanten-overzicht en klant-detailpagina: het
+gefactureerd-totaal per klant telt nu ook de bureaukosten van al zijn
+specificaties mee (nieuwe kolom `totaal_kantoorkosten` bij de al
+bestaande facturatiebatches-query, geen nieuwe query nodig). Op de
+klant-detailpagina staat er nu ook een "waarvan € X bureaukosten"-regel
+onder het totaal, en de "Per categorie"/"Per land"-uitsplitsing blijft
+bewust zonder bureaukosten (niet toe te wijzen aan één dossiertype of
+land) — bijvangst: de header-total sloot voorheen niet aan met de som
+van de specificatieregels eronder (die al wél incl. bureaukosten
+toonden), dat sluit nu weer aan. (2) Nieuwe KPI-tegel op het dashboard,
+"Bureaukosten · {periode}", naast "Gefactureerd · {periode}" en alleen
+zichtbaar voor directie/beheerder — met dezelfde periode-select als de
+rest van de pagina (op `periode_eind` van de specificatie, de beste
+beschikbare benadering op batch-niveau; een specificatie kan een
+periodegrens overspannen terwijl de onderliggende items dat niet doen,
+dus dit sluit niet altijd tot op de euro aan met "Gefactureerd"
+ernaast). Bijvangst: RLS op `facturatiebatches` kende de rol directie
+nog niet (bestond nog niet toen die policy geschreven werd) — filterde
+dus stilzwijgend alles weg voor directie, geen foutmelding; nieuwe
+migratie `20260921100000_facturatiebatches_directie.sql` voegt die rol
+toe. Lokaal getest: Arcadis' totaal (€2.915,00 incl. €165 bureaukosten)
+klopt met de som van zijn specificaties; dashboard-tegel toont €226,20
+(2026 YTD) voor zowel beheerder als directie, wisselt correct naar €30,00
+bij Heel jaar 2025 (klopt met de enige specificatie die daarin valt), en
+is terecht onzichtbaar voor teamleider. Geen console-/servererrors.
+Gepusht naar `beta` — nog niet gepromoot naar `main`/LIVE.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de

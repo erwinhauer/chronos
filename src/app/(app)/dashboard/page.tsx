@@ -1,4 +1,4 @@
-import { Plus, Euro, TrendingUp, TrendingDown, Clock, Briefcase, CalendarDays } from "lucide-react";
+import { Plus, Euro, TrendingUp, TrendingDown, Clock, Briefcase, CalendarDays, Receipt } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { euro, isGefactureerd, isNogTeFactureren, regelbedrag, nettoOmzetPlaceholder } from "@/lib/factuurbedragen";
@@ -203,20 +203,33 @@ export default async function DashboardPage({
 
   const supabase = await createClient();
   const profile = await getCurrentProfile();
+  // Bureaukosten-KPI is alleen voor directie/beheerder — de query alleen voor
+  // hen uitvoeren i.p.v. voor iedereen die de pagina laadt.
+  const zietBureaukosten = profile?.role === "directie" || profile?.role === "beheerder";
 
-  const [{ data: items }, { data: teamdoelen }, { data: teamMembers }, { data: profiles }, { data: teamsBasis }, landenMap] =
-    await Promise.all([
-      supabase
-        .from("factuuritems")
-        .select(
-          "medewerker_id, klant_id, team_id, honorarium, externe_kosten, korting, qty, status, declarabel, datum, prijstype, klanten(naam), factuuritem_dossiers(type_dienst, land, volgorde)"
-        ),
-      supabase.from("teamdoelen").select("bruto_bedrag, netto_bedrag, teams(id, naam)").eq("jaar", gekozenJaar),
-      supabase.from("team_members").select("team_id, profile_id"),
-      supabase.from("profiles").select("id, full_name, role"),
-      supabase.from("teams").select("id, naam").order("naam"),
-      haalLandenMap(supabase),
-    ]);
+  const [
+    { data: items },
+    { data: teamdoelen },
+    { data: teamMembers },
+    { data: profiles },
+    { data: teamsBasis },
+    landenMap,
+    { data: batches },
+  ] = await Promise.all([
+    supabase
+      .from("factuuritems")
+      .select(
+        "medewerker_id, klant_id, team_id, honorarium, externe_kosten, korting, qty, status, declarabel, datum, prijstype, klanten(naam), factuuritem_dossiers(type_dienst, land, volgorde)"
+      ),
+    supabase.from("teamdoelen").select("bruto_bedrag, netto_bedrag, teams(id, naam)").eq("jaar", gekozenJaar),
+    supabase.from("team_members").select("team_id, profile_id"),
+    supabase.from("profiles").select("id, full_name, role"),
+    supabase.from("teams").select("id, naam").order("naam"),
+    haalLandenMap(supabase),
+    zietBureaukosten
+      ? supabase.from("facturatiebatches").select("totaal_kantoorkosten, periode_eind")
+      : Promise.resolve({ data: null }),
+  ]);
 
   const rows = (items ?? []) as unknown as FactuurRegel[];
 
@@ -231,6 +244,17 @@ export default async function DashboardPage({
   const inGekozenPeriodeUren = inGekozenPeriode.filter((r) => r.prijstype === "uren");
 
   const gefactureerd = inGekozenPeriode.reduce((sum, r) => sum + regelbedrag(r), 0);
+
+  // Bureaukosten staan per specificatie vast (niet per factuuritem te
+  // herleiden, zie factuurbedragen.ts), dus hier los van "gefactureerd"
+  // opgeteld uit facturatiebatches — periode_eind is de beste beschikbare
+  // benadering van "in welke periode dit werk viel" op batch-niveau (een
+  // batch kan een periodegrens overspannen terwijl de onderliggende items
+  // dat niet doen, dus dit sluit niet altijd tot op de euro aan met
+  // "gefactureerd" hierboven).
+  const bureaukostenTotaal = (batches ?? [])
+    .filter((b) => inPeriode(b.periode_eind, periode, gekozenJaar))
+    .reduce((sum, b) => sum + b.totaal_kantoorkosten, 0);
 
   const namenPerId = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
   const teamleiderIds = new Set((profiles ?? []).filter((p) => p.role === "teamleider").map((p) => p.id));
@@ -562,7 +586,19 @@ export default async function DashboardPage({
         <JaarSelect huidigJaar={gekozenJaar} />
       </div>
 
-      <HeroTile label={`Gefactureerd · ${periodeLabel(periode)}`} value={euro(gefactureerd)} icon={Euro} />
+      {zietBureaukosten ? (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <HeroTile label={`Gefactureerd · ${periodeLabel(periode)}`} value={euro(gefactureerd)} icon={Euro} />
+          <HeroTile
+            label={`Bureaukosten · ${periodeLabel(periode)}`}
+            value={euro(bureaukostenTotaal)}
+            icon={Receipt}
+            variant="coral"
+          />
+        </div>
+      ) : (
+        <HeroTile label={`Gefactureerd · ${periodeLabel(periode)}`} value={euro(gefactureerd)} icon={Euro} />
+      )}
 
       <div className="flex flex-col gap-3">
         <h3 className="text-lg font-semibold tracking-tight">Onderhanden werk · {periodeLabel(periode)}</h3>
