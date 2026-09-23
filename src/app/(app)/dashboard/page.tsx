@@ -1,8 +1,8 @@
-import { Plus, Euro, TrendingUp, TrendingDown, Clock, Briefcase, CalendarDays, Receipt } from "lucide-react";
+import { Plus, Euro, TrendingUp, TrendingDown, Clock, Briefcase, CalendarDays, Receipt, Hourglass } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { euro, isGefactureerd, isNogTeFactureren, regelbedrag, nettoOmzetPlaceholder } from "@/lib/factuurbedragen";
-import { parsePeriodeKey, periodeLabel, inPeriode } from "@/lib/omzet-periode";
+import { parsePeriodeKey, periodeLabel, inPeriode, periodeDagen, DWO_PERIODES } from "@/lib/omzet-periode";
 import { codeVoorDienstLabel, PRODUCTGROEP_CODES } from "@/lib/dossiernummer";
 import { haalLandenMap, type LandenMap } from "@/lib/landen";
 import { eersteDienst, groepeerPerProductgroep, groepeerPerLand } from "@/lib/omzet-aggregatie";
@@ -31,6 +31,13 @@ const MAX_SERIES = 5;
 
 function firstName(fullName: string) {
   return fullName.split(" ")[0];
+}
+
+// DWO als "12,4 dagen" — null (geen omzet in de gekozen periode, dus geen
+// zinnig factuurtempo om tegen af te zetten) toont een streepje i.p.v. NaN/Infinity.
+function formatDagen(dagen: number | null): string {
+  if (dagen === null) return "—";
+  return `${new Intl.NumberFormat("nl-NL", { maximumFractionDigits: 1, minimumFractionDigits: 1 }).format(dagen)} dagen`;
 }
 
 type FactuurRegel = {
@@ -181,6 +188,7 @@ export default async function DashboardPage({
     productgroepPeriode?: string;
     landPeriode?: string;
     teamlidPeriode?: string;
+    dwoPeriode?: string;
   }>;
 }) {
   const {
@@ -191,6 +199,7 @@ export default async function DashboardPage({
     productgroepPeriode: productgroepPeriodeParam,
     landPeriode: landPeriodeParam,
     teamlidPeriode: teamlidPeriodeParam,
+    dwoPeriode: dwoPeriodeParam,
   } = await searchParams;
   const periode = parsePeriodeKey(periodeParam);
   const medewerkerPeriode = parsePeriodeKey(medewerkerPeriodeParam, { type: "mtd" });
@@ -198,6 +207,7 @@ export default async function DashboardPage({
   const productgroepPeriode = parsePeriodeKey(productgroepPeriodeParam);
   const landPeriode = parsePeriodeKey(landPeriodeParam);
   const teamlidPeriode = parsePeriodeKey(teamlidPeriodeParam);
+  const dwoPeriode = parsePeriodeKey(dwoPeriodeParam, { type: "rolling3m" });
   const echtHuidigJaar = new Date().getFullYear();
   const gekozenJaar = jaarParam && /^\d{4}$/.test(jaarParam) ? Number(jaarParam) : echtHuidigJaar;
 
@@ -291,9 +301,8 @@ export default async function DashboardPage({
   // "Onderhanden werk · {periode}" met de per-team-uitsplitsing eronder) —
   // die twee mogen niet dezelfde variabele delen, anders verschuift de kale
   // KPI-tegel mee met de periode-select terwijl hij daar niet naast staat.
-  const ohwTotaalOnbeperkt = rows
-    .filter((r) => isNogTeFactureren(r.status, r.declarabel))
-    .reduce((sum, r) => sum + regelbedrag(r), 0);
+  const ohwRowsOnbeperkt = rows.filter((r) => isNogTeFactureren(r.status, r.declarabel));
+  const ohwTotaalOnbeperkt = ohwRowsOnbeperkt.reduce((sum, r) => sum + regelbedrag(r), 0);
   const ohwPerTeam = (teamsBasis ?? []).map((team) => {
     const bedrag = ohwRows.filter((r) => r.team_id === team.id).reduce((sum, r) => sum + regelbedrag(r), 0);
     return { teamId: team.id, teamNaam: team.naam, bedrag };
@@ -312,6 +321,32 @@ export default async function DashboardPage({
   const ohwGeenTeamAlle = ohwGeenTeamRowsAlle.reduce((sum, r) => sum + regelbedrag(r), 0);
   const ohwGeenTeamRowsEigen = ohwGeenTeamRowsAlle.filter((r) => r.medewerker_id === profile?.id);
   const ohwGeenTeamEigen = ohwGeenTeamRowsEigen.reduce((sum, r) => sum + regelbedrag(r), 0);
+
+  // DWO (Days Work Outstanding) — hoeveel dagen werk aan omzet er nú nog
+  // openstaat, tegen het factuurtempo van de gekozen periode: (onderhanden
+  // werk nú / gemiddelde dagomzet in de periode). De teller is bewust altijd
+  // "nú" (ohwRowsOnbeperkt, zonder periode-filter) — DWO meet de diepte van
+  // de huidige achterstand, niet "hoeveel bleef er open in periode X". Alleen
+  // de noemer (het factuurtempo) verschuift met de periode-select, net als
+  // bij het gangbare Days Sales Outstanding-kengetal. "rolling3m" kan een
+  // jaargrens overspannen, dus hier filteren op de volledige "rows" (niet op
+  // "ditJaar", die al op gekozenJaar is voorgesorteerd).
+  const zietDwo = profile?.role === "directie" || profile?.role === "beheerder";
+  const dwoDagen = periodeDagen(dwoPeriode, gekozenJaar);
+  const dwoOmzetRows = rows.filter((r) => isGefactureerd(r.status) && inPeriode(r.datum, dwoPeriode, gekozenJaar));
+  function berekenDwo(ohwBedrag: number, omzetRows: typeof dwoOmzetRows): number | null {
+    const omzet = omzetRows.reduce((sum, r) => sum + regelbedrag(r), 0);
+    const dagomzet = dwoDagen > 0 ? omzet / dwoDagen : 0;
+    return dagomzet > 0 ? ohwBedrag / dagomzet : null;
+  }
+  const dwoPerTeam = (teamsBasis ?? []).map((team) => {
+    const ohwBedrag = ohwRowsOnbeperkt
+      .filter((r) => r.team_id === team.id)
+      .reduce((sum, r) => sum + regelbedrag(r), 0);
+    const omzetRows = dwoOmzetRows.filter((r) => r.team_id === team.id);
+    return { teamId: team.id, teamNaam: team.naam, dwo: berekenDwo(ohwBedrag, omzetRows) };
+  });
+  const dwoTotaal = berekenDwo(ohwTotaalOnbeperkt, dwoOmzetRows);
 
   const teamKaarten = (teamdoelen ?? [])
     .map((d) => {
@@ -671,6 +706,35 @@ export default async function DashboardPage({
           )}
         </div>
       </div>
+
+      {zietDwo && (
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-lg font-semibold tracking-tight">
+              DWO (Days Work Outstanding) · {periodeLabel(dwoPeriode)}
+            </h3>
+            <TabelPeriodeSelect paramNaam="dwoPeriode" periodes={DWO_PERIODES} standaard={{ type: "rolling3m" }} />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Onderhanden werk nú, uitgedrukt in dagen tegen het factuurtempo van de gekozen periode — hoger is meer
+            achterstand.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {dwoPerTeam.map((t) => (
+              <Card key={t.teamId} className="rounded-2xl">
+                <CardContent className="flex items-center gap-4">
+                  <StatIcon icon={Hourglass} tint="warning" className="h-11 w-11" />
+                  <div>
+                    <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{t.teamNaam}</p>
+                    <div className="text-xl font-semibold tabular-figures text-warning">{formatDagen(t.dwo)}</div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            <HeroTile label="DWO · Bedrijfsbreed" value={formatDagen(dwoTotaal)} icon={Hourglass} />
+          </div>
+        </div>
+      )}
 
       {zietAlleTeams && (
         <div className="flex flex-col gap-6">

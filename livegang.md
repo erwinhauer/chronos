@@ -484,6 +484,34 @@ is terecht onzichtbaar voor teamleider. Geen console-/servererrors.
 Op verzoek gepromoot naar `main`/LIVE op 2026-09-21.
 `main` en `beta` staan weer gelijk.
 
+Daarna een nieuwe KPI op verzoek (2026-09-23): DWO (Days Work
+Outstanding) per team en bedrijfsbreed, alleen voor directie/beheerder.
+Vooraf twee dingen afgestemd: het voortschrijdend-gemiddelde-venster
+(3 maanden gekozen) en de zichtbaarheid (directie + beheerder, net als
+de bureaukosten-tegel, niet alleen directie). Formule: (onderhanden werk
+nú ÷ gemiddelde dagomzet in de gekozen periode) — de teller is bewust
+altijd "nú" (dezelfde ohwTotaalOnbeperkt-aanpak als de kale OHW-tegel),
+alleen de noemer (het factuurtempo) verschuift met de periode-select,
+net als het gangbare Days Sales Outstanding-kengetal. Nieuwe periode
+`Periode`-variant `rolling3m` in `omzet-periode.ts` (± 3 maanden tot
+vandaag, los van het jaar — kan een jaargrens overspannen) plus een
+nieuwe `DWO_PERIODES`-set (jaar/halfjaar/kwartaal/maand/rolling, geen
+ytd/mtd) en een geëxporteerde `periodeDagen()` voor de gemiddelde-
+dagomzet-berekening. `TabelPeriodeSelect` kreeg optionele `periodes`/
+`standaard`-props (was hardcoded op `MEDEWERKER_PERIODES`) zodat de
+DWO-tegel zijn eigen periodeset en default (rolling) kan gebruiken
+zonder de bestaande aanroepen (klant/productgroep/land/teamlid) te
+raken. Een team zonder omzet in de gekozen periode toont een streepje
+i.p.v. delen door nul. Lokaal getest tegen handmatig nagerekende SQL-
+sommen: rolling3m (geen omzet in de seed-data, toont terecht overal een
+streepje), juni 2026 (Team Benelux 0,0 dagen, Team International —,
+bedrijfsbreed 125,2 dagen) en heel jaar 2025 (bedrijfsbreed 2.284,0
+dagen) — alle drie kwamen exact overeen met de handmatige berekening.
+Zichtbaar voor beheerder en directie, terecht onzichtbaar voor
+teamleider. Geen console-/servererrors, geen migratie nodig (leest uit
+al opgehaalde factuuritems/facturatiebatches). Gepusht naar `beta` —
+nog niet gepromoot naar `main`/LIVE.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de

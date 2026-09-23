@@ -8,7 +8,11 @@ export type Periode =
   | { type: "jaar" }
   | { type: "maand"; maand: number } // 0-11
   | { type: "kwartaal"; kwartaal: number } // 1-4
-  | { type: "halfjaar"; helft: 1 | 2 };
+  | { type: "halfjaar"; helft: 1 | 2 }
+  // Voortschrijdend gemiddelde over de laatste 3 maanden tot vandaag — los van
+  // "jaar" (kan een jaargrens overspannen), gebruikt voor de DWO-tegel op het
+  // dashboard om één rustige/drukke maand niet te laten domineren.
+  | { type: "rolling3m" };
 
 const PERIODE_LABELS: Record<string, string> = {
   ytd: "Dit jaar (YTD)",
@@ -32,6 +36,7 @@ const PERIODE_LABELS: Record<string, string> = {
   "kwartaal-4": "Q4",
   "halfjaar-1": "H1",
   "halfjaar-2": "H2",
+  rolling3m: "Rolling gemiddelde (3 mnd)",
 };
 
 export function periodeKey(periode: Periode): string {
@@ -40,6 +45,7 @@ export function periodeKey(periode: Periode): string {
   if (periode.type === "jaar") return "jaar";
   if (periode.type === "maand") return `maand-${periode.maand}`;
   if (periode.type === "kwartaal") return `kwartaal-${periode.kwartaal}`;
+  if (periode.type === "rolling3m") return "rolling3m";
   return `halfjaar-${periode.helft}`;
 }
 
@@ -52,6 +58,7 @@ export function parsePeriodeKey(key: string | undefined, standaard: Periode = { 
   if (key === "ytd") return { type: "ytd" };
   if (key === "mtd") return { type: "mtd" };
   if (key === "jaar") return { type: "jaar" };
+  if (key === "rolling3m") return { type: "rolling3m" };
   const [type, waarde] = key.split("-");
   const nummer = Number(waarde);
   if (type === "maand" && nummer >= 0 && nummer <= 11) return { type: "maand", maand: nummer };
@@ -77,6 +84,18 @@ export const MEDEWERKER_PERIODES: Periode[] = [
   ...[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((maand): Periode => ({ type: "maand", maand })),
 ];
 
+// Periode-set voor de DWO-tegel (directie/beheerder) — geen ytd/mtd (die
+// horen bij "sinds jaarstart"/"deze maand", niet bij een DWO-vergelijking),
+// wel de voortschrijdend-gemiddelde optie als standaard/eerste keuze.
+export const DWO_PERIODES: Periode[] = [
+  { type: "rolling3m" },
+  { type: "jaar" },
+  { type: "halfjaar", helft: 1 },
+  { type: "halfjaar", helft: 2 },
+  ...[1, 2, 3, 4].map((kwartaal): Periode => ({ type: "kwartaal", kwartaal })),
+  ...[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((maand): Periode => ({ type: "maand", maand })),
+];
+
 // Datumgrens (exclusief eind) voor een periode binnen een specifiek jaar. "ytd"
 // loopt tot en met vandaag; de overige periodes zijn een vaste kalendergrens.
 function periodeRange(periode: Periode, jaar: number): { start: Date; eind: Date } {
@@ -96,6 +115,12 @@ function periodeRange(periode: Periode, jaar: number): { start: Date; eind: Date
     const startMaand = (periode.kwartaal - 1) * 3;
     return { start: new Date(jaar, startMaand, 1), eind: new Date(jaar, startMaand + 3, 1) };
   }
+  if (periode.type === "rolling3m") {
+    const eind = new Date();
+    const start = new Date(eind);
+    start.setMonth(start.getMonth() - 3);
+    return { start, eind };
+  }
   const startMaand = periode.helft === 1 ? 0 : 6;
   return { start: new Date(jaar, startMaand, 1), eind: new Date(jaar, startMaand + 6, 1) };
 }
@@ -104,4 +129,13 @@ export function inPeriode(datum: string, periode: Periode, jaar: number): boolea
   const { start, eind } = periodeRange(periode, jaar);
   const d = new Date(datum);
   return d >= start && d < eind;
+}
+
+// Aantal dagen in de periode — nodig om een gemiddelde dagomzet te berekenen
+// voor DWO ((onderhanden werk / gemiddelde dagomzet) = dagen). "ytd"/"mtd"
+// lopen tot vandaag, dus dat aantal loopt vanzelf mee op tijdens het jaar/de
+// maand.
+export function periodeDagen(periode: Periode, jaar: number): number {
+  const { start, eind } = periodeRange(periode, jaar);
+  return (eind.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
 }
