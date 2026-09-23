@@ -553,7 +553,8 @@ veld nu ook automatisch toe zodra het de focus verliest (`onBlur`),
 naast Enter/plusje. Lokaal getest: typen en direct doorklikken naar
 "Klant" voegt het dossier nu vanzelf toe; de knop "Dossier toevoegen"
 zelf blijft ook gewoon werken (geen dubbele tag door de blur-vóór-click-
-volgorde). Gepusht naar `beta` — nog niet gepromoot naar `main`/LIVE.
+volgorde). Op verzoek gepromoot naar `main`/LIVE op 2026-09-23.
+`main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
