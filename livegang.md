@@ -538,7 +538,8 @@ lokaal gecontroleerd tegen handmatig nagerekende SQL-sommen (augustus
 bedrijfsbreed 170,4 dagen — nu wél exact) en tegen een periode zonder
 definitief gemaakte items (toont overal terecht een streepje).
 Zichtbaar voor beheerder en directie, terecht onzichtbaar voor
-teamleider. Gepusht naar `beta` — nog niet gepromoot naar `main`/LIVE.
+teamleider. Op verzoek gepromoot naar `main`/LIVE op 2026-09-23.
+`main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
