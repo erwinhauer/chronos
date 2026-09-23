@@ -2,7 +2,7 @@ import { Plus, Euro, TrendingUp, TrendingDown, Clock, Briefcase, CalendarDays, R
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { euro, isGefactureerd, isNogTeFactureren, regelbedrag, nettoOmzetPlaceholder } from "@/lib/factuurbedragen";
-import { parsePeriodeKey, periodeLabel, inPeriode, periodeDagen, DWO_PERIODES } from "@/lib/omzet-periode";
+import { parsePeriodeKey, periodeLabel, inPeriode, DWO_PERIODES } from "@/lib/omzet-periode";
 import { codeVoorDienstLabel, PRODUCTGROEP_CODES } from "@/lib/dossiernummer";
 import { haalLandenMap, type LandenMap } from "@/lib/landen";
 import { eersteDienst, groepeerPerProductgroep, groepeerPerLand } from "@/lib/omzet-aggregatie";
@@ -44,6 +44,7 @@ type FactuurRegel = {
   medewerker_id: string;
   klant_id: string;
   team_id: string | null;
+  facturatiebatch_id: string | null;
   honorarium: number;
   externe_kosten: number;
   korting: number;
@@ -229,7 +230,7 @@ export default async function DashboardPage({
     supabase
       .from("factuuritems")
       .select(
-        "medewerker_id, klant_id, team_id, honorarium, externe_kosten, korting, qty, status, declarabel, datum, prijstype, klanten(naam), factuuritem_dossiers(type_dienst, land, volgorde)"
+        "medewerker_id, klant_id, team_id, facturatiebatch_id, honorarium, externe_kosten, korting, qty, status, declarabel, datum, prijstype, klanten(naam), factuuritem_dossiers(type_dienst, land, volgorde)"
       ),
     supabase.from("teamdoelen").select("bruto_bedrag, netto_bedrag, teams(id, naam)").eq("jaar", gekozenJaar),
     supabase.from("team_members").select("team_id, profile_id"),
@@ -237,7 +238,7 @@ export default async function DashboardPage({
     supabase.from("teams").select("id, naam").order("naam"),
     haalLandenMap(supabase),
     zietBureaukosten
-      ? supabase.from("facturatiebatches").select("totaal_kantoorkosten, periode_eind")
+      ? supabase.from("facturatiebatches").select("id, totaal_kantoorkosten, periode_eind, goedgekeurd_op")
       : Promise.resolve({ data: null }),
   ]);
 
@@ -322,31 +323,45 @@ export default async function DashboardPage({
   const ohwGeenTeamRowsEigen = ohwGeenTeamRowsAlle.filter((r) => r.medewerker_id === profile?.id);
   const ohwGeenTeamEigen = ohwGeenTeamRowsEigen.reduce((sum, r) => sum + regelbedrag(r), 0);
 
-  // DWO (Days Work Outstanding) — hoeveel dagen werk aan omzet er nú nog
-  // openstaat, tegen het factuurtempo van de gekozen periode: (onderhanden
-  // werk nú / gemiddelde dagomzet in de periode). De teller is bewust altijd
-  // "nú" (ohwRowsOnbeperkt, zonder periode-filter) — DWO meet de diepte van
-  // de huidige achterstand, niet "hoeveel bleef er open in periode X". Alleen
-  // de noemer (het factuurtempo) verschuift met de periode-select, net als
-  // bij het gangbare Days Sales Outstanding-kengetal. "rolling3m" kan een
-  // jaargrens overspannen, dus hier filteren op de volledige "rows" (niet op
-  // "ditJaar", die al op gekozenJaar is voorgesorteerd).
+  // DWO (Days Work Outstanding) — hoeveel dagen werk gemiddeld als
+  // onderhanden werk blijft staan vóórdat het definitief wordt gemaakt (in
+  // een specificatie wordt vastgelegd): per factuuritem het aantal dagen
+  // tussen zijn eigen datum en het moment waarop de specificatie waarin het
+  // is opgenomen is goedgekeurd (facturatiebatches.goedgekeurd_op — hetzelfde
+  // moment als "definitief", zie genereerSpecificatie). Dit is dus een
+  // achteraf-gemeten doorlooptijd van al afgeronde items, geen schatting op
+  // basis van het huidige factuurtempo. Gewogen naar bedrag (net als het
+  // gangbare Days Sales Outstanding-kengetal) — een item van €5.000 dat 40
+  // dagen bleef liggen weegt zwaarder dan een item van €50 dat 2 dagen bleef
+  // liggen. De periode-select filtert op wanneer de specificatie is
+  // goedgekeurd (dus "welke items zijn er in deze periode definitief
+  // gemaakt"), niet op de datum van het item zelf.
   const zietDwo = profile?.role === "directie" || profile?.role === "beheerder";
-  const dwoDagen = periodeDagen(dwoPeriode, gekozenJaar);
-  const dwoOmzetRows = rows.filter((r) => isGefactureerd(r.status) && inPeriode(r.datum, dwoPeriode, gekozenJaar));
-  function berekenDwo(ohwBedrag: number, omzetRows: typeof dwoOmzetRows): number | null {
-    const omzet = omzetRows.reduce((sum, r) => sum + regelbedrag(r), 0);
-    const dagomzet = dwoDagen > 0 ? omzet / dwoDagen : 0;
-    return dagomzet > 0 ? ohwBedrag / dagomzet : null;
-  }
-  const dwoPerTeam = (teamsBasis ?? []).map((team) => {
-    const ohwBedrag = ohwRowsOnbeperkt
-      .filter((r) => r.team_id === team.id)
-      .reduce((sum, r) => sum + regelbedrag(r), 0);
-    const omzetRows = dwoOmzetRows.filter((r) => r.team_id === team.id);
-    return { teamId: team.id, teamNaam: team.naam, dwo: berekenDwo(ohwBedrag, omzetRows) };
+  const goedgekeurdOpPerBatch = new Map((batches ?? []).map((b) => [b.id, b.goedgekeurd_op]));
+  const dwoRegels = rows.flatMap((r) => {
+    const goedgekeurdOp = r.facturatiebatch_id ? goedgekeurdOpPerBatch.get(r.facturatiebatch_id) : undefined;
+    if (!goedgekeurdOp || !inPeriode(goedgekeurdOp, dwoPeriode, gekozenJaar)) return [];
+    // goedgekeurd_op is een timestamptz (heeft een tijdstip), datum is een
+    // pure date — op kalenderdatum vergelijken (niet op exacte milliseconden,
+    // anders schuift elk resultaat met het tijdstip-op-de-dag mee).
+    const dagen =
+      (new Date(goedgekeurdOp.slice(0, 10)).getTime() - new Date(r.datum).getTime()) / (1000 * 60 * 60 * 24);
+    return [{ teamId: r.team_id, dagen, bedrag: regelbedrag(r) }];
   });
-  const dwoTotaal = berekenDwo(ohwTotaalOnbeperkt, dwoOmzetRows);
+  function berekenDwo(regels: typeof dwoRegels): number | null {
+    const totaalBedrag = regels.reduce((sum, r) => sum + r.bedrag, 0);
+    if (totaalBedrag <= 0) return null;
+    const gewogenDagen = regels.reduce((sum, r) => sum + r.dagen * r.bedrag, 0);
+    return gewogenDagen / totaalBedrag;
+  }
+  const dwoPerTeam = (teamsBasis ?? []).map((team) => ({
+    teamId: team.id,
+    teamNaam: team.naam,
+    dwo: berekenDwo(dwoRegels.filter((r) => r.teamId === team.id)),
+  }));
+  const dwoGeenTeamRegels = dwoRegels.filter((r) => r.teamId === null);
+  const dwoGeenTeam = dwoGeenTeamRegels.length > 0 ? berekenDwo(dwoGeenTeamRegels) : null;
+  const dwoTotaal = berekenDwo(dwoRegels);
 
   const teamKaarten = (teamdoelen ?? [])
     .map((d) => {
@@ -716,8 +731,9 @@ export default async function DashboardPage({
             <TabelPeriodeSelect paramNaam="dwoPeriode" periodes={DWO_PERIODES} standaard={{ type: "rolling3m" }} />
           </div>
           <p className="text-xs text-muted-foreground">
-            Onderhanden werk nú, uitgedrukt in dagen tegen het factuurtempo van de gekozen periode — hoger is meer
-            achterstand.
+            Gemiddeld aantal dagen tussen de datum van een factuuritem en het moment waarop het definitief is gemaakt
+            (gewogen naar bedrag) — voor items die in de gekozen periode definitief zijn gemaakt. Hoger is een
+            langere doorlooptijd.
           </p>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {dwoPerTeam.map((t) => (
@@ -731,6 +747,17 @@ export default async function DashboardPage({
                 </CardContent>
               </Card>
             ))}
+            {dwoGeenTeamRegels.length > 0 && (
+              <Card className="rounded-2xl">
+                <CardContent className="flex items-center gap-4">
+                  <StatIcon icon={Hourglass} tint="warning" className="h-11 w-11" />
+                  <div>
+                    <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Geen team</p>
+                    <div className="text-xl font-semibold tabular-figures text-warning">{formatDagen(dwoGeenTeam)}</div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
             <HeroTile label="DWO · Bedrijfsbreed" value={formatDagen(dwoTotaal)} icon={Hourglass} />
           </div>
         </div>

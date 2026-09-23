@@ -513,6 +513,33 @@ al opgehaalde factuuritems/facturatiebatches). Op verzoek gepromoot
 naar `main`/LIVE op 2026-09-23.
 `main` en `beta` staan weer gelijk.
 
+Daarna bleek de DWO-formule hierboven niet te kloppen met wat er
+bedoeld was (2026-09-23): geen ratio-schatting (onderhanden werk t.o.v.
+factuurtempo), maar een achteraf-gemeten doorlooptijd — het aantal
+dagen tussen de datum van een factuuritem en het moment waarop het
+definitief is gemaakt (facturatiebatches.goedgekeurd_op, hetzelfde
+moment als "definitief" in genereerSpecificatie), gewogen naar bedrag.
+De periode-select filtert nu op wanneer de specificatie is goedgekeurd
+("welke items zijn in deze periode definitief gemaakt"), niet meer op
+de datum van het item zelf; ohwTotaalOnbeperkt/periodeDagen/de oude
+ratio-berekening zijn losgetrokken (periodeDagen() had daarna geen
+enkele aanroeper meer en is verwijderd). Er ook meteen een "Geen
+team"-kaart aan toegevoegd, dezelfde reden als bij Onderhanden werk:
+zonder die kaart telden teamloze items wel mee in "Bedrijfsbreed" maar
+nergens in de per-team-kaarten. Onderweg een echte bug gevonden en
+gefixt: `goedgekeurd_op` is een timestamptz (met tijdstip),
+`factuuritems.datum` een pure date — het aantal dagen rechtstreeks op
+milliseconden uitrekenen gaf daardoor per regel een extra fractie dag
+(het tijdstip-op-de-dag van de specificatie), zichtbaar als een
+~0,5-dag-afwijking t.o.v. de handmatige SQL-controle. Opgelost door
+`goedgekeurd_op` eerst tot zijn kalenderdatum af te kappen. Opnieuw
+lokaal gecontroleerd tegen handmatig nagerekende SQL-sommen (augustus
+2026: Team Benelux 165,6 dagen, Team International 193,0 dagen,
+bedrijfsbreed 170,4 dagen — nu wél exact) en tegen een periode zonder
+definitief gemaakte items (toont overal terecht een streepje).
+Zichtbaar voor beheerder en directie, terecht onzichtbaar voor
+teamleider. Gepusht naar `beta` — nog niet gepromoot naar `main`/LIVE.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de
