@@ -509,8 +509,9 @@ bedrijfsbreed 125,2 dagen) en heel jaar 2025 (bedrijfsbreed 2.284,0
 dagen) — alle drie kwamen exact overeen met de handmatige berekening.
 Zichtbaar voor beheerder en directie, terecht onzichtbaar voor
 teamleider. Geen console-/servererrors, geen migratie nodig (leest uit
-al opgehaalde factuuritems/facturatiebatches). Gepusht naar `beta` —
-nog niet gepromoot naar `main`/LIVE.
+al opgehaalde factuuritems/facturatiebatches). Op verzoek gepromoot
+naar `main`/LIVE op 2026-09-23.
+`main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
