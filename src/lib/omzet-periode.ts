@@ -130,12 +130,3 @@ export function inPeriode(datum: string, periode: Periode, jaar: number): boolea
   const d = new Date(datum);
   return d >= start && d < eind;
 }
-
-// Aantal dagen in de periode — nodig om een gemiddelde dagomzet te berekenen
-// voor DWO ((onderhanden werk / gemiddelde dagomzet) = dagen). "ytd"/"mtd"
-// lopen tot vandaag, dus dat aantal loopt vanzelf mee op tijdens het jaar/de
-// maand.
-export function periodeDagen(periode: Periode, jaar: number): number {
-  const { start, eind } = periodeRange(periode, jaar);
-  return (eind.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
-}
