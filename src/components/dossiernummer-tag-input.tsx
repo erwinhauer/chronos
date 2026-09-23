@@ -68,6 +68,13 @@ export function DossiernummerTagInput({
               toevoegen();
             }
           }}
+          // Anders bleef getypte tekst onopvallend "los" staan zodra je
+          // wegklikte naar een volgend veld — nooit toegevoegd, zonder dat
+          // daar iets op wees. Nu ook automatisch toevoegen als het veld de
+          // focus verliest, niet alleen bij Enter/plusje.
+          onBlur={() => {
+            if (invoer.trim()) toevoegen();
+          }}
           placeholder="Typ het dossiernummer en klik op Enter, of klik op het plusje"
         />
         <Button type="button" variant="outline" size="icon" onClick={toevoegen} aria-label="Dossier toevoegen">
