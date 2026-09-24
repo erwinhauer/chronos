@@ -5,6 +5,7 @@ const TINTEN = {
   primary: "bg-primary/10 text-primary",
   warning: "bg-warning/10 text-warning",
   success: "bg-success/10 text-success",
+  destructive: "bg-destructive/10 text-destructive",
 };
 
 export function StatIcon({

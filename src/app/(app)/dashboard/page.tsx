@@ -1,18 +1,24 @@
-import { Plus, Euro, TrendingUp, TrendingDown, Clock, Briefcase, CalendarDays, Receipt, Hourglass } from "lucide-react";
+import { Plus, Euro, TrendingUp, TrendingDown, Clock, Briefcase, Receipt, Hourglass } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { euro, isGefactureerd, isNogTeFactureren, regelbedrag, nettoOmzetPlaceholder } from "@/lib/factuurbedragen";
 import { parsePeriodeKey, periodeLabel, inPeriode, DWO_PERIODES } from "@/lib/omzet-periode";
 import { codeVoorDienstLabel, PRODUCTGROEP_CODES } from "@/lib/dossiernummer";
 import { haalLandenMap, type LandenMap } from "@/lib/landen";
-import { eersteDienst, groepeerPerProductgroep, groepeerPerLand } from "@/lib/omzet-aggregatie";
+import {
+  eersteDienst,
+  groepeerPerProductgroep,
+  groepeerPerLand,
+  groepeerPerProductgroepEnLand,
+} from "@/lib/omzet-aggregatie";
+import { dwoKleurToken } from "@/lib/dwo-kleur";
 import { OmzetGrafiek, type OmzetRij } from "@/components/omzet-grafiek";
 import { PeriodeSelect } from "@/components/periode-select";
 import { JaarSelect } from "@/components/jaar-select";
 import { MedewerkerPeriodeSelect } from "@/components/medewerker-periode-select";
 import { TabelPeriodeSelect } from "@/components/tabel-periode-select";
 import { MaandomzetDonut } from "@/components/maandomzet-donut";
-import type { TeamlidKpi } from "@/components/teamlid-kpi-tegel";
+import { TeamlidKpiTegel, type TeamlidKpi } from "@/components/teamlid-kpi-tegel";
 import { HeroTile } from "@/components/hero-tile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SegmentedProgress } from "@/components/segmented-progress";
@@ -39,6 +45,15 @@ function formatDagen(dagen: number | null): string {
   if (dagen === null) return "—";
   return `${new Intl.NumberFormat("nl-NL", { maximumFractionDigits: 1, minimumFractionDigits: 1 }).format(dagen)} dagen`;
 }
+
+// Tailwind kan geen samengestelde class-naam (`text-${token}`) JIT-compileren —
+// daarom een statische lookup i.p.v. de token rechtstreeks in een template te plakken.
+const DWO_TEKST_KLEUR: Record<ReturnType<typeof dwoKleurToken>, string> = {
+  success: "text-success",
+  warning: "text-warning",
+  destructive: "text-destructive",
+  primary: "text-muted-foreground",
+};
 
 type FactuurRegel = {
   medewerker_id: string;
@@ -188,7 +203,7 @@ export default async function DashboardPage({
     klantPeriode?: string;
     productgroepPeriode?: string;
     landPeriode?: string;
-    teamlidPeriode?: string;
+    sectie2Periode?: string;
     dwoPeriode?: string;
   }>;
 }) {
@@ -199,7 +214,7 @@ export default async function DashboardPage({
     klantPeriode: klantPeriodeParam,
     productgroepPeriode: productgroepPeriodeParam,
     landPeriode: landPeriodeParam,
-    teamlidPeriode: teamlidPeriodeParam,
+    sectie2Periode: sectie2PeriodeParam,
     dwoPeriode: dwoPeriodeParam,
   } = await searchParams;
   const periode = parsePeriodeKey(periodeParam);
@@ -207,7 +222,11 @@ export default async function DashboardPage({
   const klantPeriode = parsePeriodeKey(klantPeriodeParam);
   const productgroepPeriode = parsePeriodeKey(productgroepPeriodeParam);
   const landPeriode = parsePeriodeKey(landPeriodeParam);
-  const teamlidPeriode = parsePeriodeKey(teamlidPeriodeParam);
+  // Sectie 2 (Praktijkvoerder/Gebruiker-dashboard) heeft één periodeselector die alles
+  // in die sectie stuurt — Gefactureerd/OHW-tegels, teamlid-tegels, beide "nog te
+  // factureren"-tabellen, productgroep/land(/kruistabel) en DWO — in plaats van de
+  // vroegere, verspreide losse selectors per tabel.
+  const sectie2Periode = parsePeriodeKey(sectie2PeriodeParam);
   const dwoPeriode = parsePeriodeKey(dwoPeriodeParam, { type: "rolling3m" });
   const echtHuidigJaar = new Date().getFullYear();
   const gekozenJaar = jaarParam && /^\d{4}$/.test(jaarParam) ? Number(jaarParam) : echtHuidigJaar;
@@ -245,9 +264,8 @@ export default async function DashboardPage({
   const rows = (items ?? []) as unknown as FactuurRegel[];
 
   const ditJaar = rows.filter((r) => isGefactureerd(r.status) && new Date(r.datum).getFullYear() === gekozenJaar);
-  // Vast MTD-venster (los van de globale periode-select) voor de nieuwe
-  // teamleider/medewerker-KPI-rijen, die altijd YTD/MTD tonen ongeacht de
-  // periode die de rest van de pagina stuurt.
+  // Vast MTD-venster (los van de globale periode-select) — voedt de "Maandomzet
+  // vs. target"-donut in de Finance/Beheerder/Directie-weergave van de Teams-tab.
   const ditJaarMtd = ditJaar.filter((r) => inPeriode(r.datum, { type: "mtd" }, gekozenJaar));
   // Periode-gefilterd (voor de omzet-uitsplitsingen en de stat-tegels) — los van
   // "ditJaar", dat altijd het volledige gekozen jaar blijft voor de on-target-berekening.
@@ -308,20 +326,22 @@ export default async function DashboardPage({
     const bedrag = ohwRows.filter((r) => r.team_id === team.id).reduce((sum, r) => sum + regelbedrag(r), 0);
     return { teamId: team.id, teamNaam: team.naam, bedrag };
   });
-  const eigenOhwPerTeam = ohwPerTeam.filter((t) => eigenTeamIds.has(t.teamId));
   const ohwPerTeamId = new Map(ohwPerTeam.map((t) => [t.teamId, t.bedrag]));
-  const persoonlijkeOhw = ohwRows
-    .filter((r) => r.medewerker_id === profile?.id)
-    .reduce((sum, r) => sum + regelbedrag(r), 0);
+  // Onbeperkte (niet periode-gefilterde) OHW per team — voedt Sectie 1's vaste
+  // "Onderhanden werk"-tegel op het Praktijkvoerder/Gebruiker-dashboard, zelfde
+  // gedachte als de bedrijfsbrede ohwTotaalOnbeperkt-tegel helemaal boven de pagina.
+  const ohwPerTeamOnbeperktId = new Map(
+    (teamsBasis ?? []).map((team) => [
+      team.id,
+      ohwRowsOnbeperkt.filter((r) => r.team_id === team.id).reduce((sum, r) => sum + regelbedrag(r), 0),
+    ])
+  );
   // Rijen zonder team_id (oude, niet-teruggevulde items) horen niet bij één
   // specifiek team — apart tonen i.p.v. laten verdwijnen uit de per-team-
-  // optelling. Voor de eigen-teams-kaarten (teamleider) alleen de eigen
-  // items, net als de "Geen team"-tab bij Factuuritems; directie/finance/
-  // beheerder zien via RLS toch al alles, dus daar alle rijen zonder team.
+  // optelling (alleen relevant voor de zietAlleTeams-weergave; directie/
+  // finance/beheerder zien via RLS toch al alles).
   const ohwGeenTeamRowsAlle = ohwRows.filter((r) => r.team_id === null);
   const ohwGeenTeamAlle = ohwGeenTeamRowsAlle.reduce((sum, r) => sum + regelbedrag(r), 0);
-  const ohwGeenTeamRowsEigen = ohwGeenTeamRowsAlle.filter((r) => r.medewerker_id === profile?.id);
-  const ohwGeenTeamEigen = ohwGeenTeamRowsEigen.reduce((sum, r) => sum + regelbedrag(r), 0);
 
   // DWO (Days Work Outstanding) — hoeveel dagen werk gemiddeld als
   // onderhanden werk blijft staan vóórdat het definitief wordt gemaakt (in
@@ -338,17 +358,25 @@ export default async function DashboardPage({
   // gemaakt"), niet op de datum van het item zelf.
   const zietDwo = profile?.role === "directie" || profile?.role === "beheerder";
   const goedgekeurdOpPerBatch = new Map((batches ?? []).map((b) => [b.id, b.goedgekeurd_op]));
-  const dwoRegels = rows.flatMap((r) => {
-    const goedgekeurdOp = r.facturatiebatch_id ? goedgekeurdOpPerBatch.get(r.facturatiebatch_id) : undefined;
-    if (!goedgekeurdOp || !inPeriode(goedgekeurdOp, dwoPeriode, gekozenJaar)) return [];
-    // goedgekeurd_op is een timestamptz (heeft een tijdstip), datum is een
-    // pure date — op kalenderdatum vergelijken (niet op exacte milliseconden,
-    // anders schuift elk resultaat met het tijdstip-op-de-dag mee).
-    const dagen =
-      (new Date(goedgekeurdOp.slice(0, 10)).getTime() - new Date(r.datum).getTime()) / (1000 * 60 * 60 * 24);
-    return [{ teamId: r.team_id, dagen, bedrag: regelbedrag(r) }];
-  });
-  function berekenDwo(regels: typeof dwoRegels): number | null {
+  // Losgetrokken van "dwoPeriode" (de bedrijfsbrede, directie/beheerder-only DWO-
+  // sectie hieronder) zodat Sectie 2 op het Praktijkvoerder/Gebruiker-dashboard zijn
+  // eigen periodeselector (sectie2Periode) kan gebruiken zonder die andere sectie
+  // te beïnvloeden.
+  function berekenDwoRegels(dwoPeriodeArg: typeof dwoPeriode) {
+    return rows.flatMap((r) => {
+      const goedgekeurdOp = r.facturatiebatch_id ? goedgekeurdOpPerBatch.get(r.facturatiebatch_id) : undefined;
+      if (!goedgekeurdOp || !inPeriode(goedgekeurdOp, dwoPeriodeArg, gekozenJaar)) return [];
+      // goedgekeurd_op is een timestamptz (heeft een tijdstip), datum is een
+      // pure date — op kalenderdatum vergelijken (niet op exacte milliseconden,
+      // anders schuift elk resultaat met het tijdstip-op-de-dag mee).
+      const dagen =
+        (new Date(goedgekeurdOp.slice(0, 10)).getTime() - new Date(r.datum).getTime()) / (1000 * 60 * 60 * 24);
+      return [{ teamId: r.team_id, dagen, bedrag: regelbedrag(r) }];
+    });
+  }
+  const dwoRegels = berekenDwoRegels(dwoPeriode);
+  const dwoRegelsSectie2 = berekenDwoRegels(sectie2Periode);
+  function berekenDwo(regels: ReturnType<typeof berekenDwoRegels>): number | null {
     const totaalBedrag = regels.reduce((sum, r) => sum + r.bedrag, 0);
     if (totaalBedrag <= 0) return null;
     const gewogenDagen = regels.reduce((sum, r) => sum + r.dagen * r.bedrag, 0);
@@ -409,25 +437,37 @@ export default async function DashboardPage({
       const teamLeden = ditJaar.filter((r) => r.team_id === team.id);
       const { chartData, medewerkerNamen } = buildOmzetGrafiekData(teamLeden, namenPerId);
 
-      // Nieuwe teamleider/medewerker-KPI's: vaste MTD-vensters voor de rij-1-
-      // tegel/donut, los van de globale periode-select hierboven.
-      const teamItemsMtd = ditJaarMtd.filter((r) => r.team_id === team.id);
-      const gefactureerdMtd = teamItemsMtd.reduce((sum, r) => sum + regelbedrag(r), 0);
+      // MTD vs. maandtarget — alleen nog gebruikt door de Finance/Beheerder/Directie-
+      // weergave hieronder (de Praktijkvoerder/Gebruiker-weergave toont YTD, zie Sectie 1).
+      const gefactureerdMtd = ditJaarMtd
+        .filter((r) => r.team_id === team.id)
+        .reduce((sum, r) => sum + regelbedrag(r), 0);
       const maandTargetBruto = d.bruto_bedrag / 12;
-      // "Per teamlid"-tegels: één, onafhankelijk filterbaar venster (teamlidPeriode).
-      const teamItemsInTeamlidPeriode = ditJaar.filter(
-        (r) => r.team_id === team.id && inPeriode(r.datum, teamlidPeriode, gekozenJaar)
+
+      // Sectie 1 (vast, YTD) op het Praktijkvoerder/Gebruiker-dashboard: onbeperkte
+      // (niet periode-gefilterde) OHW voor dit team, naast het al bestaande
+      // gefactureerdDitJaar/brutoDoel hierboven.
+      const ohwTeamOnbeperkt = ohwPerTeamOnbeperktId.get(team.id) ?? 0;
+
+      // Sectie 2 (filterbaar, één gedeelde periodeselector: sectie2Periode) — alle
+      // onderdelen hieronder gebruiken bewust dezelfde periode, in plaats van elk
+      // hun eigen losse selector zoals voorheen.
+      const teamItemsSectie2 = ditJaar.filter(
+        (r) => r.team_id === team.id && inPeriode(r.datum, sectie2Periode, gekozenJaar)
       );
-      const teamlidKpiRijen = berekenTeamlidKpiRijen(teamItemsInTeamlidPeriode, leden, namenPerId, teamleiderIds);
-      // Zelfde periode-filter als de "Nog te factureren werk van het team"-tegel
-      // hieronder (ohwRows, gefilterd op de globale periode/jaar) — de uitsplitsing
-      // per teamlid moet optellen tot precies het bedrag dat die tegel toont.
-      const ohwPerTeamlid = berekenOhwPerTeamlid(
-        ohwRows.filter((r) => r.team_id === team.id),
-        leden,
-        namenPerId,
-        teamleiderIds
+      const gefactureerdSectie2 = teamItemsSectie2.reduce((sum, r) => sum + regelbedrag(r), 0);
+      const teamlidKpiRijen = berekenTeamlidKpiRijen(teamItemsSectie2, leden, namenPerId, teamleiderIds);
+      const ohwRowsTeamSectie2 = rows.filter(
+        (r) =>
+          r.team_id === team.id && isNogTeFactureren(r.status, r.declarabel) && inPeriode(r.datum, sectie2Periode, gekozenJaar)
       );
+      const ohwSectie2 = ohwRowsTeamSectie2.reduce((sum, r) => sum + regelbedrag(r), 0);
+      const ohwPerTeamlidSectie2 = berekenOhwPerTeamlid(ohwRowsTeamSectie2, leden, namenPerId, teamleiderIds);
+      const nogTeFacturenPerKlantSectie2 = berekenNogTeFacturenPerKlant(ohwRowsTeamSectie2);
+      const perProductgroepSectie2 = groepeerPerProductgroep(teamItemsSectie2);
+      const perLandRegioSectie2 = groepeerPerLand(teamItemsSectie2, landenMap, 20);
+      const perProductgroepEnLandSectie2 = groepeerPerProductgroepEnLand(teamItemsSectie2, landenMap, 6);
+      const dwoTeamSectie2 = berekenDwo(dwoRegelsSectie2.filter((r) => r.teamId === team.id));
 
       return {
         teamId: team.id,
@@ -437,9 +477,17 @@ export default async function DashboardPage({
         gefactureerdDitJaar,
         gefactureerdMtd,
         maandTargetBruto,
-        nogTeFactureren: ohwPerTeamId.get(team.id) ?? 0,
-        ohwPerTeamlid,
+        ohwTeamOnbeperkt,
+        gefactureerdSectie2,
+        ohwSectie2,
+        ohwPerTeamlidSectie2,
+        nogTeFacturenPerKlantSectie2,
         teamlidKpiRijen,
+        perProductgroepSectie2,
+        perLandRegioSectie2,
+        perProductgroepEnLandSectie2,
+        dwoTeamSectie2,
+        nogTeFactureren: ohwPerTeamId.get(team.id) ?? 0,
         brutoOmzetTeam,
         urenOmzetTeam,
         teamlidRijen,
@@ -538,18 +586,24 @@ export default async function DashboardPage({
   // juiste rol-scope beperkt) — met per-klant uitsplitsing voor de uitklaprijen.
   const topKlantenHeleGroep = berekenTopKlanten(inKlantPeriode, landenMap, 20);
 
-  // Nog te factureren per klant — dezelfde periode/jaar-filter als de rest van het dashboard.
-  const nogTeFacturenPerKlant = new Map<string, { naam: string; bedrag: number }>();
-  for (const r of rows) {
-    if (!isNogTeFactureren(r.status, r.declarabel) || !inPeriode(r.datum, periode, gekozenJaar)) continue;
-    const naam = r.klanten?.naam ?? "Onbekend";
-    const bestaand = nogTeFacturenPerKlant.get(r.klant_id) ?? { naam, bedrag: 0 };
-    bestaand.bedrag += regelbedrag(r);
-    nogTeFacturenPerKlant.set(r.klant_id, bestaand);
+  // Nog te factureren per klant — herbruikbaar, zowel bedrijfsbreed (hieronder,
+  // globale periode) als per team op Sectie 2 van het Praktijkvoerder/Gebruiker-
+  // dashboard (teamKaarten hieronder, sectie2Periode).
+  function berekenNogTeFacturenPerKlant(regels: FactuurRegel[]) {
+    const map = new Map<string, { naam: string; bedrag: number }>();
+    for (const r of regels) {
+      const naam = r.klanten?.naam ?? "Onbekend";
+      const bestaand = map.get(r.klant_id) ?? { naam, bedrag: 0 };
+      bestaand.bedrag += regelbedrag(r);
+      map.set(r.klant_id, bestaand);
+    }
+    return Array.from(map.values())
+      .filter((r) => r.bedrag > 0)
+      .sort((a, b) => b.bedrag - a.bedrag);
   }
-  const nogTeFacturenTabel = Array.from(nogTeFacturenPerKlant.values())
-    .filter((r) => r.bedrag > 0)
-    .sort((a, b) => b.bedrag - a.bedrag);
+  const nogTeFacturenTabel = berekenNogTeFacturenPerKlant(
+    rows.filter((r) => isNogTeFactureren(r.status, r.declarabel) && inPeriode(r.datum, periode, gekozenJaar))
+  );
 
   // Omzet vs. target, bedrijfsbreed — alleen zinvol voor rollen die alle teams zien.
   // "ditJaar" is hier precies de juiste bron: bedrijfsbreed, gefactureerd, en al op het
@@ -625,36 +679,39 @@ export default async function DashboardPage({
         </LinkButton>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <HeroTile label={`Gefactureerd dit jaar (YTD)`} value={euro(jaarBrutoOmzet)} icon={Euro} />
-        <HeroTile label="Onderhanden werk" value={euro(ohwTotaalOnbeperkt)} icon={Briefcase} variant="coral" />
-      </div>
+      {/* Hero-rij 1/2, periode/jaar-select en de bedrijfsbrede OHW-uitsplitsing zijn
+          voor Praktijkvoerder/Gebruiker vervangen door Sectie 1/2 op de teamkaart
+          hieronder — voor Finance/Beheerder/Directie (zietAlleTeams) ongewijzigd. */}
+      {zietAlleTeams && (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <HeroTile label={`Gefactureerd dit jaar (YTD)`} value={euro(jaarBrutoOmzet)} icon={Euro} />
+            <HeroTile label="Onderhanden werk" value={euro(ohwTotaalOnbeperkt)} icon={Briefcase} variant="coral" />
+          </div>
 
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <span className="text-sm text-muted-foreground">Periode:</span>
-        <PeriodeSelect />
-        <JaarSelect huidigJaar={gekozenJaar} />
-      </div>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <span className="text-sm text-muted-foreground">Periode:</span>
+            <PeriodeSelect />
+            <JaarSelect huidigJaar={gekozenJaar} />
+          </div>
 
-      {zietBureaukosten ? (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <HeroTile label={`Gefactureerd · ${periodeLabel(periode)}`} value={euro(gefactureerd)} icon={Euro} />
-          <HeroTile
-            label={`Bureaukosten · ${periodeLabel(periode)}`}
-            value={euro(bureaukostenTotaal)}
-            icon={Receipt}
-            variant="coral"
-          />
-        </div>
-      ) : (
-        <HeroTile label={`Gefactureerd · ${periodeLabel(periode)}`} value={euro(gefactureerd)} icon={Euro} />
-      )}
+          {zietBureaukosten ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <HeroTile label={`Gefactureerd · ${periodeLabel(periode)}`} value={euro(gefactureerd)} icon={Euro} />
+              <HeroTile
+                label={`Bureaukosten · ${periodeLabel(periode)}`}
+                value={euro(bureaukostenTotaal)}
+                icon={Receipt}
+                variant="coral"
+              />
+            </div>
+          ) : (
+            <HeroTile label={`Gefactureerd · ${periodeLabel(periode)}`} value={euro(gefactureerd)} icon={Euro} />
+          )}
 
-      <div className="flex flex-col gap-3">
-        <h3 className="text-lg font-semibold tracking-tight">Onderhanden werk · {periodeLabel(periode)}</h3>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {zietAlleTeams ? (
-            <>
+          <div className="flex flex-col gap-3">
+            <h3 className="text-lg font-semibold tracking-tight">Onderhanden werk · {periodeLabel(periode)}</h3>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {ohwPerTeam.map((t) => (
                 <Card key={t.teamId} className="rounded-2xl">
                   <CardContent className="flex items-center gap-4">
@@ -678,49 +735,10 @@ export default async function DashboardPage({
                 </Card>
               )}
               <HeroTile label="Onderhanden werk · Groep" value={euro(ohwTotaalGroep)} icon={Briefcase} />
-            </>
-          ) : eigenOhwPerTeam.length > 0 ? (
-            <>
-              {eigenOhwPerTeam.map((t) => (
-                <Card key={t.teamId} className="rounded-2xl">
-                  <CardContent className="flex items-center gap-4">
-                    <StatIcon icon={Briefcase} tint="warning" className="h-11 w-11" />
-                    <div>
-                      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                        Onderhanden werk · {t.teamNaam}
-                      </p>
-                      <div className="text-xl font-semibold tabular-figures text-warning">{euro(t.bedrag)}</div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-              {ohwGeenTeamRowsEigen.length > 0 && (
-                <Card className="rounded-2xl">
-                  <CardContent className="flex items-center gap-4">
-                    <StatIcon icon={Briefcase} tint="warning" className="h-11 w-11" />
-                    <div>
-                      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                        Onderhanden werk · Geen team
-                      </p>
-                      <div className="text-xl font-semibold tabular-figures text-warning">{euro(ohwGeenTeamEigen)}</div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </>
-          ) : (
-            <Card className="rounded-2xl">
-              <CardContent className="flex items-center gap-4">
-                <StatIcon icon={Briefcase} tint="warning" className="h-11 w-11" />
-                <div>
-                  <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Onderhanden werk</p>
-                  <div className="text-xl font-semibold tabular-figures text-warning">{euro(persoonlijkeOhw)}</div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {zietDwo && (
         <div className="flex flex-col gap-3">
@@ -1073,95 +1091,286 @@ export default async function DashboardPage({
                   </Card>
                 ) : (
                   <>
-                    <div className="grid gap-4 sm:grid-cols-2">
+                    {/* Sectie 1 — vast, altijd dit jaar (YTD), niet periode-filterbaar. */}
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                       <Card className="rounded-2xl">
                         <CardContent className="flex items-center gap-4">
-                          <StatIcon icon={CalendarDays} tint="success" className="h-11 w-11" />
+                          <StatIcon icon={Euro} tint="primary" className="h-11 w-11" />
                           <div>
                             <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                              Omzet deze maand (MTD)
+                              Gefactureerd {gekozenJaar}
                             </p>
-                            <div className="text-xl font-semibold tabular-figures">{euro(t.gefactureerdMtd)}</div>
+                            <div className="text-xl font-semibold tabular-figures">{euro(t.gefactureerdDitJaar)}</div>
                           </div>
                         </CardContent>
                       </Card>
                       <Card className="rounded-2xl">
-                        <CardContent className="flex flex-col items-center justify-center gap-1 py-2">
+                        <CardContent className="flex items-center gap-4">
+                          <StatIcon icon={Briefcase} tint="warning" className="h-11 w-11" />
+                          <div>
+                            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                              Onderhanden werk
+                            </p>
+                            <div className="text-xl font-semibold tabular-figures text-warning">
+                              {euro(t.ohwTeamOnbeperkt)}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="rounded-2xl">
+                        <CardContent className="flex flex-col gap-2 p-4">
                           <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                            Maandomzet vs. target
+                            Target vs. gefactureerd
                           </p>
-                          <MaandomzetDonut omzet={t.gefactureerdMtd} target={t.maandTargetBruto} ohw={t.nogTeFactureren} />
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-xl font-semibold tabular-figures">
+                              {t.brutoDoel > 0 ? `${Math.round((t.gefactureerdDitJaar / t.brutoDoel) * 100)}%` : "—"}
+                            </span>
+                            <span className="tabular-figures text-xs text-muted-foreground">
+                              {euro(t.gefactureerdDitJaar)} / {euro(t.brutoDoel)}
+                            </span>
+                          </div>
+                          <SegmentedProgress value={t.brutoDoel > 0 ? (t.gefactureerdDitJaar / t.brutoDoel) * 100 : 0} />
+                        </CardContent>
+                      </Card>
+                      <Card className="rounded-2xl">
+                        <CardContent className="flex flex-col items-center justify-center gap-1 p-4">
+                          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                            Target vs. OHW + gefactureerd
+                          </p>
+                          <MaandomzetDonut omzet={t.gefactureerdDitJaar} ohw={t.ohwTeamOnbeperkt} target={t.brutoDoel} />
                         </CardContent>
                       </Card>
                     </div>
 
-                    {t.ohwPerTeamlid.length > 0 && (
-                      <div className="flex flex-col gap-1 rounded-lg border border-border p-3">
-                        <p className="mb-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                          Nog te factureren werk van het team, per teamlid
-                        </p>
-                        {t.ohwPerTeamlid.map((lid) => (
-                          <div key={lid.naam} className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">
-                              {lid.naam}
-                              {lid.isTeamleider && " (Praktijkvoerder)"}
-                            </span>
-                            <span className="tabular-figures font-medium">{euro(lid.bedrag)}</span>
-                          </div>
-                        ))}
+                    {/* Sectie 2 — filterbaar, één gedeelde periodeselector voor alles hieronder. */}
+                    <div className="flex flex-col gap-4 border-t border-border pt-6">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <h4 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
+                          Detail · {periodeLabel(sectie2Periode)}
+                        </h4>
+                        <TabelPeriodeSelect paramNaam="sectie2Periode" />
                       </div>
-                    )}
 
-                    <Card className="rounded-2xl">
-                      <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
-                        <CardTitle className="text-base">Per teamlid · {periodeLabel(teamlidPeriode)}</CardTitle>
-                        <TabelPeriodeSelect paramNaam="teamlidPeriode" />
-                      </CardHeader>
-                      <CardContent className="p-0">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Teamlid</TableHead>
-                              <TableHead className="text-right">Fixed fee</TableHead>
-                              <TableHead className="text-right">Uren</TableHead>
-                              <TableHead className="text-right">Totaal</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {t.teamlidKpiRijen.length === 0 ? (
-                              <TableRow>
-                                <TableCell colSpan={4} className="py-10 text-center text-sm text-muted-foreground">
-                                  Nog geen omzet in deze periode.
-                                </TableCell>
-                              </TableRow>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <Card className="rounded-2xl">
+                          <CardContent className="flex items-center gap-4">
+                            <StatIcon icon={Euro} tint="primary" className="h-11 w-11" />
+                            <div>
+                              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                                Gefactureerd
+                              </p>
+                              <div className="text-xl font-semibold tabular-figures">{euro(t.gefactureerdSectie2)}</div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                        <Card className="rounded-2xl">
+                          <CardContent className="flex items-center gap-4">
+                            <StatIcon icon={Briefcase} tint="warning" className="h-11 w-11" />
+                            <div>
+                              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                                Onderhanden werk
+                              </p>
+                              <div className="text-xl font-semibold tabular-figures text-warning">
+                                {euro(t.ohwSectie2)}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                          Uitsplitsing per teamlid
+                        </p>
+                        {t.teamlidKpiRijen.length === 0 ? (
+                          <p className="py-6 text-center text-sm text-muted-foreground">Nog geen omzet in deze periode.</p>
+                        ) : (
+                          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                            {t.teamlidKpiRijen.map((lid) => (
+                              <TeamlidKpiTegel key={lid.naam} lid={lid} />
+                            ))}
+                            <TeamlidKpiTegel
+                              isTotaal
+                              lid={{
+                                naam: "Totaal team",
+                                isTeamleider: false,
+                                urenAantal: t.teamlidKpiRijen.reduce((sum, l) => sum + l.urenAantal, 0),
+                                urenBedrag: t.teamlidKpiRijen.reduce((sum, l) => sum + l.urenBedrag, 0),
+                                nietUrenBedrag: t.teamlidKpiRijen.reduce((sum, l) => sum + l.nietUrenBedrag, 0),
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="grid gap-4 lg:grid-cols-2">
+                        <Card className="rounded-2xl">
+                          <CardHeader>
+                            <CardTitle className="text-base">Nog te factureren per teamlid</CardTitle>
+                          </CardHeader>
+                          <CardContent className="flex flex-col gap-1">
+                            {t.ohwPerTeamlidSectie2.length === 0 ? (
+                              <p className="py-6 text-center text-sm text-muted-foreground">Niets nog te factureren.</p>
                             ) : (
-                              t.teamlidKpiRijen.map((lid) => (
-                                <TableRow key={lid.naam}>
-                                  <TableCell>
-                                    <span className="font-medium">{lid.naam}</span>
-                                    {lid.isTeamleider && (
-                                      <Badge variant="outline" className="ml-2 text-[10px]">
-                                        Praktijkvoerder
-                                      </Badge>
-                                    )}
-                                  </TableCell>
-                                  <TableCell className="text-right tabular-figures">{euro(lid.nietUrenBedrag)}</TableCell>
-                                  <TableCell className="text-right tabular-figures">
-                                    {euro(lid.urenBedrag)}
-                                    <span className="ml-1 text-xs text-muted-foreground">
-                                      ({lid.urenAantal.toFixed(1)} u)
-                                    </span>
-                                  </TableCell>
-                                  <TableCell className="text-right font-medium tabular-figures">
-                                    {euro(lid.urenBedrag + lid.nietUrenBedrag)}
-                                  </TableCell>
-                                </TableRow>
+                              t.ohwPerTeamlidSectie2.map((lid) => (
+                                <div key={lid.naam} className="flex items-center justify-between rounded-md p-2 text-sm">
+                                  <span className="text-muted-foreground">
+                                    {lid.naam}
+                                    {lid.isTeamleider && " (Praktijkvoerder)"}
+                                  </span>
+                                  <span className="tabular-figures font-medium text-warning">{euro(lid.bedrag)}</span>
+                                </div>
                               ))
                             )}
-                          </TableBody>
-                        </Table>
-                      </CardContent>
-                    </Card>
+                          </CardContent>
+                        </Card>
+                        <Card className="rounded-2xl">
+                          <CardHeader>
+                            <CardTitle className="text-base">Nog te factureren per klant</CardTitle>
+                          </CardHeader>
+                          <CardContent className="flex flex-col gap-1">
+                            {t.nogTeFacturenPerKlantSectie2.length === 0 ? (
+                              <p className="py-6 text-center text-sm text-muted-foreground">Niets nog te factureren.</p>
+                            ) : (
+                              t.nogTeFacturenPerKlantSectie2.map((r) => (
+                                <div key={r.naam} className="flex items-center gap-3 rounded-md p-2">
+                                  <AvatarInitials naam={r.naam} />
+                                  <span className="flex-1 text-sm font-medium">{r.naam}</span>
+                                  <span className="text-sm font-medium tabular-figures text-warning">{euro(r.bedrag)}</span>
+                                  <Badge variant="warning">Openstaand</Badge>
+                                </div>
+                              ))
+                            )}
+                          </CardContent>
+                        </Card>
+                      </div>
+
+                      <div className="grid gap-4 lg:grid-cols-2">
+                        <Card className="rounded-2xl">
+                          <CardHeader>
+                            <CardTitle className="text-base">Omzet per productgroep</CardTitle>
+                          </CardHeader>
+                          <CardContent className="flex flex-col gap-1">
+                            {t.perProductgroepSectie2.length === 0 ? (
+                              <p className="py-6 text-center text-sm text-muted-foreground">Nog geen omzet in deze periode.</p>
+                            ) : (
+                              t.perProductgroepSectie2.map((d) => (
+                                <div key={d.label} className="flex items-center gap-3 rounded-md p-2">
+                                  <DienstIcon dienst={d.label} />
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium">
+                                      {d.code} · {d.label}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">{d.aantal} factuuritems</p>
+                                  </div>
+                                  <span className="text-sm font-medium tabular-figures">{euro(d.omzet)}</span>
+                                </div>
+                              ))
+                            )}
+                          </CardContent>
+                        </Card>
+                        <Card className="rounded-2xl">
+                          <CardHeader>
+                            <CardTitle className="text-base">Omzet per land/regio (top 20)</CardTitle>
+                          </CardHeader>
+                          <CardContent className="flex flex-col gap-1">
+                            {t.perLandRegioSectie2.length === 0 ? (
+                              <p className="py-6 text-center text-sm text-muted-foreground">Nog geen omzet in deze periode.</p>
+                            ) : (
+                              t.perLandRegioSectie2.map((l) => (
+                                <div key={l.landNaam} className="flex items-center gap-3 rounded-md p-2">
+                                  <CountryFlag iso={l.iso} naam={l.landNaam} />
+                                  <span className="flex-1 text-sm font-medium">{l.landNaam}</span>
+                                  <span className="text-sm font-medium tabular-figures">{euro(l.omzet)}</span>
+                                </div>
+                              ))
+                            )}
+                          </CardContent>
+                        </Card>
+                      </div>
+
+                      <Card className="rounded-2xl">
+                        <CardHeader>
+                          <CardTitle className="text-base">Omzet per productgroep × land/regio</CardTitle>
+                        </CardHeader>
+                        <CardContent className="overflow-x-auto p-0">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Productgroep</TableHead>
+                                {t.perProductgroepEnLandSectie2.kolommen.map((k) => (
+                                  <TableHead key={k} className="text-right">
+                                    {k}
+                                  </TableHead>
+                                ))}
+                                <TableHead className="text-right">Totaal</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {t.perProductgroepEnLandSectie2.rijen.length === 0 ? (
+                                <TableRow>
+                                  <TableCell
+                                    colSpan={t.perProductgroepEnLandSectie2.kolommen.length + 2}
+                                    className="py-10 text-center text-sm text-muted-foreground"
+                                  >
+                                    Nog geen omzet in deze periode.
+                                  </TableCell>
+                                </TableRow>
+                              ) : (
+                                <>
+                                  {t.perProductgroepEnLandSectie2.rijen.map((rij) => (
+                                    <TableRow key={rij.label}>
+                                      <TableCell className="font-medium">
+                                        {rij.code} · {rij.label}
+                                      </TableCell>
+                                      {rij.perKolom.map((bedrag, i) => (
+                                        <TableCell key={i} className="text-right tabular-figures">
+                                          {bedrag > 0 ? euro(bedrag) : "—"}
+                                        </TableCell>
+                                      ))}
+                                      <TableCell className="text-right font-medium tabular-figures">
+                                        {euro(rij.totaal)}
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                  <TableRow>
+                                    <TableCell className="font-medium">Totaal</TableCell>
+                                    {t.perProductgroepEnLandSectie2.totaalPerKolom.map((bedrag, i) => (
+                                      <TableCell key={i} className="text-right font-medium tabular-figures">
+                                        {euro(bedrag)}
+                                      </TableCell>
+                                    ))}
+                                    <TableCell className="text-right font-semibold tabular-figures">
+                                      {euro(t.perProductgroepEnLandSectie2.totaal)}
+                                    </TableCell>
+                                  </TableRow>
+                                </>
+                              )}
+                            </TableBody>
+                          </Table>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="rounded-2xl">
+                        <CardHeader>
+                          <CardTitle className="text-base">DWO (Days Work Outstanding)</CardTitle>
+                          <p className="text-xs text-muted-foreground">
+                            Gemiddelde doorlooptijd tussen de datum van een factuuritem en het moment waarop het
+                            definitief is gemaakt, gewogen naar bedrag. Streefwaarde: onder 45 dagen, uiterlijk
+                            onder 60.
+                          </p>
+                        </CardHeader>
+                        <CardContent className="flex items-center gap-4">
+                          <StatIcon icon={Hourglass} tint={dwoKleurToken(t.dwoTeamSectie2)} className="h-11 w-11" />
+                          <div
+                            className={`text-xl font-semibold tabular-figures ${DWO_TEKST_KLEUR[dwoKleurToken(t.dwoTeamSectie2)]}`}
+                          >
+                            {formatDagen(t.dwoTeamSectie2)}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
                   </>
                 )}
               </TabsContent>
@@ -1194,6 +1403,9 @@ export default async function DashboardPage({
         </Card>
       )}
 
+      {/* Bedrijfsbrede versies — voor Praktijkvoerder/Gebruiker vervangen door de
+          team-gescoped equivalenten in Sectie 2 hierboven. */}
+      {zietAlleTeams && (
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="rounded-2xl">
           <CardHeader className="flex flex-row items-center justify-between gap-4">
@@ -1273,6 +1485,7 @@ export default async function DashboardPage({
           </CardContent>
         </Card>
       </div>
+      )}
     </div>
   );
 }

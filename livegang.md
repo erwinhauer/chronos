@@ -607,6 +607,38 @@ Lokaal getest: "TM12345BX00" + "TM21548EU00" (zelfde type, ander land) wordt ter
 geweigerd met een duidelijke foutmelding; "TM12345BX00" + "TM45678BX00" (zelfde type
 én land) wordt terecht geaccepteerd.
 
+Daarna, op verzoek, een ingrijpend dashboard-herontwerp voor Praktijkvoerder en
+Gebruiker (2026-09-24) — Erwin vond het bestaande dashboard onoverzichtelijk (te veel
+losse secties, elk met een eigen periodeselector). De Teams-tab van die twee rollen
+is vervangen door twee heldere secties per team-tabblad (Finance/Beheerder/Directie
+blijft ongewijzigd):
+
+- **Sectie 1 (vast, altijd dit jaar/YTD)**: vier tegels — Gefactureerd, Onderhanden
+  werk (onbeperkt), Target vs. gefactureerd (percentage + cijfers), Target vs. OHW +
+  gefactureerd (donut, hergebruik van `MaandomzetDonut`).
+- **Sectie 2 (filterbaar, één gedeelde periodeselector i.p.v. de vroegere, verspreide
+  losse selectors per tabel)**: Gefactureerd/OHW-tegels, een nieuwe
+  `TeamlidKpiTegel`-tegel per teamlid + teamtotaal (vult een component die tot nu toe
+  alleen een type exporteerde, geen tegel), twee losse tabellen "nog te factureren"
+  (per teamlid, per klant — bewust geen kruistabel), Omzet per productgroep/land
+  (hergebruik van al bestaande per-team-berekeningen), een nieuwe kruistabel "Omzet
+  per productgroep × land/regio" (`groepeerPerProductgroepEnLand`, nieuw in
+  `omzet-aggregatie.ts`), en **DWO** — dit laatste draait een eerdere, bewuste
+  beslissing terug (was alleen zichtbaar voor Directie/Beheerder, "terecht onzichtbaar
+  voor teamleider"); nu met een korte uitlegtekst en een rood/amber/groen-kleurschaal
+  (`dwoKleurToken`, nieuw in `dwo-kleur.ts`: ≤45 dagen groen, ≤60 amber, >60 rood) via
+  een nieuwe `destructive`-tint op `StatIcon`.
+
+De nu overbodige, bedrijfsbrede secties (hero-rij 1/2, de OHW-uitsplitsing, de
+onderste productgroep/land/klant-grid) zijn voor deze twee rollen niet meer zichtbaar
+— voor Finance/Beheerder/Directie ongewijzigd (expliciet gecontroleerd: alleen
+`{zietAlleTeams && (...)}`-wrappers toegevoegd, geen wijziging aan de inhoud
+daarbinnen). Lokaal getest: `npx tsc --noEmit`/`npm run lint` schoon, in de preview
+gecontroleerd als Praktijkvoerder met twee teams (Team Benelux/Team International) —
+tabs wisselen correct, cijfers en de nieuwe kruistabel-totalen kloppen, DWO toont een
+streepje bij ontbrekende data. Gepusht naar `beta` — nog niet gepromoot naar
+`main`/LIVE.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de

@@ -63,3 +63,42 @@ export function groepeerPerLand<T extends RegelVoorAggregatie>(rows: T[], landen
     .sort((a, b) => b.omzet - a.omzet)
     .slice(0, top);
 }
+
+// Kruistabel productgroep × land — rijen in dezelfde vaste productgroepvolgorde als
+// groepeerPerProductgroep, kolommen de top-`top`-landen (qua totale omzet, zelfde
+// bepaling als groepeerPerLand); landen buiten de top vallen samen onder "Overig",
+// net als groepeerPerLand dat vandaag al doet voor de losse landentabel.
+export function groepeerPerProductgroepEnLand<T extends RegelVoorAggregatie>(
+  rows: T[],
+  landenMap: LandenMap,
+  top: number
+) {
+  const topLanden = groepeerPerLand(rows, landenMap, top);
+  const kolomVolgorde = topLanden.map((l) => l.landNaam);
+  const kolomIndex = new Map(kolomVolgorde.map((naam, i) => [naam, i]));
+  const heeftOverig = new Set(rows.map((r) => landNaamVoorIso(eersteLandIso(r), landenMap))).size > kolomVolgorde.length;
+  const kolommen = heeftOverig ? [...kolomVolgorde, "Overig"] : kolomVolgorde;
+
+  const rijenMap = new Map<string, { code: string; label: string; perKolom: number[]; totaal: number }>();
+  for (const r of rows) {
+    const label = eersteDienst(r);
+    const code = label === "Onbekend" ? "—" : codeVoorDienstLabel(label);
+    const landNaam = landNaamVoorIso(eersteLandIso(r), landenMap);
+    const kolom = kolomIndex.has(landNaam) ? kolomIndex.get(landNaam)! : kolommen.length - 1;
+    const bestaand = rijenMap.get(label) ?? { code, label, perKolom: kolommen.map(() => 0), totaal: 0 };
+    const bedrag = regelbedrag(r);
+    bestaand.perKolom[kolom] += bedrag;
+    bestaand.totaal += bedrag;
+    rijenMap.set(label, bestaand);
+  }
+
+  const volgordeIndex = (code: string) => {
+    const i = PRODUCTGROEP_CODES.indexOf(code);
+    return i === -1 ? PRODUCTGROEP_CODES.length : i;
+  };
+  const rijen = Array.from(rijenMap.values()).sort((a, b) => volgordeIndex(a.code) - volgordeIndex(b.code));
+  const totaalPerKolom = kolommen.map((_, i) => rijen.reduce((sum, rij) => sum + rij.perKolom[i], 0));
+  const totaal = rijen.reduce((sum, rij) => sum + rij.totaal, 0);
+
+  return { kolommen, rijen, totaalPerKolom, totaal };
+}
