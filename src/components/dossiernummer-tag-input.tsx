@@ -21,10 +21,12 @@ export function DossiernummerTagInput({
   const [fout, setFout] = useState<string | null>(null);
 
   // Meerdere dossiers mogen op één factuuritem, maar alleen van hetzelfde
-  // type (TM, O, I, A, etc.) — anders is achteraf niet meer te meten hoeveel
-  // omzet er per dossiertype is geschreven. Land mag wel verschillen.
+  // type (TM, O, I, A, etc.) én hetzelfde land — anders is achteraf niet meer
+  // te meten hoeveel omzet er per dossiertype/land is geschreven.
   const eersteGeparsed = value.map((d) => parseDossiernummer(d)).find((p) => p !== null);
-  const bestaandType = eersteGeparsed ? { code: eersteGeparsed.typeCode, label: eersteGeparsed.typeLabel } : null;
+  const bestaandType = eersteGeparsed
+    ? { code: eersteGeparsed.typeCode, label: eersteGeparsed.typeLabel, landIso: eersteGeparsed.landIso }
+    : null;
 
   function toevoegen() {
     const nummer = invoer.trim().toUpperCase();
@@ -37,6 +39,12 @@ export function DossiernummerTagInput({
     if (parsed && bestaandType && parsed.typeCode !== bestaandType.code) {
       setFout(
         `${parsed.typeLabel} kan niet samen met ${bestaandType.label} op één factuuritem — combineer alleen dossiers van hetzelfde type.`
+      );
+      return;
+    }
+    if (parsed && bestaandType && parsed.landIso !== bestaandType.landIso) {
+      setFout(
+        `${parsed.landNaam} kan niet samen met een dossier uit een ander land op één factuuritem — combineer alleen dossiers van hetzelfde type én land.`
       );
       return;
     }
