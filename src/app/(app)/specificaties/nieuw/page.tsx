@@ -14,7 +14,6 @@ export default async function NieuweSpecificatiePagina({
   const { klant_id, item_ids } = await searchParams;
   const profile = await getCurrentProfile();
   if (
-    profile?.role !== "finance" &&
     profile?.role !== "beheerder" &&
     profile?.role !== "teamleider" &&
     profile?.role !== "medewerker"

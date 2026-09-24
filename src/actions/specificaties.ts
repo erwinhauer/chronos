@@ -20,13 +20,12 @@ export async function genereerSpecificatie(
 ): Promise<SpecificatieFormState> {
   const profile = await getCurrentProfile();
   if (
-    profile?.role !== "finance" &&
     profile?.role !== "beheerder" &&
     profile?.role !== "teamleider" &&
     profile?.role !== "medewerker"
   ) {
     return {
-      error: "Alleen finance, beheerder, teamleider en medewerker kunnen een specificatie maken.",
+      error: "Alleen beheerder, teamleider en medewerker kunnen een specificatie maken.",
       success: false,
     };
   }
