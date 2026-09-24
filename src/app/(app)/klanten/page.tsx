@@ -5,7 +5,7 @@ import { regelbedrag } from "@/lib/factuurbedragen";
 import { KlantenTabel, type KlantOmzetRij } from "@/components/klanten-tabel";
 import type { UserRole } from "@/lib/supabase/types";
 
-const TOEGESTANE_ROLLEN: UserRole[] = ["teamleider", "finance", "beheerder", "directie"];
+const TOEGESTANE_ROLLEN: UserRole[] = ["medewerker", "teamleider", "finance", "beheerder", "directie"];
 
 export default async function KlantenPage() {
   const profile = await getCurrentProfile();

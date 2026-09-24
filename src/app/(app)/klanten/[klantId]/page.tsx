@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { UserRole } from "@/lib/supabase/types";
 
-const TOEGESTANE_ROLLEN: UserRole[] = ["teamleider", "finance", "beheerder", "directie"];
+const TOEGESTANE_ROLLEN: UserRole[] = ["medewerker", "teamleider", "finance", "beheerder", "directie"];
 
 export default async function KlantDetailPagina({ params }: { params: Promise<{ klantId: string }> }) {
   const { klantId } = await params;
