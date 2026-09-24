@@ -115,7 +115,11 @@ async function resolveDossiers(
 
   const rijen: { dossiernummer: string; type_dienst: string; land: string; matter_naam: string | null; volgorde: number }[] =
     [];
-  let eersteType: { code: string; label: string; landIso: string } | null = null;
+  // Meerdere dossiers op één regel mag, maar alleen van hetzelfde type (TM, O,
+  // I, A, etc.) én hetzelfde land — anders is achteraf niet meer te meten
+  // hoeveel omzet er per dossiertype/land is geschreven, en zou de (via
+  // Patricia bepaalde) klant niet eenduidig zijn.
+  let eersteType: { code: string; label: string; landIso: string; landNaam: string } | null = null;
   let klantActorId: string | null = null;
 
   for (const [index, { dossiernummer, dossiernaam }] of dossierParen.entries()) {
@@ -127,11 +131,11 @@ async function resolveDossiers(
       return { ok: false, error: `Vul de dossiernaam in voor dossier "${dossiernummer}".` };
     }
     if (eersteType === null) {
-      eersteType = { code: parsed.typeCode, label: parsed.typeLabel, landIso: parsed.landIso };
+      eersteType = { code: parsed.typeCode, label: parsed.typeLabel, landIso: parsed.landIso, landNaam: parsed.landNaam };
     } else if (parsed.typeCode !== eersteType.code || parsed.landIso !== eersteType.landIso) {
       return {
         ok: false,
-        error: `Dossier "${dossiernummer}" (${parsed.typeLabel} · ${parsed.landIso}) heeft een ander type of land dan de eerder toegevoegde dossiers (${eersteType.label} · ${eersteType.landIso}). Combineer op één factuuritem alleen dossiers van hetzelfde type én land.`,
+        error: `Dossier "${dossiernummer}" (${parsed.typeLabel} · ${parsed.landNaam}) heeft een ander type of land dan de eerder toegevoegde dossiers (${eersteType.label} · ${eersteType.landNaam}). Combineer op één factuuritem alleen dossiers van hetzelfde type én land.`,
       };
     }
 
