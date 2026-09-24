@@ -572,6 +572,30 @@ de bestaande "A12345NL00"/"I12345NL00"-parsing te breken. Op verzoek meteen gepr
 naar `main`/LIVE op 2026-09-24.
 `main` en `beta` staan weer gelijk.
 
+Daarna, op verzoek, twee rolwijzigingen (2026-09-24):
+
+1. Finance had tot nu toe meer rechten dan Directie — kon zelf specificaties/
+   facturatiebatches aanmaken en factuuritems bewerken/verwijderen. Finance moest
+   "vooralsnog exact dezelfde rechten als Directie" krijgen, wat in de praktijk een
+   inperking betekende: RLS-policies op `facturatiebatches`, `factuuritems`,
+   `factuuritem_dossiers` en `specificaties` herzien (migratie
+   `20260924100000_finance_readonly_als_directie.sql`) zodat finance overal precies
+   is teruggebracht tot wat directie al mocht (in de praktijk: alleen lezen, op
+   `facturatiebatches` en `factuuritems`). App-laag meebijgewerkt (`nav.ts`,
+   `genereerSpecificatie`, de "Specificatie maken"/"Verplaats naar project"-knoppen op
+   de klant-factuuritems-pagina) zodat de UI geen schrijfacties meer aanbiedt die de
+   database toch zou weigeren.
+2. Nieuwe factuuritems aanmaken is voorbehouden aan medewerker, teamleider (voor
+   zichzelf én teamleden — dat blijft ongewijzigd) en beheerder. `factuuritems_insert_eigen`
+   checkte tot nu toe alleen "voor jezelf", niet de rol, waardoor finance/directie in
+   theorie ook zelf een factuuritem voor zichzelf konden aanmaken — dat is nu
+   expliciet dichtgezet.
+
+Lokaal getest: `npx tsc --noEmit`/`npm run lint` schoon, migratie toegepast op de
+lokale database (RLS-policies bevat finance nergens meer buiten de twee
+select-policies), factuuritems-pagina laadt zonder console-/servererrors.
+Gepusht naar `beta` — nog niet gepromoot naar `main`/LIVE.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de

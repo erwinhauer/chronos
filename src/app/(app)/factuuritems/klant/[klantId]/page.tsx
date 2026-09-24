@@ -59,16 +59,17 @@ export default async function FactuuritemsPerKlantPagina({
   // "Specificatie maken" mag nu ook een medewerker (net als teamleider, maar
   // beperkt tot een klant die zijn eigen team ook echt bedient — team_
   // services_klant hierboven, zelfde RLS-scoping als op facturatiebatches).
-  const kanFactureren =
-    profile?.role === "finance" || profile?.role === "beheerder" || profile?.role === "teamleider";
+  // Finance is hier bewust weggelaten — zelfde (schrijf-)rechten als directie,
+  // zie de RLS-migratie 20260924100000_finance_readonly_als_directie.sql.
+  const kanFactureren = profile?.role === "beheerder" || profile?.role === "teamleider";
   const magSpecificatieMaken =
     kanFactureren ||
     (profile?.role === "medewerker" &&
       (await supabase.rpc("team_services_klant", { target_klant_id: klantId })).data === true);
   // "Verplaats naar project" is geen facturatie-actie — een medewerker mag dit
   // ook voor eigen/teamgenoten-items, los van kanFactureren/magSpecificatieMaken
-  // (die blijven voor projectbeheer voorbehouden aan finance/beheerder/
-  // teamleider, en voor specificaties aan wie de klant ook echt bedient).
+  // (die blijven voor projectbeheer voorbehouden aan beheerder/teamleider, en
+  // voor specificaties aan wie de klant ook echt bedient).
   const magVerplaatsen = kanFactureren || profile?.role === "medewerker";
 
   const genormaliseerd: FactuurGroepItem[] = (items ?? []).map((item) => {

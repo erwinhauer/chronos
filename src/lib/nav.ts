@@ -21,7 +21,10 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Factuuritems",
     href: "/factuuritems",
     icon: Receipt,
-    roles: ["medewerker", "teamleider", "finance", "beheerder"],
+    // finance is hier bewust weggelaten — zelfde rechten als directie (die ook geen
+    // toegang heeft tot deze beheerpagina), zie de RLS-migratie
+    // 20260924100000_finance_readonly_als_directie.sql.
+    roles: ["medewerker", "teamleider", "beheerder"],
   },
   {
     label: "Klanten",
