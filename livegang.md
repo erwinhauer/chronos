@@ -597,6 +597,16 @@ select-policies), factuuritems-pagina laadt zonder console-/servererrors.
 Op verzoek gepromoot naar `main`/LIVE op 2026-09-24.
 `main` en `beta` staan weer gelijk.
 
+Daarna, op verzoek, de dossiernummer-validatie aangescherpt (2026-09-24): meerdere
+dossiers op één factuuritem mochten al niet van verschillend type zijn, maar tot nu
+toe wel van verschillend land (bv. "TM12345BX00" samen met "TM21548EU00") — daardoor
+was achteraf niet meer te meten hoeveel omzet er per land is geschreven. Zowel de
+live-validatie in het formulier als de autoritatieve server-validatie
+(`resolveDossiers()`) uitgebreid met een landcode-check naast de bestaande typecheck.
+Lokaal getest: "TM12345BX00" + "TM21548EU00" (zelfde type, ander land) wordt terecht
+geweigerd met een duidelijke foutmelding; "TM12345BX00" + "TM45678BX00" (zelfde type
+én land) wordt terecht geaccepteerd.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de
