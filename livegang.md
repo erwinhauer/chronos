@@ -556,6 +556,22 @@ zelf blijft ook gewoon werken (geen dubbele tag door de blur-vóór-click-
 volgorde). Op verzoek gepromoot naar `main`/LIVE op 2026-09-23.
 `main` en `beta` staan weer gelijk.
 
+Daarna twee ontbrekende dossiertypen toegevoegd (2026-09-24): `parseDossiernummer()`
+(`TYPE_PREFIXES` in `dossiernummer.ts`) kende maar elf van de twaalf officiële typen —
+**AP** (Anti-Piracy) en **ID** (I-depot) ontbraken, waardoor dossiernummers met die
+prefixes niet te parsen waren (geen automatische type/land-afleiding, geen passend
+icoon). Toegevoegd als "Anti-piraterij" en "I-depot", vóór hun eenletterige
+tegenhangers A/I in de prefixlijst — dezelfde langste-prefix-eerst-volgorde die de
+rest van de lijst al aanhoudt, zodat bv. "AP12345NL00" niet per ongeluk als "A" +
+"P12345NL00" gelezen wordt. Ook de Engelse vertaaltabel (`TYPE_LABEL_EN`, voor
+Engelstalige specificaties) en de dienst-iconen (`dienst-icon.tsx` — `Stamp` voor
+I-depot, `ShieldBan` voor Anti-piraterij) aangevuld. Het bestaande type "@"
+(Domeinnamen) bleef ongewijzigd — bevestigd dat dit nog een geldig, actief type is.
+Lokaal getest: "AP12345NL00" en "ID12345BX00" parsen naar het juiste type/land, zonder
+de bestaande "A12345NL00"/"I12345NL00"-parsing te breken. Op verzoek meteen gepromoot
+naar `main`/LIVE op 2026-09-24.
+`main` en `beta` staan weer gelijk.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de
