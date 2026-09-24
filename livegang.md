@@ -605,7 +605,9 @@ live-validatie in het formulier als de autoritatieve server-validatie
 (`resolveDossiers()`) uitgebreid met een landcode-check naast de bestaande typecheck.
 Lokaal getest: "TM12345BX00" + "TM21548EU00" (zelfde type, ander land) wordt terecht
 geweigerd met een duidelijke foutmelding; "TM12345BX00" + "TM45678BX00" (zelfde type
-én land) wordt terecht geaccepteerd.
+én land) wordt terecht geaccepteerd. Op verzoek gepromoot naar `main`/LIVE op
+2026-09-24.
+`main` en `beta` staan weer gelijk.
 
 Daarna, op verzoek, een ingrijpend dashboard-herontwerp voor Praktijkvoerder en
 Gebruiker (2026-09-24) — Erwin vond het bestaande dashboard onoverzichtelijk (te veel
@@ -636,8 +638,8 @@ onderste productgroep/land/klant-grid) zijn voor deze twee rollen niet meer zich
 daarbinnen). Lokaal getest: `npx tsc --noEmit`/`npm run lint` schoon, in de preview
 gecontroleerd als Praktijkvoerder met twee teams (Team Benelux/Team International) —
 tabs wisselen correct, cijfers en de nieuwe kruistabel-totalen kloppen, DWO toont een
-streepje bij ontbrekende data. Gepusht naar `beta` — nog niet gepromoot naar
-`main`/LIVE.
+streepje bij ontbrekende data. Op verzoek gepromoot naar `main`/LIVE op 2026-09-24.
+`main` en `beta` staan weer gelijk.
 
 Daarna, op verzoek, "Klanten" ook toegankelijk gemaakt voor Medewerker
 (2026-09-24): stond alleen open voor Praktijkvoerder/Finance/Beheerder/Directie
