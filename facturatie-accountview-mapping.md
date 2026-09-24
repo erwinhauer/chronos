@@ -149,5 +149,8 @@ al via een schema draait — zie de vragen in §9.
   een vaste procedure/schema? (Bepaalt of "cron/automatisch" voor Chronos's export
   realistisch is, of dat er aan de AccountView-kant ook iets moet veranderen.)
 - Heeft AccountView, los van dit importpad, ook een bruikbare API?
+- Accepteert AccountView naast (of in plaats van) CSV ook een JSON-bestand voor
+  import? (Vraag die apart is opgekomen — nog niet bevestigd of dit een reëel
+  alternatief is voor het bestaande CSV-pad.)
 - Mag Chronos ooit een geheel **nieuwe** debiteur aanmaken via deze weg, of moet dat
   altijd eerst handmatig in AccountView gebeuren (zie §7)?

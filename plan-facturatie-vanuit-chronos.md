@@ -138,8 +138,11 @@ UI — zelfde patroon als de bestaande `btw_percentage`-comment in het schema.
 ## 6. Versturen (e-mail)
 
 - Geen bestaande e-mail-dependency in het project (geen Resend/Nodemailer o.i.d.) —
-  dit vergt een nieuwe integratie. Resend is de voor de hand liggende keuze gezien
-  Supabase/Vercel-context, maar niet hier al vastgelegd.
+  dit vergt een nieuwe integratie. **Resend is bevestigd als gekozen partij**
+  (2026-09-24) — nog te implementeren. Ter verduidelijking: dit is los van de
+  bestaande Supabase-Auth-mailer-limiet (2 e-mails/uur op de standaard-sender, zie
+  `backlog.md`) — die geldt alleen voor Supabase's eigen inlog-/wachtwoord-mails,
+  niet voor transactionele e-mail via Resend's eigen API.
 - Voorbeeldscherm (concept-status, §2 stap 1): factuurgegevens, e-mailadres(sen)
   (to/cc) bewerkbaar, met "Weet je het zeker?"-bevestiging voor verzenden — exact het
   patroon dat de backlog-notitie al beschrijft.
