@@ -30,7 +30,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Klanten",
     href: "/klanten",
     icon: Users,
-    roles: ["teamleider", "finance", "beheerder", "directie"],
+    roles: ["medewerker", "teamleider", "finance", "beheerder", "directie"],
   },
 ];
 

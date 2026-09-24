@@ -639,6 +639,22 @@ tabs wisselen correct, cijfers en de nieuwe kruistabel-totalen kloppen, DWO toon
 streepje bij ontbrekende data. Gepusht naar `beta` — nog niet gepromoot naar
 `main`/LIVE.
 
+Daarna, op verzoek, "Klanten" ook toegankelijk gemaakt voor Medewerker
+(2026-09-24): stond alleen open voor Praktijkvoerder/Finance/Beheerder/Directie
+(nav.ts + de `TOEGESTANE_ROLLEN`-check op beide klantenpagina's). De onderliggende
+RLS was hier al op voorbereid — `batches_select_scope` op `facturatiebatches` had al
+een expliciete `is_role('medewerker') AND team_services_klant(klant_id)`-tak, en
+`klanten_select_authenticated`/`factuuritems_select_scope` scopen sowieso al
+rol-onafhankelijk op teamlidmaatschap — dus alleen de route-/nav-gates moesten open,
+geen wijziging aan de data-scoping zelf nodig. Beide klantenpagina's zijn puur
+lezend (geen bewerk-acties), dus dit breidt geen schrijfrechten uit. Lokaal getest:
+`npx tsc --noEmit`/`npm run lint` schoon; een interactieve login-check als
+medewerker liep tegen een tijdelijke rate-limit van de lokale Supabase-Auth-service
+aan (bijwerking van herhaalde eigen testpogingen, niet van deze wijziging) — verificatie
+daarom gebaseerd op de RLS-policies zelf, die dit gedrag al expliciet ondersteunen.
+Op verzoek meteen gepromoot naar `main`/LIVE op 2026-09-24.
+`main` en `beta` staan weer gelijk.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de
