@@ -673,6 +673,25 @@ Koninkrijk"; de Nederlandse tak is functioneel ongewijzigd (`landen[iso]["nl"]` 
 precies wat er hardcoded stond). Op verzoek gepromoot naar `main`/LIVE op 2026-09-28.
 `main` en `beta` staan weer gelijk.
 
+Daarna, op verzoek, Aantal (Qty) en Tarief terug op de "normale" specificatie
+(2026-09-29): `metSpecificatieDetailniveau()` forceerde deze twee kolommen tot nu toe
+aan/uit op basis van een impliciete "uitgebreid"-afleiding (aan als bij het aanmaken
+van de specificatie ook "Kosten van derden" en/of "Korting" als kolom gekozen was) —
+daardoor liet een "normale" specificatie (geen van beide gekozen) alleen
+totaalbedragen zien, zelfs als de klant zelf op Tarief-zichtbaar stond
+(`kolom_tarief_zichtbaar` default al `true`). Die koppeling eruit gehaald: Tarief en
+Aantal volgen nu gewoon de eigen, per-klant ingestelde kolomzichtbaarheid, precies
+zoals Land/Matter en Persoon dat al deden — geen speciale uitzondering meer. Ook de
+default van `kolom_uren_zichtbaar` op `klanten` naar `true` gezet, en bestaande
+klanten meebijgewerkt (migratie `20260929100000_kolom_uren_zichtbaar_default_aan.sql`),
+zodat Aantal ook echt verschijnt naast Tarief, niet alleen voor klanten waar een
+beheerder dat al los had aangezet. Eén fix, vier plekken tegelijk goed: het
+scherm-voorbeeld, de PDF-export, en zowel de concept- als de al-vastgelegde
+specificatie lopen allemaal via deze ene gedeelde functie. Lokaal getest: Arcadis
+(normale specificatie, geen Kosten van derden/Korting gekozen) toont nu Qty en Fee
+per regel, met bedragen die kloppen (2 × € 300 = € 600, 2,9 × € 310 ≈ € 900, 2,5 ×
+€ 300 = € 750). Gepusht naar `beta` — nog niet gepromoot naar `main`/LIVE.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de
