@@ -375,8 +375,12 @@ export function parseDossiernummer(input: string): DossiernummerParseResult | nu
 // `landen` komt bij voorkeur van de beheerder-bewerkbare `landcodes`-tabel
 // (zie src/lib/landen.ts); zonder dat argument valt dit terug op de statische
 // lijst hierboven (die overigens ook de seed-data voor die tabel is).
-export function landNaamVoorIso(iso: string | null, landen?: Record<string, { nl: string; en: string }>): string {
+export function landNaamVoorIso(
+  iso: string | null,
+  landen?: Record<string, { nl: string; en: string }>,
+  taal: "nl" | "en" = "nl"
+): string {
   if (!iso) return "—";
-  if (landen?.[iso]) return landen[iso].nl;
+  if (landen?.[iso]) return landen[iso][taal];
   return LANDNAMEN[iso] ?? iso;
 }

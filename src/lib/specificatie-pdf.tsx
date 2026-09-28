@@ -279,7 +279,7 @@ export async function genereerSpecificatiePdf({
           const matterNamen = Array.from(new Set(dossiers.map((d) => d.matter_naam ?? "—")));
           const waarden: Record<string, string> = {
             datum: formatDatum(item.datum, taal),
-            land: landNaamVoorIso(eerste?.land ?? null, landen),
+            land: landNaamVoorIso(eerste?.land ?? null, landen, taal),
             omschrijving: item.omschrijving_klant,
             aantal: `${item.qty}`,
             tarief: item.tarief !== null ? euro(item.tarief) : "—",

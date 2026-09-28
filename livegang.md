@@ -657,6 +657,22 @@ daarom gebaseerd op de RLS-policies zelf, die dit gedrag al expliciet ondersteun
 Op verzoek meteen gepromoot naar `main`/LIVE op 2026-09-24.
 `main` en `beta` staan weer gelijk.
 
+Daarna, op verzoek, een taalbug gefixt op de specificatie (2026-09-28): bij een
+klant met `specificatietaal = en` stonden de omschrijvingen/labels al keurig in het
+Engels, maar de landnamen (Country-kolom) bleven altijd Nederlands — `landNaamVoorIso()`
+las tot nu toe hardcoded `.nl` uit de `landen`-map, ongeacht de meegegeven taal.
+Functie kreeg een `taal`-parameter (default `"nl"`, dus geen wijziging voor bestaande
+aanroepen die geen taal doorgeven — de dashboard-rapportages en de interne
+klant-/dossiernummer-schermen blijven bewust Nederlands, dat is geen klantgerichte
+weergave). Alleen de twee specificatie-renderers (`factuur-specificatie.tsx` — het
+scherm-voorbeeld — en `specificatie-pdf.tsx` — de PDF-export) geven nu de
+`specificatietaal` van de klant door, op precies de plek waar ernaast ook al
+`formatDatum(item.datum, taal)` gebeurde. Lokaal getest: Arcadis (Engelstalig) toont
+nu "Netherlands"/"Germany"/"United Kingdom" i.p.v. "Nederland"/"Duitsland"/"Verenigd
+Koninkrijk"; de Nederlandse tak is functioneel ongewijzigd (`landen[iso]["nl"]` was al
+precies wat er hardcoded stond). Gepusht naar `beta` — nog niet gepromoot naar
+`main`/LIVE.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de
