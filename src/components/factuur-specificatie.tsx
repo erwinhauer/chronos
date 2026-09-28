@@ -245,7 +245,7 @@ export function FactuurSpecificatie({
                       <div className="text-muted-foreground">{matterNamen.join(", ")}</div>
                     </TableCell>
                     {klant.kolom_matter_type_land_zichtbaar && (
-                      <TableCell className="whitespace-normal">{landNaamVoorIso(eerste?.land ?? null, landen)}</TableCell>
+                      <TableCell className="whitespace-normal">{landNaamVoorIso(eerste?.land ?? null, landen, taal)}</TableCell>
                     )}
                     <TableCell className="whitespace-normal break-words">{item.omschrijving_klant}</TableCell>
                     {klant.kolom_uren_zichtbaar && (
