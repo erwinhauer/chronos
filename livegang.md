@@ -670,8 +670,8 @@ scherm-voorbeeld — en `specificatie-pdf.tsx` — de PDF-export) geven nu de
 `formatDatum(item.datum, taal)` gebeurde. Lokaal getest: Arcadis (Engelstalig) toont
 nu "Netherlands"/"Germany"/"United Kingdom" i.p.v. "Nederland"/"Duitsland"/"Verenigd
 Koninkrijk"; de Nederlandse tak is functioneel ongewijzigd (`landen[iso]["nl"]` was al
-precies wat er hardcoded stond). Gepusht naar `beta` — nog niet gepromoot naar
-`main`/LIVE.
+precies wat er hardcoded stond). Op verzoek gepromoot naar `main`/LIVE op 2026-09-28.
+`main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
