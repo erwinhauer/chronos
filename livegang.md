@@ -690,7 +690,8 @@ scherm-voorbeeld, de PDF-export, en zowel de concept- als de al-vastgelegde
 specificatie lopen allemaal via deze ene gedeelde functie. Lokaal getest: Arcadis
 (normale specificatie, geen Kosten van derden/Korting gekozen) toont nu Qty en Fee
 per regel, met bedragen die kloppen (2 × € 300 = € 600, 2,9 × € 310 ≈ € 900, 2,5 ×
-€ 300 = € 750). Gepusht naar `beta` — nog niet gepromoot naar `main`/LIVE.
+€ 300 = € 750). Op verzoek gepromoot naar `main`/LIVE op 2026-09-29.
+`main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
