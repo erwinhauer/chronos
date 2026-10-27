@@ -95,6 +95,38 @@ export default async function NieuwFactuurItemPage({
     .map((tl) => tl.teams as unknown as { id: string; naam: string } | null)
     .filter((t): t is { id: string; naam: string } => t !== null);
 
+  // Zit de gebruiker in meerdere teams en komt hij vanuit (of kopieert hij
+  // een item van) een klant, dan hoort het nieuwe item bij het team waar die
+  // klant al factuuritems heeft — niet bij het team van zijn laatst
+  // aangemaakte item, dat kan voor een andere klant zijn geweest. Alleen de
+  // eigen teams tellen mee; bij gelijke aantallen wint het team van het
+  // meest recente item. Zonder bestaande items blijft de oude standaard staan.
+  let standaardTeamId = laatsteItem?.team_id ?? null;
+  const klantIdVoorTeam = klant_id ?? bronItem?.klant_id;
+  if (klantIdVoorTeam && teams.length > 1) {
+    const { data: itemsVanKlant } = await supabase
+      .from("factuuritems")
+      .select("team_id")
+      .eq("klant_id", klantIdVoorTeam)
+      .in(
+        "team_id",
+        teams.map((t) => t.id)
+      )
+      .order("datum", { ascending: false })
+      .limit(200);
+    const aantalPerTeam = new Map<string, number>();
+    for (const item of itemsVanKlant ?? []) {
+      if (item.team_id) aantalPerTeam.set(item.team_id, (aantalPerTeam.get(item.team_id) ?? 0) + 1);
+    }
+    let meeste = 0;
+    for (const [teamId, aantal] of aantalPerTeam) {
+      if (aantal > meeste) {
+        meeste = aantal;
+        standaardTeamId = teamId;
+      }
+    }
+  }
+
   // Alleen vooraf invullen als dit project ook echt bij de meegegeven klant
   // hoort — voorkomt dat een verkeerd/verlopen project_id in de URL een
   // ander project zou selecteren dan de klant die je net had opgezocht.
@@ -130,7 +162,7 @@ export default async function NieuwFactuurItemPage({
         magMedewerkerWijzigen={profile?.role === "teamleider" || profile?.role === "beheerder"}
         magKlantenVerwijderen={profile?.role === "beheerder"}
         teams={teams}
-        standaardTeamId={laatsteItem?.team_id ?? null}
+        standaardTeamId={standaardTeamId}
         initial={
           bronItem
             ? {
