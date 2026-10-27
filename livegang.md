@@ -693,6 +693,21 @@ per regel, met bedragen die kloppen (2 × € 300 = € 600, 2,9 × € 310 ≈ 
 € 300 = € 750). Op verzoek gepromoot naar `main`/LIVE op 2026-09-29.
 `main` en `beta` staan weer gelijk.
 
+Daarna, op verzoek, het juiste team vooraf kiezen bij een nieuw factuuritem vanuit een
+klant (2026-10-27): wie in meerdere teams zit kreeg bij "Nieuw factuuritem" vanuit de
+factuuritems van een klant het team van het eigen laatst aangemaakte item
+voorgeselecteerd, ook als dat voor een andere klant was. "Factuuritems > Nieuw"
+(`src/app/(app)/factuuritems/nieuw/page.tsx`) kijkt nu eerst naar de bestaande
+factuuritems van de meegegeven klant (ook bij "Kopiëren") en kiest daaruit het eigen
+team met de meeste items, bij gelijkstand het team van het meest recente item. Alleen
+de teams waar de gebruiker zelf lid van is tellen mee; heeft de klant nog geen items,
+dan blijft het oude gedrag (laatst gebruikte team). Het veld is nog gewoon te wijzigen.
+Lokaal getest met een gebruiker in twee teams: Lipton (3 items International, 2 Benelux)
+kiest International, Arcadis (alleen Benelux) kiest Benelux. Op verzoek gepromoot
+naar `main`/LIVE op 2026-10-27, samen met de Azure-documenten (`azure-overdracht.md`
+en `azure-verhuisplan.md`, plus Word-versies; alleen documentatie, geen codewijziging).
+`main` en `beta` staan weer gelijk.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de
