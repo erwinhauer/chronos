@@ -173,6 +173,11 @@ retentie-/opslaggrootte-mechanisme (`auditlog_opslaggrootte()`).
    - Zet de betrokken factuuritems op `status: "definitief"`.
 3. De specificatie-PDF wordt **on-demand** gegenereerd bij elke download/preview
    (`src/actions/specificatie-download.ts`), niet éénmalig opgeslagen.
+   De "Group by matter"-switch in de preview (`factuur-specificatie.tsx`) deelt zijn
+   stand via `specificatie-groepering.tsx` met de downloadknoppen; die geven
+   `groepeerOpDossier` door aan de PDF (`specificatie-pdf.tsx`). Groeplogica:
+   `src/lib/specificatie-groepering.ts`. De keuze wordt niet opgeslagen op de batch,
+   alleen per download meegegeven.
 
 ### 6.1 Enum-scaffolding die verder gaat dan de huidige implementatie
 

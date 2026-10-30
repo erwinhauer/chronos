@@ -2,6 +2,8 @@
 
 import { Fragment, useMemo, useState } from "react";
 import { landNaamVoorIso } from "@/lib/dossiernummer";
+import { groepeerItemsPerDossier } from "@/lib/specificatie-groepering";
+import { useSpecificatieGroepering } from "@/components/specificatie-groepering";
 import type { LandenMap } from "@/lib/landen";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
@@ -145,24 +147,21 @@ export function FactuurSpecificatie({
 
   // Standaard blijft de specificatie een platte, op datum gesorteerde lijst
   // (de volgorde waarin `items` al binnenkomt). Met de switch aan wordt
-  // dezelfde lijst gegroepeerd per dossier — het EERSTE dossier van een item
-  // bepaalt de groep, zelfde vereenvoudiging als bij "Groeperen op dossier"
-  // op de factuuritems-per-klant-pagina (een item met meerdere dossiers hoort
-  // maar bij één groep, anders zou het totaal per groep niet meer kloppen).
-  const [groepeerOpDossier, setGroepeerOpDossier] = useState(false);
-  const secties = useMemo(() => {
-    if (!groepeerOpDossier) return [{ dossiernummer: null as string | null, matterNaam: null as string | null, items }];
-    const map = new Map<string, { dossiernummer: string; matterNaam: string | null; items: FactuurSpecificatieItem[] }>();
-    for (const item of items) {
-      const dossiers = item.dossiers.slice().sort((a, b) => a.volgorde - b.volgorde);
-      const eerste = dossiers[0];
-      const sleutel = eerste?.dossiernummer ?? "—";
-      const bestaand = map.get(sleutel);
-      if (bestaand) bestaand.items.push(item);
-      else map.set(sleutel, { dossiernummer: sleutel, matterNaam: eerste?.matter_naam ?? null, items: [item] });
-    }
-    return Array.from(map.values()).sort((a, b) => a.dossiernummer.localeCompare(b.dossiernummer));
-  }, [items, groepeerOpDossier]);
+  // dezelfde lijst gegroepeerd per dossier (zie groepeerItemsPerDossier). De
+  // keuze staat in een gedeelde context als die er is, zodat de downloadknop
+  // (concept/definitief) de PDF met dezelfde groepering maakt; zonder context
+  // is het gewoon lokale state.
+  const groepering = useSpecificatieGroepering();
+  const [lokaalGroepeer, setLokaalGroepeer] = useState(false);
+  const groepeerOpDossier = groepering?.groepeer ?? lokaalGroepeer;
+  const setGroepeerOpDossier = groepering?.setGroepeer ?? setLokaalGroepeer;
+  const secties = useMemo(
+    () =>
+      groepeerOpDossier
+        ? groepeerItemsPerDossier(items)
+        : [{ dossiernummer: null as string | null, matterNaam: null as string | null, items }],
+    [items, groepeerOpDossier]
+  );
 
   const kolomAantal =
     2 +
