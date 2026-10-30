@@ -720,8 +720,8 @@ groepen op dossiernummer, binnen een groep op datum) zit nu op één plek,
 `src/lib/specificatie-groepering.ts`, voor preview en PDF. In de PDF krijgt elke groep
 een kopregel met dossiernummer en matternaam, die niet los onderaan een pagina blijft
 staan. Lokaal getest met een voorbeeld-PDF (drie items, twee dossiers): zonder switch
-platte lijst op datum, met switch twee groepen met kopregel. Staat op `beta`, nog niet
-op `main`.
+platte lijst op datum, met switch twee groepen met kopregel. Op verzoek gepromoot naar `main`/LIVE op 2026-10-30.
+`main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
