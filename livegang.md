@@ -708,6 +708,21 @@ naar `main`/LIVE op 2026-10-27, samen met de Azure-documenten (`azure-overdracht
 en `azure-verhuisplan.md`, plus Word-versies; alleen documentatie, geen codewijziging).
 `main` en `beta` staan weer gelijk.
 
+Daarna, op verzoek, bugfix: "Group by matter" werkte alleen in de preview (2026-10-30).
+Met de switch aan toonde de preview de items per dossier gegroepeerd, maar de gedownloade
+PDF (concept én definitief) bleef een platte lijst, omdat de switch alleen lokale state
+van de preview was en de PDF-code geen groepering kende. De keuze staat nu in een
+gedeelde context (`src/components/specificatie-groepering.tsx`) die zowel de preview als
+de downloadknoppen lezen, en gaat als `groepeerOpDossier` mee naar
+`genereerSpecificatiePdfBase64`/`genereerConceptSpecificatiePdfBase64` en
+`genereerSpecificatiePdf`. De groeplogica (eerste dossier van een item bepaalt de groep,
+groepen op dossiernummer, binnen een groep op datum) zit nu op één plek,
+`src/lib/specificatie-groepering.ts`, voor preview en PDF. In de PDF krijgt elke groep
+een kopregel met dossiernummer en matternaam, die niet los onderaan een pagina blijft
+staan. Lokaal getest met een voorbeeld-PDF (drie items, twee dossiers): zonder switch
+platte lijst op datum, met switch twee groepen met kopregel. Staat op `beta`, nog niet
+op `main`.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de

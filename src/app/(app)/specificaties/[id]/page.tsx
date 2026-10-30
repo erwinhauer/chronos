@@ -5,6 +5,7 @@ import { SetBreadcrumb } from "@/lib/breadcrumb-context";
 import { FactuurSpecificatie } from "@/components/factuur-specificatie";
 import { metSpecificatieDetailniveau } from "@/lib/specificatie-detailniveau";
 import { FactuurVoorbeeldKaart } from "@/components/factuur-voorbeeld-kaart";
+import { SpecificatieGroeperingProvider } from "@/components/specificatie-groepering";
 import { DownloadSpecificatieKnop } from "@/components/download-specificatie-knop";
 import { KopieerDossiernummersKnop } from "@/components/kopieer-dossiernummers-knop";
 import { haalLandenMap } from "@/lib/landen";
@@ -75,6 +76,7 @@ export default async function SpecificatiePagina({ params }: { params: Promise<{
   };
 
   return (
+    <SpecificatieGroeperingProvider>
     <div className="mx-auto flex max-w-7xl flex-col gap-6 print:max-w-none">
       <SetBreadcrumb
         segments={[
@@ -127,5 +129,6 @@ export default async function SpecificatiePagina({ params }: { params: Promise<{
         </FactuurVoorbeeldKaart>
       </div>
     </div>
+    </SpecificatieGroeperingProvider>
   );
 }

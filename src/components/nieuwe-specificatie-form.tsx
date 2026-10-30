@@ -13,6 +13,7 @@ import {
   type FactuurSpecificatieKlant,
 } from "@/components/factuur-specificatie";
 import { FactuurVoorbeeldKaart } from "@/components/factuur-voorbeeld-kaart";
+import { SpecificatieGroeperingContext } from "@/components/specificatie-groepering";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -69,6 +70,7 @@ export function NieuweSpecificatieForm({
   const [extraKorting, setExtraKorting] = useState(0);
   const [toonKostenDerden, setToonKostenDerden] = useState(klant.kolom_externe_kosten_zichtbaar);
   const [toonKorting, setToonKorting] = useState(klant.kolom_korting_zichtbaar);
+  const [groepeerOpDossier, setGroepeerOpDossier] = useState(false);
   const [conceptBezig, setConceptBezig] = useState(false);
   const [conceptFout, setConceptFout] = useState<string | null>(null);
 
@@ -83,6 +85,7 @@ export function NieuweSpecificatieForm({
       extra_korting: extraKorting,
       kolom_externe_kosten_zichtbaar: toonKostenDerden,
       kolom_korting_zichtbaar: toonKorting,
+      groepeerOpDossier,
     });
     setConceptBezig(false);
     if (error || !base64 || !filename) {
@@ -123,6 +126,7 @@ export function NieuweSpecificatieForm({
   );
 
   return (
+    <SpecificatieGroeperingContext.Provider value={{ groepeer: groepeerOpDossier, setGroepeer: setGroepeerOpDossier }}>
     <form ref={formRef} action={formAction} className="flex flex-col gap-6">
       <input type="hidden" name="klant_id" value={klant.id} />
       {itemIds.map((id) => (
@@ -260,5 +264,6 @@ export function NieuweSpecificatieForm({
         </DialogContent>
       </Dialog>
     </form>
+    </SpecificatieGroeperingContext.Provider>
   );
 }

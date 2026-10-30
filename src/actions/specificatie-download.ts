@@ -22,7 +22,10 @@ function specificatieBestandsnaam(klantNaam: string, taal: "nl" | "en", aangemaa
 
 // Genereert de specificatie-PDF on-demand (geen Storage meer nodig — de PDF is
 // een pure functie van de vastgelegde specificatie + haar items).
-export async function genereerSpecificatiePdfBase64(specificatieId: string): Promise<SpecificatiePdfResultaat> {
+export async function genereerSpecificatiePdfBase64(
+  specificatieId: string,
+  groepeerOpDossier = false
+): Promise<SpecificatiePdfResultaat> {
   const profile = await getCurrentProfile();
   if (
     profile?.role !== "finance" &&
@@ -104,6 +107,7 @@ export async function genereerSpecificatiePdfBase64(specificatieId: string): Pro
       items: specificatieItems,
       totalen,
       valuta: batch.valuta,
+      groepeerOpDossier,
     });
     const filename = specificatieBestandsnaam(klant.naam, klant.specificatietaal, batch.created_at);
     return { base64: buffer.toString("base64"), filename, error: null };
@@ -125,6 +129,7 @@ export async function genereerConceptSpecificatiePdfBase64(input: {
   extra_korting: number;
   kolom_externe_kosten_zichtbaar?: boolean;
   kolom_korting_zichtbaar?: boolean;
+  groepeerOpDossier?: boolean;
 }): Promise<SpecificatiePdfResultaat> {
   const profile = await getCurrentProfile();
   if (
@@ -220,6 +225,7 @@ export async function genereerConceptSpecificatiePdfBase64(input: {
       totalen,
       valuta: klant.valuta,
       watermerk: klant.specificatietaal === "nl" ? "CONCEPT" : "DRAFT",
+      groepeerOpDossier: input.groepeerOpDossier ?? false,
     });
     const filename = specificatieBestandsnaam(klant.naam, klant.specificatietaal, aangemaaktOp).replace(
       /\.pdf$/,

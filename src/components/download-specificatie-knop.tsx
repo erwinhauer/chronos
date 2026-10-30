@@ -4,15 +4,20 @@ import { useState } from "react";
 import { Download } from "lucide-react";
 import { genereerSpecificatiePdfBase64 } from "@/actions/specificatie-download";
 import { Button } from "@/components/ui/button";
+import { useSpecificatieGroepering } from "@/components/specificatie-groepering";
 
 export function DownloadSpecificatieKnop({ specificatieId }: { specificatieId: string }) {
   const [bezig, setBezig] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
+  const groepering = useSpecificatieGroepering();
 
   async function downloaden() {
     setBezig(true);
     setFout(null);
-    const { base64, filename, error } = await genereerSpecificatiePdfBase64(specificatieId);
+    const { base64, filename, error } = await genereerSpecificatiePdfBase64(
+      specificatieId,
+      groepering?.groepeer ?? false
+    );
     setBezig(false);
     if (error || !base64 || !filename) {
       setFout(error ?? "Downloaden is mislukt.");

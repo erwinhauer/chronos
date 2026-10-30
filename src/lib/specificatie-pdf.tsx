@@ -7,6 +7,7 @@
 import path from "node:path";
 import { Document, Page, View, Text, Image, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
 import { landNaamVoorIso } from "@/lib/dossiernummer";
+import { groepeerItemsPerDossier } from "@/lib/specificatie-groepering";
 import type { LandenMap } from "@/lib/landen";
 import type {
   FactuurSpecificatieItem,
@@ -106,6 +107,7 @@ const specStyles = StyleSheet.create({
   th: { fontWeight: 700, fontSize: 7, color: "#5b6270" },
   cellRight: { textAlign: "right" },
   cellSub: { color: "#5b6270", marginTop: 1 },
+  groepKop: { backgroundColor: "#f1f2ef", paddingVertical: 4, paddingHorizontal: 2, fontWeight: 700 },
   totalenBlok: { flexDirection: "column", alignSelf: "flex-end", width: 200, marginTop: 12 },
   totalenRij: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 },
   totalenLabel: { fontSize: 8, color: "#5b6270" },
@@ -158,6 +160,7 @@ export async function genereerSpecificatiePdf({
   valuta,
   landen,
   watermerk,
+  groepeerOpDossier = false,
 }: {
   klant: FactuurSpecificatieKlant;
   project?: { naam: string; po_nummer: string | null } | null;
@@ -170,6 +173,8 @@ export async function genereerSpecificatiePdf({
   valuta: string;
   landen?: LandenMap;
   watermerk?: string;
+  // Zelfde keuze als de "Group by matter"-switch in de preview.
+  groepeerOpDossier?: boolean;
 }): Promise<Buffer> {
   const taal = klant.specificatietaal;
   const t = SPEC_LABELS[taal];
@@ -200,6 +205,10 @@ export async function genereerSpecificatiePdf({
   ];
   const totaalGewicht = kolommen.reduce((som, k) => som + (KOLOM_GEWICHT[k.key] ?? 8), 0);
   const breedte = (key: string) => `${((KOLOM_GEWICHT[key] ?? 8) / totaalGewicht) * 100}%`;
+
+  const secties = groepeerOpDossier
+    ? groepeerItemsPerDossier(items)
+    : [{ dossiernummer: null as string | null, matterNaam: null as string | null, items }];
 
   const kopEnKoppen = (
     <View fixed>
@@ -273,40 +282,52 @@ export async function genereerSpecificatiePdf({
           render={({ pageNumber, totalPages }) => `${pageNumber}/${totalPages}`}
         />
         {kopEnKoppen}
-        {items.map((item) => {
-          const dossiers = item.dossiers.slice().sort((a, b) => a.volgorde - b.volgorde);
-          const eerste = dossiers[0];
-          const matterNamen = Array.from(new Set(dossiers.map((d) => d.matter_naam ?? "—")));
-          const waarden: Record<string, string> = {
-            datum: formatDatum(item.datum, taal),
-            land: landNaamVoorIso(eerste?.land ?? null, landen, taal),
-            omschrijving: item.omschrijving_klant,
-            aantal: `${item.qty}`,
-            tarief: item.tarief !== null ? euro(item.tarief) : "—",
-            kostenVanDerden: euro(item.externe_kosten),
-            korting: euro(item.korting),
-            totaal: euro(item.honorarium + item.externe_kosten - item.korting),
-          };
-          return (
-            <View key={item.id} style={specStyles.tableRow}>
-              {kolommen.map((k) => {
-                if (k.key === "refMatter") {
-                  return (
-                    <View key={k.key} style={{ width: breedte(k.key) }}>
-                      <Text>{dossiers.map((d) => d.dossiernummer).join("; ")}</Text>
-                      <Text style={specStyles.cellSub}>{matterNamen.join(", ")}</Text>
-                    </View>
-                  );
-                }
-                return (
-                  <Text key={k.key} style={[{ width: breedte(k.key) }, k.rechts ? specStyles.cellRight : undefined]}>
-                    {waarden[k.key]}
-                  </Text>
-                );
-              })}
-            </View>
-          );
-        })}
+        {secties.map((sectie) => (
+          <View key={sectie.dossiernummer ?? "__alles__"}>
+            {groepeerOpDossier && (
+              <View minPresenceAhead={40}>
+                <Text style={specStyles.groepKop}>
+                  {sectie.dossiernummer}
+                  {sectie.matterNaam ? ` — ${sectie.matterNaam}` : ""}
+                </Text>
+              </View>
+            )}
+            {sectie.items.map((item) => {
+              const dossiers = item.dossiers.slice().sort((a, b) => a.volgorde - b.volgorde);
+              const eerste = dossiers[0];
+              const matterNamen = Array.from(new Set(dossiers.map((d) => d.matter_naam ?? "—")));
+              const waarden: Record<string, string> = {
+                datum: formatDatum(item.datum, taal),
+                land: landNaamVoorIso(eerste?.land ?? null, landen, taal),
+                omschrijving: item.omschrijving_klant,
+                aantal: `${item.qty}`,
+                tarief: item.tarief !== null ? euro(item.tarief) : "—",
+                kostenVanDerden: euro(item.externe_kosten),
+                korting: euro(item.korting),
+                totaal: euro(item.honorarium + item.externe_kosten - item.korting),
+              };
+              return (
+                <View key={item.id} style={specStyles.tableRow}>
+                  {kolommen.map((k) => {
+                    if (k.key === "refMatter") {
+                      return (
+                        <View key={k.key} style={{ width: breedte(k.key) }}>
+                          <Text>{dossiers.map((d) => d.dossiernummer).join("; ")}</Text>
+                          <Text style={specStyles.cellSub}>{matterNamen.join(", ")}</Text>
+                        </View>
+                      );
+                    }
+                    return (
+                      <Text key={k.key} style={[{ width: breedte(k.key) }, k.rechts ? specStyles.cellRight : undefined]}>
+                        {waarden[k.key]}
+                      </Text>
+                    );
+                  })}
+                </View>
+              );
+            })}
+          </View>
+        ))}
         {totalenBlok}
       </Page>
     </Document>
