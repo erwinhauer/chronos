@@ -6,6 +6,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { GebruikersTab } from "@/components/instellingen/gebruikers-tab";
 import { TeamsTab } from "@/components/instellingen/teams-tab";
 import { ChangelogTab } from "@/components/instellingen/changelog-tab";
+import { sorteerReleasesNieuwsteEerst } from "@/lib/versie";
 import { LandenTab } from "@/components/instellingen/landen-tab";
 import { AuditlogTab, type AuditlogRij } from "@/components/instellingen/auditlog-tab";
 import type { UserRole } from "@/lib/supabase/types";
@@ -108,7 +109,7 @@ export default async function InstellingenPage() {
           <LandenTab landen={landen ?? []} />
         </TabsContent>
         <TabsContent value="changelog">
-          <ChangelogTab entries={changelog ?? []} />
+          <ChangelogTab entries={sorteerReleasesNieuwsteEerst(changelog ?? [])} />
         </TabsContent>
         <TabsContent value="auditlog">
           <AuditlogTab

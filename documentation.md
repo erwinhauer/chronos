@@ -171,6 +171,10 @@ retentie-/opslaggrootte-mechanisme (`auditlog_opslaggrootte()`).
   om uit het dossiernummer het land af te leiden.
 - `productchangelog`: wat de "Wat is er nieuw"-changelog in de app voedt (niet te
   verwarren met `livegang.md`, dat is de interne/technische versie).
+  De rijen worden bij elke Vercel-build geschreven door `scripts/release-changelog.mjs`
+  (array `CHANGELOG_ENTRIES`, idempotent per `versienummer`); het versienummer onderaan de
+  zijbalk is de hoogste semver uit deze tabel (`src/lib/versie.ts`) en moet gelijk zijn aan
+  `package.json` `version`. Werkwijze en controle (`npm run check:changelog`): zie `AGENTS.md`.
 - `factuuritem_wijzigingen`: audit-trail van velden die op een factuuritem gewijzigd
   zijn (voor het wijzigingenlog dat je op een bewerkt factuuritem ziet).
 

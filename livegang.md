@@ -773,6 +773,27 @@ als Praktijkvoerder: de periode wisselen houdt de scrollpositie vast, november z
 omzet toont toch € 900 onderhanden werk voor Team International. Op verzoek gepromoot naar
 `main`/LIVE op 2026-11-01. `main` en `beta` staan weer gelijk.
 
+Daarna, op verzoek, vier optimalisaties en het herstel van de changelog (2026-11-01):
+(1) Klanten: de kolomkoppen Gefactureerd, Factuuritems en Specificaties staan nu rechts
+uitgelijnd (`SortableTh` gaf de knop geen `justify-end`, waardoor `text-right` op de kop niets
+deed; geldt nu ook voor andere tabellen die `SortableTh` met `text-right` gebruiken). (2)
+Instellingen > Gebruikers: de kolom Teams is sorteerbaar (teamnamen alfabetisch achter elkaar,
+gebruikers zonder team onderaan bij oplopend). (3) Instellingen > Teams: bij Leden staan naast
+het aantal ook de namen als badges. (4) Instellingen > Landen: nieuwe kolom Vlag met
+`CountryFlag`. (5) Changelog: `scripts/release-changelog.mjs` had alleen de entry van 1.0.0
+(2026-09-16) en overschreef bij elke build niets, dus alle releases sindsdien ontbraken. Het
+script heeft nu een array `CHANGELOG_ENTRIES` met 1.0.0, 1.1.0 (17-29 september), 1.2.0
+(27 oktober t/m 1 november) en 1.3.0 (deze batch), en schrijft ze allemaal idempotent weg zodat
+LIVE ze in één keer inhaalt. De nieuwste versie in de zijbalk en de volgorde in de changelog
+volgen nu semver (`src/lib/versie.ts`) in plaats van alleen de releasedatum, omdat meerdere
+releases op één dag kunnen uitkomen. `package.json` versie is 1.3.0 en de build faalt als die
+afwijkt van de nieuwste entry. Nieuw: `npm run check:changelog` (`scripts/check-changelog.mjs`)
+faalt als er app-code of migraties zijn gewijzigd zonder nieuwe entry en versieverhoging, en de
+werkwijze staat nu in `AGENTS.md` ("Changelog en versienummer bijhouden"). Geen migraties.
+Lokaal getest als beheerder: koppen rechts, sorteren op Teams, namen bij Teams, vlaggen bij
+Landen, changelog toont 1.3.0 bovenaan en de zijbalk "Chronos v1.3.0". Staat op `beta`, nog
+niet op `main`.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SortableTh } from "@/components/sortable-th";
+import { CountryFlag } from "@/components/ui/country-flag";
 import {
   Dialog,
   DialogContent,
@@ -69,6 +70,7 @@ export function LandenTab({ landen }: { landen: Land[] }) {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-16">Vlag</TableHead>
                 <SortableTh
                   label="ISO-code"
                   actief={sortKey === "iso_code"}
@@ -93,13 +95,16 @@ export function LandenTab({ landen }: { landen: Land[] }) {
             <TableBody>
               {zichtbaar.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="py-8 text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
                     Geen landen gevonden.
                   </TableCell>
                 </TableRow>
               ) : (
                 zichtbaar.map((land) => (
                   <TableRow key={land.iso_code}>
+                    <TableCell>
+                      <CountryFlag iso={land.iso_code} naam={land.naam_nl} />
+                    </TableCell>
                     <TableCell className="font-mono text-xs tabular-figures">{land.iso_code}</TableCell>
                     <TableCell>{land.naam_nl}</TableCell>
                     <TableCell>{land.naam_en}</TableCell>
