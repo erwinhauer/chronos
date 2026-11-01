@@ -137,6 +137,10 @@ function TeamRij({
   huidigDoel?: Doel;
   jaar: number;
 }) {
+  const ledenNamen = profiles
+    .filter((p) => huidigeLeden.includes(p.id))
+    .map((p) => p.full_name)
+    .sort((a, b) => a.localeCompare(b));
   return (
     <TableRow>
       <TableCell className="font-medium">
@@ -144,7 +148,24 @@ function TeamRij({
           {team.naam}
         </Badge>
       </TableCell>
-      <TableCell className="tabular-figures">{huidigeLeden.length}</TableCell>
+      <TableCell>
+        {huidigeLeden.length === 0 ? (
+          <span className="text-sm text-muted-foreground">Nog geen leden</span>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs text-muted-foreground tabular-figures">
+              {huidigeLeden.length} {huidigeLeden.length === 1 ? "lid" : "leden"}
+            </span>
+            <div className="flex flex-wrap gap-1">
+              {ledenNamen.map((naam) => (
+                <Badge key={naam} variant="secondary" className="text-xs font-normal">
+                  {naam}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+      </TableCell>
       <TableCell className="tabular-figures">{huidigDoel ? euro(huidigDoel.bruto) : "—"}</TableCell>
       <TableCell className="text-right">
         <TeamBewerkenDialog team={team} profiles={profiles} huidigeLeden={huidigeLeden} huidigDoel={huidigDoel} jaar={jaar} />

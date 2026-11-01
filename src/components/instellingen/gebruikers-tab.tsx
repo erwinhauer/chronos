@@ -41,7 +41,7 @@ type ProfileRow = {
 };
 type Team = { id: string; naam: string };
 
-type SortKey = "naam" | "rol" | "actief";
+type SortKey = "naam" | "rol" | "teams" | "actief";
 
 export function GebruikersTab({
   profiles,
@@ -78,11 +78,19 @@ export function GebruikersTab({
       const keyFn = {
         naam: (p: ProfileRow) => p.full_name,
         rol: (p: ProfileRow) => ROLE_LABELS[p.role],
+        // Teamnamen alfabetisch achter elkaar; wie in geen enkel team zit komt onderaan (oplopend).
+        teams: (p: ProfileRow) => {
+          const namen = teams
+            .filter((t) => (teamIdsPerProfile[p.id] ?? []).includes(t.id))
+            .map((t) => t.naam)
+            .sort((a, b) => a.localeCompare(b));
+          return namen.length > 0 ? namen.join(", ") : "\uffff";
+        },
         actief: (p: ProfileRow) => (p.actief ? 1 : 0),
       }[sortKey];
       return sortRows(gefilterd, keyFn, sortRichting);
     },
-    [zoek, sortKey, sortRichting]
+    [zoek, sortKey, sortRichting, teams, teamIdsPerProfile]
   );
 
   const actieveProfiles = useMemo(
@@ -173,7 +181,12 @@ function GebruikersTabel({
             <TableRow>
               <SortableTh label="Naam" actief={sortKey === "naam"} richting={sortRichting} onClick={() => toggleSort("naam")} />
               <SortableTh label="Rol" actief={sortKey === "rol"} richting={sortRichting} onClick={() => toggleSort("rol")} />
-              <TableHead>Teams</TableHead>
+              <SortableTh
+                label="Teams"
+                actief={sortKey === "teams"}
+                richting={sortRichting}
+                onClick={() => toggleSort("teams")}
+              />
               <TableHead>Initialen</TableHead>
               <SortableTh
                 label="Actief"
