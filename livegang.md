@@ -804,8 +804,8 @@ verversen en bij het kiezen van een periode of jaar, en een link met `?periode=`
 direct op Periode. Zonder keuze opent Lopend jaar. Afdrukken toont beide blokken. Het
 tussenstukje "Hieronder kijk je naar een periode naar keuze" is vervallen. Op mobiel valt het
 icoon in de tabs weg zodat de titels passen. Geen migraties. Lokaal getest als beheerder:
-wisselen, periode kiezen binnen Periode, verversen en mobiel (375 px). Nog niet naar
-`beta`/`main`.
+wisselen, periode kiezen binnen Periode, verversen en mobiel (375 px). Op verzoek gepromoot
+naar `main`/LIVE op 2026-11-01. `main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
