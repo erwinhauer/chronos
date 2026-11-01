@@ -791,8 +791,8 @@ afwijkt van de nieuwste entry. Nieuw: `npm run check:changelog` (`scripts/check-
 faalt als er app-code of migraties zijn gewijzigd zonder nieuwe entry en versieverhoging, en de
 werkwijze staat nu in `AGENTS.md` ("Changelog en versienummer bijhouden"). Geen migraties.
 Lokaal getest als beheerder: koppen rechts, sorteren op Teams, namen bij Teams, vlaggen bij
-Landen, changelog toont 1.3.0 bovenaan en de zijbalk "Chronos v1.3.0". Staat op `beta`, nog
-niet op `main`.
+Landen, changelog toont 1.3.0 bovenaan en de zijbalk "Chronos v1.3.0". Op verzoek gepromoot naar
+`main`/LIVE op 2026-11-01. `main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
