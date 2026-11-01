@@ -66,7 +66,7 @@ export default async function NieuweSpecificatiePagina({
     <div className="mx-auto flex max-w-7xl flex-col gap-6">
       <SetBreadcrumb segments={[{ label: "Factuuritems", href: "/factuuritems" }, { label: "Nieuwe specificatie" }]} />
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Nieuwe specificatie — {klant.naam}</h2>
+        <h2 className="text-3xl font-light tracking-tight">Nieuwe specificatie — {klant.naam}</h2>
         <p className="text-sm text-muted-foreground">Controleer de specificatie voordat je bevestigt.</p>
       </div>
 

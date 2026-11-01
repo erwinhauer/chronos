@@ -2,20 +2,32 @@ import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// De vier kaartsoorten uit het design system: navy (het belangrijkste getal),
+// geel (aandacht, bv. onderhanden werk), wit (neutraal) en zacht koraal (waarschuwing).
 const VARIANTEN = {
   primary: {
-    achtergrond: "bg-primary text-primary-foreground",
-    label: "text-primary-foreground/60",
-    icoonAchtergrond: "bg-primary-foreground/10",
-    sub: "text-primary-foreground/60",
-    blob: "var(--coral)",
+    achtergrond: "bg-tile-navy text-white",
+    label: "text-white/60",
+    icoonAchtergrond: "bg-white/15 text-white",
+    sub: "text-white/65",
+  },
+  geel: {
+    achtergrond: "bg-geel text-geel-ink",
+    label: "text-geel-ink/80",
+    icoonAchtergrond: "bg-geel-ink/10 text-geel-ink",
+    sub: "text-geel-ink/80",
+  },
+  wit: {
+    achtergrond: "bg-card text-card-foreground ring-1 ring-border",
+    label: "text-muted-foreground",
+    icoonAchtergrond: "bg-muted text-foreground",
+    sub: "text-muted-foreground",
   },
   coral: {
-    achtergrond: "bg-coral text-coral-foreground",
-    label: "text-coral-foreground/60",
-    icoonAchtergrond: "bg-coral-foreground/10",
-    sub: "text-coral-foreground/60",
-    blob: "var(--primary)",
+    achtergrond: "bg-coral-soft text-foreground",
+    label: "text-muted-foreground",
+    icoonAchtergrond: "bg-coral/20 text-coral",
+    sub: "text-muted-foreground",
   },
 } as const;
 
@@ -38,26 +50,16 @@ export function HeroTile({
 }) {
   const stijl = VARIANTEN[variant];
   return (
-    <div className={cn("relative overflow-hidden rounded-2xl p-6", stijl.achtergrond, className)}>
-      <div
-        className="pointer-events-none absolute -right-14 -top-14 h-48 w-48 rounded-full opacity-20"
-        style={{ background: `radial-gradient(circle, ${stijl.blob} 0%, transparent 70%)` }}
-      />
-      <div
-        className="pointer-events-none absolute -bottom-16 -left-10 h-40 w-40 rounded-full opacity-10"
-        style={{ background: `radial-gradient(circle, ${stijl.blob} 0%, transparent 70%)` }}
-      />
-      <div className="relative z-10 flex items-start justify-between gap-4">
-        <p className={cn("text-xs font-medium tracking-wide uppercase", stijl.label)}>{label}</p>
-        {Icon && (
-          <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full", stijl.icoonAchtergrond)}>
-            <Icon className="h-4 w-4" />
-          </span>
-        )}
-      </div>
-      <div className="relative z-10 mt-5 text-3xl font-semibold tabular-figures">{value}</div>
-      {sub && <p className={cn("relative z-10 mt-1 text-sm tabular-figures", stijl.sub)}>{sub}</p>}
-      {children && <div className="relative z-10 mt-4">{children}</div>}
+    <div className={cn("relative overflow-hidden rounded-2xl p-7", stijl.achtergrond, className)}>
+      {Icon && (
+        <span className={cn("mb-5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl", stijl.icoonAchtergrond)}>
+          <Icon className="h-5 w-5" />
+        </span>
+      )}
+      <p className={cn("text-[11px] font-medium tracking-[0.1em] uppercase", stijl.label)}>{label}</p>
+      <div className="mt-2 text-4xl font-light tracking-tight tabular-figures">{value}</div>
+      {sub && <p className={cn("mt-2 text-sm tabular-figures", stijl.sub)}>{sub}</p>}
+      {children && <div className="mt-4">{children}</div>}
     </div>
   );
 }

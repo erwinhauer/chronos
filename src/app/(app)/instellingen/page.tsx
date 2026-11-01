@@ -75,7 +75,7 @@ export default async function InstellingenPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Instellingen</h2>
+        <h2 className="text-3xl font-light tracking-tight">Instellingen</h2>
         <p className="text-sm text-muted-foreground">Gebruikers, teams en de changelog beheren.</p>
       </div>
       <Tabs defaultValue="gebruikers">

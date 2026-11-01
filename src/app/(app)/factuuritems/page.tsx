@@ -119,7 +119,7 @@ export default async function FactuuritemsPage() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Factuuritems</h2>
+          <h2 className="text-3xl font-light tracking-tight">Factuuritems</h2>
           <p className="text-sm text-muted-foreground">
             Factuuritems gegroepeerd per klant. Klik op een klant voor de volledige lijst.
           </p>

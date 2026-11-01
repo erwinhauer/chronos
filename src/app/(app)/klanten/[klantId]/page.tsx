@@ -69,7 +69,7 @@ export default async function KlantDetailPagina({ params }: { params: Promise<{ 
     <div className="flex flex-col gap-6">
       <SetBreadcrumb segments={[{ label: "Klanten", href: "/klanten" }, { label: klant.naam }]} />
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight">{klant.naam}</h2>
+        <h2 className="text-3xl font-light tracking-tight">{klant.naam}</h2>
         {klant.adres && <p className="text-xs whitespace-pre-line text-muted-foreground">{klant.adres}</p>}
       </div>
 

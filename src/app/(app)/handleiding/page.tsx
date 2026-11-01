@@ -87,7 +87,7 @@ export default function HandleidingPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Handleiding</h2>
+        <h2 className="text-3xl font-light tracking-tight">Handleiding</h2>
         <p className="text-sm text-muted-foreground">Hoe Chronos werkt, van inloggen tot de definitieve specificatie.</p>
       </div>
 

@@ -1,4 +1,4 @@
-import { Plus, Euro, TrendingUp, TrendingDown, Clock, Briefcase, Receipt, Hourglass } from "lucide-react";
+import { Euro, TrendingUp, TrendingDown, Clock, Briefcase, Receipt, Hourglass } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { euro, isGefactureerd, isNogTeFactureren, regelbedrag, nettoOmzetPlaceholder } from "@/lib/factuurbedragen";
@@ -20,10 +20,10 @@ import { TabelPeriodeSelect } from "@/components/tabel-periode-select";
 import { MaandomzetDonut } from "@/components/maandomzet-donut";
 import { TeamlidKpiTegel, type TeamlidKpi } from "@/components/teamlid-kpi-tegel";
 import { HeroTile } from "@/components/hero-tile";
+import { DashboardHero } from "@/components/dashboard-hero";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SegmentedProgress } from "@/components/segmented-progress";
 import { StatIcon } from "@/components/stat-icon";
-import { LinkButton } from "@/components/link-button";
 import { AvatarInitials } from "@/components/ui/avatar-initials";
 import { CountryFlag } from "@/components/ui/country-flag";
 import { DienstIcon } from "@/components/ui/dienst-icon";
@@ -666,18 +666,7 @@ export default async function DashboardPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight">
-            Welkom, {profile ? firstName(profile.full_name) : ""}
-          </h2>
-          <p className="text-sm text-muted-foreground">Hier is een overzicht van Chronos.</p>
-        </div>
-        <LinkButton href="/factuuritems/nieuw">
-          <Plus className="h-4 w-4" />
-          Nieuw factuuritem
-        </LinkButton>
-      </div>
+      <DashboardHero voornaam={profile ? firstName(profile.full_name) : ""} />
 
       {/* Hero-rij 1/2, periode/jaar-select en de bedrijfsbrede OHW-uitsplitsing zijn
           voor Praktijkvoerder/Gebruiker vervangen door Sectie 1/2 op de teamkaart
@@ -686,7 +675,7 @@ export default async function DashboardPage({
         <>
           <div className="grid gap-4 sm:grid-cols-2">
             <HeroTile label={`Gefactureerd dit jaar (YTD)`} value={euro(jaarBrutoOmzet)} icon={Euro} />
-            <HeroTile label="Onderhanden werk" value={euro(ohwTotaalOnbeperkt)} icon={Briefcase} variant="coral" />
+            <HeroTile label="Onderhanden werk" value={euro(ohwTotaalOnbeperkt)} icon={Briefcase} variant="geel" />
           </div>
 
           <div className="flex flex-wrap items-center justify-end gap-2">
@@ -702,7 +691,7 @@ export default async function DashboardPage({
                 label={`Bureaukosten · ${periodeLabel(periode)}`}
                 value={euro(bureaukostenTotaal)}
                 icon={Receipt}
-                variant="coral"
+                variant="wit"
               />
             </div>
           ) : (
@@ -710,7 +699,7 @@ export default async function DashboardPage({
           )}
 
           <div className="flex flex-col gap-3">
-            <h3 className="text-lg font-semibold tracking-tight">Onderhanden werk · {periodeLabel(periode)}</h3>
+            <h3 className="text-2xl font-light tracking-tight">Onderhanden werk · {periodeLabel(periode)}</h3>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {ohwPerTeam.map((t) => (
                 <Card key={t.teamId} className="rounded-2xl">
@@ -743,7 +732,7 @@ export default async function DashboardPage({
       {zietDwo && (
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-lg font-semibold tracking-tight">
+            <h3 className="text-2xl font-light tracking-tight">
               DWO (Days Work Outstanding) · {periodeLabel(dwoPeriode)}
             </h3>
             <TabelPeriodeSelect paramNaam="dwoPeriode" periodes={DWO_PERIODES} standaard={{ type: "rolling3m" }} />
@@ -783,7 +772,7 @@ export default async function DashboardPage({
 
       {zietAlleTeams && (
         <div className="flex flex-col gap-6">
-          <h3 className="text-lg font-semibold tracking-tight">Omzet vs. target · {gekozenJaar}</h3>
+          <h3 className="text-2xl font-light tracking-tight">Omzet vs. target · {gekozenJaar}</h3>
 
           <div className="grid gap-6 lg:grid-cols-2">
             <HeroTile
@@ -953,7 +942,7 @@ export default async function DashboardPage({
 
       {teamKaarten.length > 0 && (
         <div className="flex flex-col gap-4">
-          <h3 className="text-lg font-semibold tracking-tight">Teams</h3>
+          <h3 className="text-2xl font-light tracking-tight">Teams</h3>
 
           <Tabs defaultValue={teamKaarten[0].teamId}>
             <TabsList>

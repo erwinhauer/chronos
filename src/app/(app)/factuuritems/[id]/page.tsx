@@ -110,7 +110,7 @@ export default async function FactuurItemBewerkenPage({
     <div className="flex flex-col gap-6">
       <SetBreadcrumb segments={[{ label: "Factuuritems", href: "/factuuritems" }, { label: "Bewerken" }]} />
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Factuuritem bewerken</h2>
+        <h2 className="text-3xl font-light tracking-tight">Factuuritem bewerken</h2>
         <p className="text-sm text-muted-foreground">Pas het factuuritem aan.</p>
         {laatstBewerktDoor && (
           <p className="mt-1 text-xs text-muted-foreground">Laatst bewerkt door {laatstBewerktDoor}</p>

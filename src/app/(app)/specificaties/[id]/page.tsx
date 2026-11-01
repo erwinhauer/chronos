@@ -86,7 +86,7 @@ export default async function SpecificatiePagina({ params }: { params: Promise<{
         ]}
       />
       <div className="flex items-center justify-between print:hidden">
-        <h2 className="text-2xl font-semibold tracking-tight">{titel}</h2>
+        <h2 className="text-3xl font-light tracking-tight">{titel}</h2>
         <div className="flex items-center gap-2">
           <KopieerDossiernummersKnop dossiernummers={dossiernummers} />
           {magDownloaden && <DownloadSpecificatieKnop specificatieId={batch.id} />}
