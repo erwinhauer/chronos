@@ -1,4 +1,4 @@
-import { TrendingUp, TrendingDown, ChevronsDown } from "lucide-react";
+import { TrendingUp, TrendingDown } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { euro, isGefactureerd, isNogTeFactureren, regelbedrag, nettoOmzetPlaceholder } from "@/lib/factuurbedragen";
@@ -16,6 +16,7 @@ import type { TeamlidKpi } from "@/components/teamlid-kpi-tegel";
 import { TeamlidKaart } from "@/components/teamlid-kaart";
 import { KpiTegel } from "@/components/kpi-tegel";
 import { DashboardSectie, SectieKop } from "@/components/dashboard-sectie";
+import { DashboardWissel } from "@/components/dashboard-wissel";
 import { DashboardHero } from "@/components/dashboard-hero";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SegmentedProgress } from "@/components/segmented-progress";
@@ -178,9 +179,10 @@ export default async function DashboardPage({
   searchParams: Promise<{
     periode?: string;
     jaar?: string;
+    weergave?: string;
   }>;
 }) {
-  const { periode: periodeParam, jaar: jaarParam } = await searchParams;
+  const { periode: periodeParam, jaar: jaarParam, weergave: weergaveParam } = await searchParams;
   // Het dashboard heeft twee blokken: "Lopend jaar" (vast, het gekozen kalenderjaar) en
   // "Periode" (alles daarin volgt deze ene periodekeuze: tegels, uitsplitsing per teamlid,
   // lijsten per klant/productgroep/land en DWO).
@@ -522,10 +524,14 @@ export default async function DashboardPage({
   };
 
   const periodeTekst = periodeLabel(periode);
+  // Welk blok bovenaan open staat: expliciet gekozen (?weergave=), anders het periodeblok zodra er
+  // een periode in de URL staat (bv. een gedeelde link), anders "Lopend jaar".
+  const beginWeergave: "jaar" | "periode" =
+    weergaveParam === "periode" || (weergaveParam !== "jaar" && periodeParam) ? "periode" : "jaar";
   const jaarTitel = isLopendJaar ? `${gekozenJaar} tot nu toe` : `Heel ${gekozenJaar}`;
   const jaarHint = isLopendJaar
-    ? "1 januari t/m vandaag · staat vast en verandert niet met de periodekeuze hieronder"
-    : `Kalenderjaar ${gekozenJaar} · staat vast en verandert niet met de periodekeuze hieronder`;
+    ? "1 januari t/m vandaag · staat vast en verandert niet met de periodekeuze"
+    : `Kalenderjaar ${gekozenJaar} · staat vast en verandert niet met de periodekeuze`;
   const dwoZichtbaar = zietDwo || !zietAlleTeams;
   // KPI-kaarten per teamlid over het hele jaar, voor het uitklapblok in "Lopend jaar".
   function teamledenJaarKaarten(t: (typeof teamKaarten)[number]) {
@@ -567,7 +573,12 @@ export default async function DashboardPage({
     <div className="flex flex-col gap-7">
       <DashboardHero voornaam={profile ? firstName(profile.full_name) : ""} />
 
-      {/* ───────────────────────── Lopend jaar (vast) ───────────────────────── */}
+      {/* Lopend jaar en Periode staan bovenaan achter een wissel: één tegelijk in beeld. */}
+      <DashboardWissel
+        beginWeergave={beginWeergave}
+        jaarTitel={jaarTitel}
+        periodeTitel={periodeTekst}
+        jaar={
       <DashboardSectie
         soort="jaar"
         titel={jaarTitel}
@@ -765,13 +776,8 @@ export default async function DashboardPage({
           </div>
         )}
       </DashboardSectie>
-
-      <div className="flex items-center gap-3 px-2 text-sm text-muted-foreground print:hidden">
-        <ChevronsDown className="h-4 w-4" />
-        Hieronder kijk je naar een periode naar keuze
-      </div>
-
-      {/* ───────────────────────── Periode (keuze) ───────────────────────── */}
+        }
+        periode={
       <DashboardSectie
         soort="periode"
         titel={periodeTekst}
@@ -1145,6 +1151,8 @@ export default async function DashboardPage({
           </div>
         )}
       </DashboardSectie>
+        }
+      />
     </div>
   );
 }

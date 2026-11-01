@@ -249,7 +249,14 @@ voor items waarvan de batch in de gekozen periode is goedgekeurd. Zie §5
 
 ### 7.4 Dashboard: "Lopend jaar" en "Periode"
 Het dashboard (`src/app/(app)/dashboard/page.tsx`) heeft twee duidelijk gescheiden blokken
-(`DashboardSectie`, `src/components/dashboard-sectie.tsx`):
+(`DashboardSectie`, `src/components/dashboard-sectie.tsx`). Ze staan niet onder elkaar maar
+achter een wissel direct onder de begroeting (`DashboardWissel`,
+`src/components/dashboard-wissel.tsx`, tabs met `role="tablist"`): één blok tegelijk in beeld,
+het andere `hidden` (beide blijven server-side gerenderd, dus wisselen is direct; bij afdrukken
+zijn ze allebei zichtbaar). De keuze staat in `?weergave=` (`periode`, weggelaten = jaar),
+wordt met `history.replaceState` bijgewerkt en blijft behouden bij het wisselen van periode of
+jaar. Zonder `?weergave=` opent het blok Periode alleen als er een `?periode=` in de URL
+staat, anders Lopend jaar.
 - **Lopend jaar** (navy rand): het gekozen kalenderjaar (`?jaar=`, standaard het huidige,
   `JaarSelect`). Vast, volgt de periodekeuze niet. Tegels gefactureerd, onderhanden werk
   en bureaukosten (alleen directie/beheerder), de targetstrook, een target per team, een
