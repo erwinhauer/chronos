@@ -929,7 +929,7 @@ function NativeSelect({
         onChange={(e) => onChange?.(e.target.value)}
         required={required}
         disabled={disabled}
-        className="h-9 w-full appearance-none rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-base outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm dark:bg-input/30"
+        className="h-10 w-full appearance-none rounded-full border border-input bg-transparent px-4 py-1.5 text-base outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm dark:bg-input/30"
       >
         {children}
       </select>

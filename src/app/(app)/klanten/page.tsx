@@ -51,7 +51,7 @@ export default async function KlantenPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Klanten</h2>
+        <h2 className="text-3xl font-light tracking-tight">Klanten</h2>
         <p className="text-sm text-muted-foreground">Gefactureerde omzet per klant, over alle tijd.</p>
       </div>
       <KlantenTabel klanten={klanten} />

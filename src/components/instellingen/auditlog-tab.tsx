@@ -99,7 +99,7 @@ export function AuditlogTab({
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="h-9 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none dark:bg-input/30"
+            className="h-10 rounded-full border border-input bg-transparent px-4 text-sm outline-none dark:bg-input/30"
           >
             <option value="alle">Alle objecttypen</option>
             {objectTypes.map((t) => (

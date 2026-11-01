@@ -19,7 +19,7 @@ export function NavLinks({
   const items = (itemsOverride ?? NAV_ITEMS).filter((item) => item.roles.includes(role));
 
   return (
-    <nav className="flex flex-col gap-1">
+    <nav className="flex flex-col gap-1.5">
       {items.map((item) => {
         const active = pathname === item.href || pathname.startsWith(item.href + "/");
         const Icon = item.icon;
@@ -29,13 +29,13 @@ export function NavLinks({
             href={item.href}
             onClick={onNavigate}
             className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+              "flex items-center gap-3 rounded-full px-4 py-3 text-[15px] transition-colors",
               active
-                ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+                ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+                : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
             )}
           >
-            <Icon className="h-4 w-4 shrink-0" />
+            <Icon className={cn("h-5 w-5 shrink-0", active ? "text-coral" : "opacity-75")} />
             {item.label}
           </Link>
         );

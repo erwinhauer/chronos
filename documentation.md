@@ -34,6 +34,17 @@ voor het plan om dat uit te breiden.
 - **`@react-pdf/renderer`** voor de specificatie-PDF (server-side gegenereerd, on-demand —
   zie §6.4).
 - Vercel voor deploys.
+- **UI / design system** (sinds 2026-11-01): kleur- en vormtokens staan centraal in
+  `src/app/globals.css` (navy `#0F053A`, koraal `#FF6368` als accent en primaire actie,
+  geel `--geel` voor aandacht, `--mist`/`--tint` als lichte vlakken; `--radius` 1rem).
+  Knoppen, invoervelden, selects, tabs en badges zijn pillvormig; kaarten hebben een
+  grote afronding en een dunne rand. De shell (`src/components/app-shell.tsx`) heeft een
+  zwevende, afgeronde sidebar en een topbalk met breadcrumb en
+  `ThemeToggle` (licht/donker). De keuze staat in `localStorage` (`chronos-theme`); een
+  inline-script in `src/app/layout.tsx` zet de `dark`-klasse vóór de eerste paint, en
+  `html.dark` zet `color-scheme: dark` voor native selects. De kaartsoorten staan in
+  `HeroTile` (navy, geel, wit, zacht koraal); de begroeting op het dashboard is
+  `DashboardHero`. Lettertype is Switzer (lichte gewichten voor koppen en bedragen).
 - **Belangrijk — dit is niet de Next.js uit je trainingsdata**: er zijn breaking changes
   t.o.v. wat je van eerdere Next.js-versies kent. Lees `node_modules/next/dist/docs/`
   voordat je nieuwe Next.js-conventies aanneemt (zie `AGENTS.md`).

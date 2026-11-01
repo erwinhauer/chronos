@@ -723,6 +723,21 @@ staan. Lokaal getest met een voorbeeld-PDF (drie items, twee dossiers): zonder s
 platte lijst op datum, met switch twee groepen met kopregel. Op verzoek gepromoot naar `main`/LIVE op 2026-10-30.
 `main` en `beta` staan weer gelijk.
 
+Daarna, op verzoek, de nieuwe UI (2026-11-01): een nieuw design system, eerst ontwikkeld
+en lokaal getest op `feature/nieuwe-ui`. Kleur- en vormtokens staan centraal in
+`src/app/globals.css`: navy `#0F053A` als basis, koraal `#FF6368` als accent en primaire
+actie, geel voor aandacht, een ronde vormtaal (pillvormige knoppen, velden, tabs en
+badges; kaarten met grote afronding en dunne rand) en lichte koppen en bedragen (Switzer).
+De shell kreeg een zwevende, afgeronde sidebar met merkblok en gebruikerskaart en een
+topbalk met breadcrumb en een licht/donker-schakelaar (keuze onthouden in `localStorage`).
+Het dashboard kreeg een begroetingskaart met de datum van vandaag, een kaart "Nieuw
+factuuritem" en vernieuwde cijfertegels (navy, geel, wit, zacht koraal); de inhoud van het
+dashboard is niet gewijzigd. Geen migraties, geen wijzigingen in specificatie-PDF's.
+Lokaal getest in licht en donker op dashboard, factuuritems, nieuw factuuritem en klanten.
+Een eerste versie met aqua als accent is vervangen door koraal. Op verzoek gepromoot naar
+`main`/LIVE op 2026-11-01; de branch `feature/nieuwe-ui` is daarna gesloten.
+`main` en `beta` staan weer gelijk.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de

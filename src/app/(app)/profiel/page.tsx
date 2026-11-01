@@ -28,7 +28,7 @@ export default async function ProfielPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Profiel</h2>
+        <h2 className="text-3xl font-light tracking-tight">Profiel</h2>
         <p className="text-sm text-muted-foreground">Je gegevens en profielfoto.</p>
       </div>
 

@@ -67,7 +67,7 @@ export function VerplaatsProjectDialog({
               name="project_id"
               value={projectId}
               onChange={(e) => setProjectId(e.target.value)}
-              className="h-8 w-full appearance-none rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none dark:bg-input/30"
+              className="h-10 w-full appearance-none rounded-full border border-input bg-transparent px-4 text-sm outline-none dark:bg-input/30"
             >
               <option value="">Geen project</option>
               {opties.map((p) => (

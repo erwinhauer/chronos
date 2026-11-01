@@ -113,7 +113,7 @@ export default async function FactuuritemsPerKlantPagina({
       <SetBreadcrumb segments={[{ label: "Factuuritems", href: "/factuuritems" }, { label: klant.naam }]} />
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight">{klant.naam}</h2>
+          <h2 className="text-3xl font-light tracking-tight">{klant.naam}</h2>
           {(klant.patricia_id || klant.adres) && (
             <p className="text-xs text-muted-foreground">
               {[klant.patricia_id ? `PNN ${klant.patricia_id}` : null, klant.adres?.replace(/\n/g, ", ")]
