@@ -770,8 +770,8 @@ nu ook de KPI-kaarten per teamlid (totaal, uren, fixed fee, onderhanden werk, aa
 het hele jaar, in een uitklapblok per team (`src/components/teamleden-accordeon.tsx`, base-ui
 Accordion, standaard dicht, meerdere teams tegelijk te openen). Geen migraties. Lokaal getest
 als Praktijkvoerder: de periode wisselen houdt de scrollpositie vast, november zonder eigen
-omzet toont toch € 900 onderhanden werk voor Team International. Staat op `beta`, nog niet op
-`main`.
+omzet toont toch € 900 onderhanden werk voor Team International. Op verzoek gepromoot naar
+`main`/LIVE op 2026-11-01. `main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
