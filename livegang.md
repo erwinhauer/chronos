@@ -794,6 +794,19 @@ Lokaal getest als beheerder: koppen rechts, sorteren op Teams, namen bij Teams, 
 Landen, changelog toont 1.3.0 bovenaan en de zijbalk "Chronos v1.3.0". Op verzoek gepromoot naar
 `main`/LIVE op 2026-11-01. `main` en `beta` staan weer gelijk.
 
+Daarna, op verzoek, een optimalisatie van het dashboard (2026-11-01): "Lopend jaar" en
+"Periode" staan niet meer onder elkaar maar achter een wissel direct onder de begroeting
+(`src/components/dashboard-wissel.tsx`, twee grote tabs: navy voor Lopend jaar, koraal voor
+Periode, elk met de titel van wat je dan ziet). Beide blokken worden server-side nog steeds
+volledig gerenderd en alleen getoond of verborgen, dus wisselen kost geen nieuwe request. De
+keuze staat in de URL (`?weergave=periode`, `window.history.replaceState`), blijft staan bij
+verversen en bij het kiezen van een periode of jaar, en een link met `?periode=` opent
+direct op Periode. Zonder keuze opent Lopend jaar. Afdrukken toont beide blokken. Het
+tussenstukje "Hieronder kijk je naar een periode naar keuze" is vervallen. Op mobiel valt het
+icoon in de tabs weg zodat de titels passen. Geen migraties. Lokaal getest als beheerder:
+wisselen, periode kiezen binnen Periode, verversen en mobiel (375 px). Nog niet naar
+`beta`/`main`.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de

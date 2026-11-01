@@ -124,9 +124,24 @@ const RELEASE_1_3_0 = {
   gebruikersactie: null,
 };
 
+const RELEASE_1_4_0 = {
+  versienummer: "1.4.0",
+  releasedatum: "2026-11-01",
+  titel: "Dashboard: Lopend jaar en Periode wissel je bovenaan",
+  nieuwe_functies: [
+    "Dashboard: bovenaan wissel je met één klik tussen Lopend jaar en Periode, zodat je niet meer hoeft te scrollen. De keuze blijft staan als je de pagina ververst of de link deelt",
+  ],
+  wijzigingen: [
+    "Dashboard: de twee blokken staan niet meer onder elkaar maar één tegelijk in beeld; bij afdrukken komen ze allebei op papier",
+  ],
+  bugfixes: [],
+  bekende_beperkingen: [],
+  gebruikersactie: null,
+};
+
 // Oudste eerst; de nieuwste release hoort onderaan. package.json "version" moet gelijk zijn
 // aan de laatste (zie de controle hieronder).
-const CHANGELOG_ENTRIES = [RELEASE_1_0_0, RELEASE_1_1_0, RELEASE_1_2_0, RELEASE_1_3_0];
+const CHANGELOG_ENTRIES = [RELEASE_1_0_0, RELEASE_1_1_0, RELEASE_1_2_0, RELEASE_1_3_0, RELEASE_1_4_0];
 
 // Het versienummer in package.json en de nieuwste changelog-entry horen gelijk te lopen.
 {
