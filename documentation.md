@@ -43,7 +43,7 @@ voor het plan om dat uit te breiden.
   `ThemeToggle` (licht/donker). De keuze staat in `localStorage` (`chronos-theme`); een
   inline-script in `src/app/layout.tsx` zet de `dark`-klasse vóór de eerste paint, en
   `html.dark` zet `color-scheme: dark` voor native selects. De kaartsoorten staan in
-  `HeroTile` (navy, geel, wit, zacht koraal); de begroeting op het dashboard is
+  `KpiTegel` (navy, geel, wit, zacht koraal); de begroeting op het dashboard is
   `DashboardHero`. Lettertype is Switzer (lichte gewichten voor koppen en bedragen).
 - **Belangrijk — dit is niet de Next.js uit je trainingsdata**: er zijn breaking changes
   t.o.v. wat je van eerdere Next.js-versies kent. Lees `node_modules/next/dist/docs/`
@@ -243,12 +243,28 @@ Waarde-gewogen gemiddelde van `(facturatiebatch.goedgekeurd_op-datum − factuur
 voor items waarvan de batch in de gekozen periode is goedgekeurd. Zie §5
 (`facturatiebatches`) voor de timestamptz/date-valkuil.
 
-### 7.4 Periode-filters (dashboard)
-`src/lib/omzet-periode.ts` — een gedeeld `Periode`-type (`ytd`/`mtd`/`jaar`/`maand`/
-`kwartaal`/`halfjaar`/`rolling3m`) met per-tegel toegestane subsets
-(`ALLE_PERIODES`/`MEDEWERKER_PERIODES`/`DWO_PERIODES`), gestuurd via query-params zodat
-meerdere tabellen op één dashboardpagina onafhankelijk filterbaar zijn
-(`TabelPeriodeSelect`-component, één per tabel/tegel).
+### 7.4 Dashboard: "Lopend jaar" en "Periode"
+Het dashboard (`src/app/(app)/dashboard/page.tsx`) heeft twee duidelijk gescheiden blokken
+(`DashboardSectie`, `src/components/dashboard-sectie.tsx`):
+- **Lopend jaar** (navy rand): het gekozen kalenderjaar (`?jaar=`, standaard het huidige,
+  `JaarSelect`). Vast, volgt de periodekeuze niet. Tegels gefactureerd, onderhanden werk
+  (onbeperkt) en bureaukosten (alleen directie/beheerder), de targetstrook, een target per
+  team en de omzet-per-maand-tabel. Praktijkvoerder/Gebruiker zien dit per eigen team.
+- **Periode** (gestreepte koraalrand): alles volgt de ene `?periode=` (`PeriodeKeuze`:
+  knoppen voor deze maand, dit kwartaal, laatste 3 maanden en dit jaar, plus een keuzelijst
+  voor de rest; standaard `rolling3m`, zie `STANDAARD_DASHBOARD_PERIODE`). Tegels
+  (gefactureerd, bureaukosten, onderhanden werk, DWO), onderhanden werk per team, per team
+  een uitsplitsing per teamlid (`TeamlidKaart`: totaal, uren, fixed fee, nog te factureren,
+  aandeel in het team), lijsten per klant/productgroep/land en de productgroep×land-tabel.
+  Alleen de trendgrafiek per teamlid per maand in een teamtab blijft het hele jaar tonen
+  (met een label "Lopend jaar").
+
+Het `Periode`-type staat in `src/lib/omzet-periode.ts` (`ytd`/`mtd`/`jaar`/`maand`/
+`kwartaal`/`halfjaar`/`rolling3m`). De vroegere losse selectors per tabel
+(`medewerkerPeriode`, `klantPeriode`, `productgroepPeriode`, `landPeriode`, `sectie2Periode`,
+`dwoPeriode`) bestaan niet meer; ook de tabel "Omzet per medewerker · hele groep" is
+vervallen (de teamlidkaarten per team vervangen die). KPI-tegels (`KpiTegel`) tonen het
+bedrag groot en de titel klein.
 
 ## 8. Externe koppelingen
 

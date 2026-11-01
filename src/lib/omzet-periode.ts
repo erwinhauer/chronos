@@ -36,8 +36,11 @@ const PERIODE_LABELS: Record<string, string> = {
   "kwartaal-4": "Q4",
   "halfjaar-1": "H1",
   "halfjaar-2": "H2",
-  rolling3m: "Rolling gemiddelde (3 mnd)",
+  rolling3m: "Laatste 3 maanden",
 };
+
+// Standaardperiode van het "Periode"-blok op het dashboard (los van het vaste "Lopend jaar"-blok).
+export const STANDAARD_DASHBOARD_PERIODE: Periode = { type: "rolling3m" };
 
 export function periodeKey(periode: Periode): string {
   if (periode.type === "ytd") return "ytd";
@@ -68,32 +71,14 @@ export function parsePeriodeKey(key: string | undefined, standaard: Periode = { 
 }
 
 export const ALLE_PERIODES: Periode[] = [
-  { type: "ytd" },
-  { type: "jaar" },
-  ...[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((maand): Periode => ({ type: "maand", maand })),
-  ...[1, 2, 3, 4].map((kwartaal): Periode => ({ type: "kwartaal", kwartaal })),
-  { type: "halfjaar", helft: 1 },
-  { type: "halfjaar", helft: 2 },
-];
-
-// Beperkte periode-set voor de "omzet per medewerker"-filter — geen jaar/halfjaar nodig.
-export const MEDEWERKER_PERIODES: Periode[] = [
   { type: "mtd" },
-  { type: "ytd" },
-  ...[1, 2, 3, 4].map((kwartaal): Periode => ({ type: "kwartaal", kwartaal })),
-  ...[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((maand): Periode => ({ type: "maand", maand })),
-];
-
-// Periode-set voor de DWO-tegel (directie/beheerder) — geen ytd/mtd (die
-// horen bij "sinds jaarstart"/"deze maand", niet bij een DWO-vergelijking),
-// wel de voortschrijdend-gemiddelde optie als standaard/eerste keuze.
-export const DWO_PERIODES: Periode[] = [
   { type: "rolling3m" },
+  { type: "ytd" },
   { type: "jaar" },
+  ...[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((maand): Periode => ({ type: "maand", maand })),
+  ...[1, 2, 3, 4].map((kwartaal): Periode => ({ type: "kwartaal", kwartaal })),
   { type: "halfjaar", helft: 1 },
   { type: "halfjaar", helft: 2 },
-  ...[1, 2, 3, 4].map((kwartaal): Periode => ({ type: "kwartaal", kwartaal })),
-  ...[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((maand): Periode => ({ type: "maand", maand })),
 ];
 
 // Datumgrens (exclusief eind) voor een periode binnen een specifiek jaar. "ytd"

@@ -205,13 +205,13 @@ export default function HandleidingPage() {
           <SectieKop label="Stap 2" titel="Het dashboard" />
           <p className="text-sm text-muted-foreground">Toont, afhankelijk van je rol:</p>
           <ul className="flex flex-col gap-1 text-sm text-muted-foreground">
-            <li>— gefactureerde omzet en onderhanden werk voor de gekozen periode,</li>
-            <li>— voortgang t.o.v. het jaartarget,</li>
-            <li>— omzet per teamlid, klant, productgroep en land.</li>
+            <li>— bovenin het blok &quot;Lopend jaar&quot;: wat dit jaar is gefactureerd, het onderhanden werk en de voortgang t.o.v. het jaartarget,</li>
+            <li>— daaronder het blok &quot;Periode&quot;: omzet, onderhanden werk en DWO voor de periode die je kiest, uitgesplitst per teamlid, klant, productgroep en land.</li>
           </ul>
           <p className="text-xs text-muted-foreground">
-            Gebruik de periode-selector rechtsboven om te wisselen tussen maand, kwartaal of jaar. Dit scherm is puur
-            informatief — je registreert hier niets.
+            Het blok &quot;Lopend jaar&quot; staat vast. Alleen het blok &quot;Periode&quot; verandert als je rechtsboven in dat blok een
+            andere periode kiest (deze maand, dit kwartaal, laatste 3 maanden, dit jaar of een andere). Dit scherm is
+            puur informatief — je registreert hier niets.
           </p>
         </div>
         <StapMockup>

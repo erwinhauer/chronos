@@ -738,6 +738,26 @@ Een eerste versie met aqua als accent is vervangen door koraal. Op verzoek gepro
 `main`/LIVE op 2026-11-01; de branch `feature/nieuwe-ui` is daarna gesloten.
 `main` en `beta` staan weer gelijk.
 
+Daarna, op verzoek, het dashboard overzichtelijker (2026-11-01): de KPI-tegels tonen het
+bedrag nu heel groot (tot 60 px, cent kleiner) met een kleine titel erboven
+(`src/components/kpi-tegel.tsx`). De pagina heeft twee duidelijk verschillende blokken
+(`src/components/dashboard-sectie.tsx`): "Lopend jaar" met een navy rand (gefactureerd,
+onderhanden werk, bureaukosten, targetstrook, target per team en de omzet-per-maand-tabel;
+staat vast) en "Periode" met een gestreepte koraalrand en één periodekeuze
+(`src/components/periode-keuze.tsx`: deze maand, dit kwartaal, laatste 3 maanden, dit jaar of
+een andere periode; standaard laatste 3 maanden) die alles in dat blok stuurt: tegels, DWO,
+onderhanden werk per team, de lijsten per klant/productgroep/land en de uitsplitsing per
+teamlid. Die uitsplitsing is nu een kaart per teamlid plus een teamtotaal
+(`src/components/teamlid-kaart.tsx`): totaal groot, uren (bedrag en uren), fixed fee, nog te
+factureren en aandeel in het team. De zes losse periodeselectors (per tabel, medewerker,
+klant, productgroep, land, DWO, "sectie 2") zijn vervangen door die ene keuze; de tabel "Omzet
+per medewerker · hele groep" is vervallen omdat de teamlidkaarten per team die vervangen;
+de donut "Target vs. OHW + gefactureerd" is vervangen door een regel "met onderhanden werk"
+in de targetstrook. Praktijkvoerder/Gebruiker zien dezelfde opzet voor hun eigen team(s).
+Geen migraties. Lokaal getest als beheerder en als Praktijkvoerder (periode "laatste 3
+maanden" en "dit jaar"): het teamtotaal Benelux (€ 3.010) en International (€ 760) tellen op
+tot het jaartotaal (€ 3.770). Staat op `beta`, nog niet op `main`.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de
