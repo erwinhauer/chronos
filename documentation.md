@@ -120,6 +120,11 @@ zodra opgenomen in een specificatie-batch — zie §6). `qty`/`tarief`/`korting`
 sinds de `factuuritem_negatief_bedrag`-migratie ook negatief zijn (deel-crediteren
 **vóór** facturering, op regelniveau) — de korting-check (`korting <= honorarium`)
 geldt alleen nog als het honorarium niet negatief is.
+In het formulier (`src/components/factuuritem-form.tsx`) staan `externe_kosten` en `korting`
+achter de switch "Kosten derden/korting uitsplitsen" (`uitsplitsen`): standaard uit, behalve
+bij een bestaand item dat al kosten of korting heeft. Uitzetten zet kosten en korting terug
+op 0, zodat er nooit een verborgen bedrag meegaat; de regels in "Overzicht regel" verdwijnen
+dan ook.
 
 ### `factuuritem_dossiers`
 Koppeltabel: welke dossiers (kunnen er meerdere zijn) horen bij dit factuuritem, met

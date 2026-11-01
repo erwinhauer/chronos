@@ -252,7 +252,7 @@ export default function HandleidingPage() {
             <li>3. Vul per dossier de dossiernaam in, kies klant en eventueel project.</li>
             <li>4. Vul de omschrijving voor de klant in — komt op de specificatie. Een interne opmerking niet.</li>
             <li>5. Kies prijstype (Uren of Fixed fee); Chronos stelt een tarief voor.</li>
-            <li>6. Vul eventueel kosten van derden en/of korting in, en klik op &ldquo;Factuuritem aanmaken&rdquo;.</li>
+            <li>6. Heb je kosten van derden of korting? Zet dan de schakelaar &ldquo;Kosten derden/korting uitsplitsen&rdquo; aan en vul ze in. Anders laat je die uit, en klik je op &ldquo;Factuuritem aanmaken&rdquo;.</li>
           </ol>
         </div>
         <StapMockup>
