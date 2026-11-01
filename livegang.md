@@ -756,7 +756,7 @@ de donut "Target vs. OHW + gefactureerd" is vervangen door een regel "met onderh
 in de targetstrook. Praktijkvoerder/Gebruiker zien dezelfde opzet voor hun eigen team(s).
 Geen migraties. Lokaal getest als beheerder en als Praktijkvoerder (periode "laatste 3
 maanden" en "dit jaar"): het teamtotaal Benelux (€ 3.010) en International (€ 760) tellen op
-tot het jaartotaal (€ 3.770). Staat op `beta`, nog niet op `main`.
+tot het jaartotaal (€ 3.770). Op verzoek gepromoot naar `main`/LIVE op 2026-11-01. `main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
