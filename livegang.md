@@ -813,7 +813,8 @@ derden/korting uitsplitsen" (`factuuritem-form.tsx`, `Switch`). Standaard uit; b
 bestaand item met kosten of korting staat hij bij het openen aan. Uitzetten zet kosten en
 korting terug op 0, zodat er geen verborgen bedrag meegaat, en de regels Kosten van derden en
 Korting verdwijnen uit "Overzicht regel". Versie 1.5.0. Geen migraties. Lokaal getest: standaard
-verborgen, aan toont beide velden, uit reset de waarden naar 0. Nog niet naar `beta`/`main`.
+verborgen, aan toont beide velden, uit reset de waarden naar 0. Op verzoek gepromoot naar
+`main`/LIVE op 2026-11-01. `main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
