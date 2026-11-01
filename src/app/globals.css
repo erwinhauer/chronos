@@ -11,10 +11,7 @@
   --font-heading: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
-  --color-aqua: var(--aqua);
-  --color-aqua-soft: var(--aqua-soft);
-  --color-aqua-ink: var(--aqua-ink);
-  --color-aqua-deep: var(--aqua-deep);
+  --color-coral-deep: var(--coral-deep);
   --color-geel: var(--geel);
   --color-geel-ink: var(--geel-ink);
   --color-mist: var(--mist);
@@ -66,7 +63,7 @@
 }
 
 :root {
-  /* Chronos nieuwe UI — navy (#0F053A) + aqua (primaire actie) + geel (aandacht) + koraal (waarschuwing) */
+  /* Chronos nieuwe UI — navy (#0F053A) + koraal (#FF6368, primaire actie en waarschuwing) + geel (aandacht) */
   --background: #f4f6fc;
   --foreground: #0f053a;
   --card: #ffffff;
@@ -86,16 +83,13 @@
   --warning: oklch(0.6 0.14 70);
   --border: #dce2f1;
   --input: #dce2f1;
-  --ring: #74d6d1;
+  --ring: #ff6368;
   --brand: #0f053a;
   --brand-foreground: #ffffff;
   --coral: #ff6368;
   --coral-foreground: #0f053a;
   --coral-soft: #ffe1e2;
-  --aqua: #74d6d1;
-  --aqua-soft: #d9f4f2;
-  --aqua-ink: #0f053a;
-  --aqua-deep: #2a9d98;
+  --coral-deep: #d8444a;
   --geel: #fff2a0;
   --geel-ink: #5a4b00;
   --mist: #e8ecf8;
@@ -112,12 +106,12 @@
   --radius: 1rem;
   --sidebar: #0f053a;
   --sidebar-foreground: #e9eafb;
-  --sidebar-primary: var(--aqua);
+  --sidebar-primary: var(--coral);
   --sidebar-primary-foreground: #0f053a;
   --sidebar-accent: #201a66;
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: oklch(1 0 0 / 12%);
-  --sidebar-ring: #74d6d1;
+  --sidebar-ring: #ff6368;
 }
 
 .dark {
@@ -140,16 +134,13 @@
   --warning: oklch(0.75 0.14 70);
   --border: #2a2470;
   --input: #2a2470;
-  --ring: #74d6d1;
+  --ring: #ff6368;
   --brand: #c9ceff;
   --brand-foreground: #0f053a;
   --coral: #ff6368;
   --coral-foreground: #0f053a;
   --coral-soft: #4a1f3a;
-  --aqua: #74d6d1;
-  --aqua-soft: #17385a;
-  --aqua-ink: #0f053a;
-  --aqua-deep: #74d6d1;
+  --coral-deep: #ff6368;
   --geel: #3b3412;
   --geel-ink: #ffe98a;
   --mist: #15114a;
@@ -165,12 +156,12 @@
   --chart-5: #d55181;
   --sidebar: #070320;
   --sidebar-foreground: #e9eafb;
-  --sidebar-primary: var(--aqua);
+  --sidebar-primary: var(--coral);
   --sidebar-primary-foreground: #0f053a;
   --sidebar-accent: #1b1660;
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: oklch(1 0 0 / 12%);
-  --sidebar-ring: #74d6d1;
+  --sidebar-ring: #ff6368;
 }
 
 @layer base {
@@ -188,8 +179,8 @@
     color-scheme: dark;
   }
   ::selection {
-    background: var(--aqua);
-    color: var(--aqua-ink);
+    background: var(--coral);
+    color: var(--coral-foreground);
   }
 }
 

@@ -107,7 +107,7 @@ function HeaderTitle({ fallback }: { fallback: string }) {
 function SidebarBrand() {
   return (
     <div className="flex items-center gap-3 px-3">
-      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-aqua text-aqua-ink">
+      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-coral text-coral-foreground">
         <ChronosMark className="h-6 w-6" />
       </span>
       <div className="leading-tight">
@@ -123,7 +123,7 @@ function SidebarGebruiker({ profile, toegekendeRollen }: { profile: Profile; toe
     <div className="flex items-center gap-3 px-2">
       <Avatar className="h-11 w-11">
         {profile.avatar_url && <AvatarImage src={profile.avatar_url} alt="" />}
-        <AvatarFallback className="bg-aqua text-sm font-medium text-aqua-ink">
+        <AvatarFallback className="bg-coral text-sm font-medium text-coral-foreground">
           {profile.initialen || suggestInitialen(profile.full_name)}
         </AvatarFallback>
       </Avatar>

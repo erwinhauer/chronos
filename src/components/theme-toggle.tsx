@@ -36,7 +36,7 @@ export function ThemeToggle({ className }: { className?: string }) {
         onClick={() => zet(false)}
         aria-pressed={!donker}
         aria-label="Licht"
-        className={cn(knop, !donker ? "bg-aqua text-aqua-ink" : "text-muted-foreground hover:text-foreground")}
+        className={cn(knop, !donker ? "bg-coral text-coral-foreground" : "text-muted-foreground hover:text-foreground")}
       >
         <Sun className="h-[18px] w-[18px]" />
       </button>
@@ -45,7 +45,7 @@ export function ThemeToggle({ className }: { className?: string }) {
         onClick={() => zet(true)}
         aria-pressed={donker}
         aria-label="Donker"
-        className={cn(knop, donker ? "bg-aqua text-aqua-ink" : "text-muted-foreground hover:text-foreground")}
+        className={cn(knop, donker ? "bg-coral text-coral-foreground" : "text-muted-foreground hover:text-foreground")}
       >
         <Moon className="h-[18px] w-[18px]" />
       </button>

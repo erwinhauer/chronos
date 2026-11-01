@@ -35,7 +35,7 @@ export function NavLinks({
                 : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
             )}
           >
-            <Icon className={cn("h-5 w-5 shrink-0", active ? "text-aqua" : "opacity-75")} />
+            <Icon className={cn("h-5 w-5 shrink-0", active ? "text-coral" : "opacity-75")} />
             {item.label}
           </Link>
         );
