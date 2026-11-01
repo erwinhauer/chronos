@@ -64,7 +64,7 @@ export function TeamlidKaart({
           </span>
         </div>
         <div className={cn(regel, isTotaal ? "border-white/15" : "border-border")}>
-          <span>Nog te factureren</span>
+          <span>Onderhanden werk</span>
           <span className={cn("tabular-figures font-medium", isTotaal ? "text-white" : "text-foreground")}>
             {euro(ohw)}
           </span>

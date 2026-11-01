@@ -758,6 +758,21 @@ Geen migraties. Lokaal getest als beheerder en als Praktijkvoerder (periode "laa
 maanden" en "dit jaar"): het teamtotaal Benelux (€ 3.010) en International (€ 760) tellen op
 tot het jaartotaal (€ 3.770). Op verzoek gepromoot naar `main`/LIVE op 2026-11-01. `main` en `beta` staan weer gelijk.
 
+Daarna vier bugfixes op het dashboard (2026-11-01): (1) een andere periode kiezen laat de
+pagina niet meer terugspringen; de scrollpositie blijft staan (`router.push(..., { scroll: false })`
+in `src/components/periode-keuze.tsx`). (2) Onderhanden werk is nu al het werk dat nog niet is
+gefactureerd, ook uit eerdere periodes: in het blok "Periode" volgt het de periodekeuze niet
+meer (tegel, per team, per teamlid en de lijst "Nog te factureren per klant"). Eén `ohwRows`
+in `dashboard/page.tsx` voedt zowel "Lopend jaar" als "Periode"; de regel op de teamlidkaart
+heet nu "Onderhanden werk". (3) De standaardperiode is nu "Deze maand" (`mtd`, via
+`STANDAARD_DASHBOARD_PERIODE`) in plaats van de laatste 3 maanden. (4) In "Lopend jaar" staan
+nu ook de KPI-kaarten per teamlid (totaal, uren, fixed fee, onderhanden werk, aandeel) over
+het hele jaar, in een uitklapblok per team (`src/components/teamleden-accordeon.tsx`, base-ui
+Accordion, standaard dicht, meerdere teams tegelijk te openen). Geen migraties. Lokaal getest
+als Praktijkvoerder: de periode wisselen houdt de scrollpositie vast, november zonder eigen
+omzet toont toch € 900 onderhanden werk voor Team International. Staat op `beta`, nog niet op
+`main`.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de

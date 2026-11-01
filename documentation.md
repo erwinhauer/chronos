@@ -248,15 +248,19 @@ Het dashboard (`src/app/(app)/dashboard/page.tsx`) heeft twee duidelijk gescheid
 (`DashboardSectie`, `src/components/dashboard-sectie.tsx`):
 - **Lopend jaar** (navy rand): het gekozen kalenderjaar (`?jaar=`, standaard het huidige,
   `JaarSelect`). Vast, volgt de periodekeuze niet. Tegels gefactureerd, onderhanden werk
-  (onbeperkt) en bureaukosten (alleen directie/beheerder), de targetstrook, een target per
-  team en de omzet-per-maand-tabel. Praktijkvoerder/Gebruiker zien dit per eigen team.
+  en bureaukosten (alleen directie/beheerder), de targetstrook, een target per team, een
+  uitklapblok per team met de KPI-kaarten per teamlid over het hele jaar
+  (`TeamledenAccordeon`, base-ui Accordion, standaard dicht) en de omzet-per-maand-tabel.
+  Praktijkvoerder/Gebruiker zien dit per eigen team.
 - **Periode** (gestreepte koraalrand): alles volgt de ene `?periode=` (`PeriodeKeuze`:
   knoppen voor deze maand, dit kwartaal, laatste 3 maanden en dit jaar, plus een keuzelijst
-  voor de rest; standaard `rolling3m`, zie `STANDAARD_DASHBOARD_PERIODE`). Tegels
-  (gefactureerd, bureaukosten, onderhanden werk, DWO), onderhanden werk per team, per team
-  een uitsplitsing per teamlid (`TeamlidKaart`: totaal, uren, fixed fee, nog te factureren,
-  aandeel in het team), lijsten per klant/productgroep/land en de productgroep×land-tabel.
-  Alleen de trendgrafiek per teamlid per maand in een teamtab blijft het hele jaar tonen
+  voor de rest; standaard `mtd` (deze maand), zie `STANDAARD_DASHBOARD_PERIODE`; de
+  knoppen scrollen de pagina niet terug naar boven, `router.push(..., { scroll: false })`).
+  Tegels (gefactureerd, bureaukosten, onderhanden werk, DWO), onderhanden werk per team, per
+  team een uitsplitsing per teamlid (`TeamlidKaart`: totaal, uren, fixed fee, onderhanden
+  werk, aandeel in het team), lijsten per klant/productgroep/land en de productgroep×land-tabel.
+  Onderhanden werk is **al het nog niet gefactureerde werk, ook uit eerdere periodes** en
+  volgt de periodekeuze dus niet (één `ohwRows` voor beide blokken). Alleen de trendgrafiek per teamlid per maand in een teamtab blijft het hele jaar tonen
   (met een label "Lopend jaar").
 
 Het `Periode`-type staat in `src/lib/omzet-periode.ts` (`ytd`/`mtd`/`jaar`/`maand`/

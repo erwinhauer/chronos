@@ -35,7 +35,8 @@ export function PeriodeKeuze() {
     if (key === periodeKey(STANDAARD_PERIODE)) params.delete("periode");
     else params.set("periode", key);
     const query = params.toString();
-    router.push(query ? `/dashboard?${query}` : "/dashboard");
+    // scroll: false houdt de pagina op dezelfde plek staan na het wisselen van periode.
+    router.push(query ? `/dashboard?${query}` : "/dashboard", { scroll: false });
   }
 
   return (
