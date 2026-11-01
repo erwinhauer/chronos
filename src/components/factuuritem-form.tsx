@@ -17,6 +17,7 @@ import { DatumInput } from "@/components/ui/datum-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -227,6 +228,11 @@ export function FactuurItemForm({
   const [kortingType, setKortingType] = useState<KortingType>(initial?.korting_type ?? "bedrag");
   const [kortingBedrag, setKortingBedrag] = useState(initial?.korting ?? 0);
   const [kortingPercentage, setKortingPercentage] = useState(initial?.korting_percentage ?? 0);
+  // Kosten van derden en korting zijn uitzonderingen: standaard verborgen, tenzij een bestaand
+  // item ze al heeft (dan moet je ze kunnen zien en aanpassen).
+  const [uitsplitsen, setUitsplitsen] = useState(
+    (initial?.externe_kosten ?? 0) !== 0 || (initial?.korting ?? 0) !== 0 || (initial?.korting_percentage ?? 0) !== 0
+  );
   const [kantoorkostenActief, setKantoorkostenActief] = useState(initial?.kantoorkosten_van_toepassing ?? true);
   const [declarabel, setDeclarabel] = useState(initial?.declarabel ?? true);
   const [toonSluitenBevestiging, setToonSluitenBevestiging] = useState(false);
@@ -628,85 +634,105 @@ export function FactuurItemForm({
                 </div>
               </div>
 
-              <div className="grid gap-4 border-t border-border pt-5 sm:grid-cols-2">
-                <div className="flex flex-col gap-2">
-                  <div className="flex h-6 items-center">
-                    <Label htmlFor="externe_kosten_input">Kosten van derden (optioneel)</Label>
-                  </div>
-                  <div className="relative">
-                    <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                      €
-                    </span>
-                    <Input
-                      id="externe_kosten_input"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      className="pl-6"
-                      value={externeKosten}
-                      onChange={(e) => setExterneKosten(Number(e.target.value))}
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <div className="flex h-6 items-center justify-between">
-                    <Label htmlFor="korting_input">Korting (optioneel)</Label>
-                    <div className="flex overflow-hidden rounded-md border border-input">
-                      <button
-                        type="button"
-                        onClick={() => setKortingType("bedrag")}
-                        className={`px-2 py-0.5 text-xs ${kortingType === "bedrag" ? "bg-accent font-medium" : "text-muted-foreground"}`}
-                      >
-                        €
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setKortingType("percentage")}
-                        className={`px-2 py-0.5 text-xs ${kortingType === "percentage" ? "bg-accent font-medium" : "text-muted-foreground"}`}
-                      >
-                        %
-                      </button>
+              <div className="flex flex-col gap-4 border-t border-border pt-5">
+                <label className="flex items-center gap-3 text-sm">
+                  <Switch
+                    checked={uitsplitsen}
+                    onCheckedChange={(aan) => {
+                      setUitsplitsen(aan);
+                      // Uitzetten betekent: geen kosten van derden en geen korting op deze regel.
+                      if (!aan) {
+                        setExterneKosten(0);
+                        setKortingType("bedrag");
+                        setKortingBedrag(0);
+                        setKortingPercentage(0);
+                      }
+                    }}
+                  />
+                  Kosten derden/korting uitsplitsen
+                </label>
+                {uitsplitsen && (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex h-6 items-center">
+                        <Label htmlFor="externe_kosten_input">Kosten van derden (optioneel)</Label>
+                      </div>
+                      <div className="relative">
+                        <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                          €
+                        </span>
+                        <Input
+                          id="externe_kosten_input"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          className="pl-6"
+                          value={externeKosten}
+                          onChange={(e) => setExterneKosten(Number(e.target.value))}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex h-6 items-center justify-between">
+                        <Label htmlFor="korting_input">Korting (optioneel)</Label>
+                        <div className="flex overflow-hidden rounded-md border border-input">
+                          <button
+                            type="button"
+                            onClick={() => setKortingType("bedrag")}
+                            className={`px-2 py-0.5 text-xs ${kortingType === "bedrag" ? "bg-accent font-medium" : "text-muted-foreground"}`}
+                          >
+                            €
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setKortingType("percentage")}
+                            className={`px-2 py-0.5 text-xs ${kortingType === "percentage" ? "bg-accent font-medium" : "text-muted-foreground"}`}
+                          >
+                            %
+                          </button>
+                        </div>
+                      </div>
+                      {kortingType === "bedrag" ? (
+                        <div className="relative">
+                          <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                            €
+                          </span>
+                          <Input
+                            id="korting_input"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            className="pl-6"
+                            value={kortingBedrag}
+                            onChange={(e) => setKortingBedrag(Number(e.target.value))}
+                            disabled={honorarium < 0}
+                          />
+                        </div>
+                      ) : (
+                        <Input
+                          id="korting_input"
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          max="100"
+                          value={kortingPercentage}
+                          onChange={(e) => setKortingPercentage(Number(e.target.value))}
+                          disabled={honorarium < 0}
+                        />
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        {honorarium < 0
+                          ? "Niet van toepassing bij een negatief bedrag (crediteren)."
+                          : `Max. het honorarium (${euro(honorarium, klant?.valuta ?? "EUR")}), nooit over kosten van derden.`}
+                      </p>
+                      {kortingTeHoog && (
+                        <p className="text-xs font-medium text-warning">
+                          Let op: dit is meer dan 25% korting op onze opslag!
+                        </p>
+                      )}
                     </div>
                   </div>
-                  {kortingType === "bedrag" ? (
-                    <div className="relative">
-                      <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                        €
-                      </span>
-                      <Input
-                        id="korting_input"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        className="pl-6"
-                        value={kortingBedrag}
-                        onChange={(e) => setKortingBedrag(Number(e.target.value))}
-                        disabled={honorarium < 0}
-                      />
-                    </div>
-                  ) : (
-                    <Input
-                      id="korting_input"
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      max="100"
-                      value={kortingPercentage}
-                      onChange={(e) => setKortingPercentage(Number(e.target.value))}
-                      disabled={honorarium < 0}
-                    />
-                  )}
-                  <p className="text-xs text-muted-foreground">
-                    {honorarium < 0
-                      ? "Niet van toepassing bij een negatief bedrag (crediteren)."
-                      : `Max. het honorarium (${euro(honorarium, klant?.valuta ?? "EUR")}), nooit over kosten van derden.`}
-                  </p>
-                  {kortingTeHoog && (
-                    <p className="text-xs font-medium text-warning">
-                      Let op: dit is meer dan 25% korting op onze opslag!
-                    </p>
-                  )}
-                </div>
+                )}
               </div>
 
               <div className="flex flex-col gap-3 border-t border-border pt-5">
@@ -738,8 +764,12 @@ export function FactuurItemForm({
             </CardHeader>
             <CardContent className="flex flex-col gap-2 text-sm">
               <Row label="Honorarium" value={euro(honorarium, klant?.valuta ?? "EUR")} />
-              <Row label="Kosten van derden" value={euro(externeKosten, klant?.valuta ?? "EUR")} />
-              <Row label="Korting" value={`- ${euro(kortingBerekend, klant?.valuta ?? "EUR")}`} />
+              {uitsplitsen && (
+                <>
+                  <Row label="Kosten van derden" value={euro(externeKosten, klant?.valuta ?? "EUR")} />
+                  <Row label="Korting" value={`- ${euro(kortingBerekend, klant?.valuta ?? "EUR")}`} />
+                </>
+              )}
               <div className="my-1 border-t border-border" />
               <Row label="Regelbedrag" value={euro(regelbedrag, klant?.valuta ?? "EUR")} bold />
               <Row

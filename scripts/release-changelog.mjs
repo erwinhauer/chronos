@@ -139,9 +139,24 @@ const RELEASE_1_4_0 = {
   gebruikersactie: null,
 };
 
+const RELEASE_1_5_0 = {
+  versienummer: "1.5.0",
+  releasedatum: "2026-11-01",
+  titel: "Nieuw factuuritem: kosten derden en korting alleen als je ze nodig hebt",
+  nieuwe_functies: [
+    "Nieuw factuuritem: met de schakelaar Kosten derden/korting uitsplitsen toon je de velden voor kosten van derden en korting alleen wanneer je ze nodig hebt",
+  ],
+  wijzigingen: [
+    "Nieuw factuuritem: de velden voor kosten van derden en korting zijn standaard verborgen. Bij een bestaand item met kosten of korting staat de schakelaar automatisch aan",
+  ],
+  bugfixes: [],
+  bekende_beperkingen: [],
+  gebruikersactie: null,
+};
+
 // Oudste eerst; de nieuwste release hoort onderaan. package.json "version" moet gelijk zijn
 // aan de laatste (zie de controle hieronder).
-const CHANGELOG_ENTRIES = [RELEASE_1_0_0, RELEASE_1_1_0, RELEASE_1_2_0, RELEASE_1_3_0, RELEASE_1_4_0];
+const CHANGELOG_ENTRIES = [RELEASE_1_0_0, RELEASE_1_1_0, RELEASE_1_2_0, RELEASE_1_3_0, RELEASE_1_4_0, RELEASE_1_5_0];
 
 // Het versienummer in package.json en de nieuwste changelog-entry horen gelijk te lopen.
 {

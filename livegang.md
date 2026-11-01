@@ -807,6 +807,14 @@ icoon in de tabs weg zodat de titels passen. Geen migraties. Lokaal getest als b
 wisselen, periode kiezen binnen Periode, verversen en mobiel (375 px). Op verzoek gepromoot
 naar `main`/LIVE op 2026-11-01. `main` en `beta` staan weer gelijk.
 
+Daarna, op verzoek, een optimalisatie van Nieuw factuuritem (2026-11-01): de velden Kosten van
+derden en Korting staan niet meer altijd in beeld maar achter de schakelaar "Kosten
+derden/korting uitsplitsen" (`factuuritem-form.tsx`, `Switch`). Standaard uit; bij een
+bestaand item met kosten of korting staat hij bij het openen aan. Uitzetten zet kosten en
+korting terug op 0, zodat er geen verborgen bedrag meegaat, en de regels Kosten van derden en
+Korting verdwijnen uit "Overzicht regel". Versie 1.5.0. Geen migraties. Lokaal getest: standaard
+verborgen, aan toont beide velden, uit reset de waarden naar 0. Nog niet naar `beta`/`main`.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de
