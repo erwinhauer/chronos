@@ -205,11 +205,11 @@ export default function HandleidingPage() {
           <SectieKop label="Stap 2" titel="Het dashboard" />
           <p className="text-sm text-muted-foreground">Toont, afhankelijk van je rol:</p>
           <ul className="flex flex-col gap-1 text-sm text-muted-foreground">
-            <li>— bovenin het blok &quot;Lopend jaar&quot;: wat dit jaar is gefactureerd, het onderhanden werk en de voortgang t.o.v. het jaartarget,</li>
-            <li>— daaronder het blok &quot;Periode&quot;: omzet, onderhanden werk en DWO voor de periode die je kiest, uitgesplitst per teamlid, klant, productgroep en land.</li>
+            <li>— bovenin het blok &quot;Lopend jaar&quot;: wat dit jaar is gefactureerd, het onderhanden werk en de voortgang t.o.v. het jaartarget, met per team een uitklapblok met de KPI&apos;s van je teamleden,</li>
+            <li>— daaronder het blok &quot;Periode&quot;: omzet en DWO voor de periode die je kiest (standaard deze maand), uitgesplitst per teamlid, klant, productgroep en land.</li>
           </ul>
           <p className="text-xs text-muted-foreground">
-            Het blok &quot;Lopend jaar&quot; staat vast. Alleen het blok &quot;Periode&quot; verandert als je rechtsboven in dat blok een
+            Onderhanden werk is al het werk dat nog niet is gefactureerd, ook uit eerdere periodes, en verandert dus niet met de periodekeuze. Het blok &quot;Lopend jaar&quot; staat vast. Alleen het blok &quot;Periode&quot; verandert als je rechtsboven in dat blok een
             andere periode kiest (deze maand, dit kwartaal, laatste 3 maanden, dit jaar of een andere). Dit scherm is
             puur informatief — je registreert hier niets.
           </p>

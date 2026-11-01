@@ -40,7 +40,7 @@ const PERIODE_LABELS: Record<string, string> = {
 };
 
 // Standaardperiode van het "Periode"-blok op het dashboard (los van het vaste "Lopend jaar"-blok).
-export const STANDAARD_DASHBOARD_PERIODE: Periode = { type: "rolling3m" };
+export const STANDAARD_DASHBOARD_PERIODE: Periode = { type: "mtd" };
 
 export function periodeKey(periode: Periode): string {
   if (periode.type === "ytd") return "ytd";

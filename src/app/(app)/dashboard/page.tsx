@@ -10,6 +10,7 @@ import { dwoKleurToken } from "@/lib/dwo-kleur";
 import { cn } from "@/lib/utils";
 import { OmzetGrafiek, type OmzetRij } from "@/components/omzet-grafiek";
 import { PeriodeKeuze } from "@/components/periode-keuze";
+import { TeamledenAccordeon } from "@/components/teamleden-accordeon";
 import { JaarSelect } from "@/components/jaar-select";
 import type { TeamlidKpi } from "@/components/teamlid-kpi-tegel";
 import { TeamlidKaart } from "@/components/teamlid-kaart";
@@ -269,31 +270,15 @@ export default async function DashboardPage({
   // de medewerker — anders telt een item van iemand in meerdere teams dubbel
   // mee (eens bij elk van zijn teams). Zelfde reden waarom team_id destijds
   // aan factuuritems is toegevoegd (zie de kolomcomment op die tabel).
-  const ohwRows = rows.filter((r) => isNogTeFactureren(r.status, r.declarabel) && inPeriode(r.datum, periode, gekozenJaar));
-  const ohwTotaalGroep = ohwRows.reduce((sum, r) => sum + regelbedrag(r), 0);
-  // Losstaand van hierboven: de kale KPI-tegel "Onderhanden werk" (helemaal
-  // boven de pagina, vóór de periode-selector, naast de al-onbeperkte
-  // "Gefactureerd dit jaar (YTD)") hoort — net als bij Factuuritems > "Totaal
-  // openstaand" — al het nog niet gefactureerde werk te tonen, hoe oud ook.
-  // ohwTotaalGroep hierboven is bewust WEL periode-gefilterd (voor de sectie
-  // "Onderhanden werk · {periode}" met de per-team-uitsplitsing eronder) —
-  // die twee mogen niet dezelfde variabele delen, anders verschuift de kale
-  // KPI-tegel mee met de periode-select terwijl hij daar niet naast staat.
-  const ohwRowsOnbeperkt = rows.filter((r) => isNogTeFactureren(r.status, r.declarabel));
-  const ohwTotaalOnbeperkt = ohwRowsOnbeperkt.reduce((sum, r) => sum + regelbedrag(r), 0);
+  // Onderhanden werk is ALLE declarabele, nog niet gefactureerde werk, hoe oud ook: een
+  // periodekeuze (bv. november) laat dus ook werk uit eerdere periodes zien. Daarom één set,
+  // zowel voor het vaste "Lopend jaar"-blok als voor het "Periode"-blok.
+  const ohwRows = rows.filter((r) => isNogTeFactureren(r.status, r.declarabel));
+  const ohwTotaal = ohwRows.reduce((sum, r) => sum + regelbedrag(r), 0);
   const ohwPerTeam = (teamsBasis ?? []).map((team) => {
     const bedrag = ohwRows.filter((r) => r.team_id === team.id).reduce((sum, r) => sum + regelbedrag(r), 0);
     return { teamId: team.id, teamNaam: team.naam, bedrag };
   });
-  // Onbeperkte (niet periode-gefilterde) OHW per team — voedt Sectie 1's vaste
-  // "Onderhanden werk"-tegel op het Praktijkvoerder/Gebruiker-dashboard, zelfde
-  // gedachte als de bedrijfsbrede ohwTotaalOnbeperkt-tegel helemaal boven de pagina.
-  const ohwPerTeamOnbeperktId = new Map(
-    (teamsBasis ?? []).map((team) => [
-      team.id,
-      ohwRowsOnbeperkt.filter((r) => r.team_id === team.id).reduce((sum, r) => sum + regelbedrag(r), 0),
-    ])
-  );
   // Rijen zonder team_id (oude, niet-teruggevulde items) horen niet bij één
   // specifiek team — apart tonen i.p.v. laten verdwijnen uit de per-team-
   // optelling (alleen relevant voor de zietAlleTeams-weergave; directie/
@@ -369,7 +354,13 @@ export default async function DashboardPage({
       const dwoTeamPeriode = berekenDwo(dwoRegels.filter((r) => r.teamId === team.id));
 
       // Vast "Lopend jaar": onbeperkte OHW van dit team en de trend per teamlid per maand.
-      const ohwTeamOnbeperkt = ohwPerTeamOnbeperktId.get(team.id) ?? 0;
+      const teamlidKpiRijenJaar = berekenTeamlidKpiRijen(
+        ditJaar.filter((r) => r.team_id === team.id),
+        leden,
+        namenPerId,
+        teamleiderIds
+      );
+      const ohwTeamOnbeperkt = ohwPerTeam.find((t) => t.teamId === team.id)?.bedrag ?? 0;
       const { chartData, medewerkerNamen } = buildOmzetGrafiekData(
         ditJaar.filter((r) => r.team_id === team.id),
         namenPerId
@@ -382,6 +373,7 @@ export default async function DashboardPage({
         nettoDoel: d.netto_bedrag,
         gefactureerdDitJaar,
         ohwTeamOnbeperkt,
+        teamlidKpiRijenJaar,
         gefactureerdPeriode,
         ohwPeriode,
         ohwPerTeamlidPeriode,
@@ -468,9 +460,7 @@ export default async function DashboardPage({
       .filter((r) => r.bedrag > 0)
       .sort((a, b) => b.bedrag - a.bedrag);
   }
-  const nogTeFacturenTabel = berekenNogTeFacturenPerKlant(
-    rows.filter((r) => isNogTeFactureren(r.status, r.declarabel) && inPeriode(r.datum, periode, gekozenJaar))
-  );
+  const nogTeFacturenTabel = berekenNogTeFacturenPerKlant(ohwRows);
 
   // Omzet vs. target, bedrijfsbreed — alleen zinvol voor rollen die alle teams zien.
   // "ditJaar" is hier precies de juiste bron: bedrijfsbreed, gefactureerd, en al op het
@@ -537,6 +527,36 @@ export default async function DashboardPage({
     ? "1 januari t/m vandaag · staat vast en verandert niet met de periodekeuze hieronder"
     : `Kalenderjaar ${gekozenJaar} · staat vast en verandert niet met de periodekeuze hieronder`;
   const dwoZichtbaar = zietDwo || !zietAlleTeams;
+  // KPI-kaarten per teamlid over het hele jaar, voor het uitklapblok in "Lopend jaar".
+  function teamledenJaarKaarten(t: (typeof teamKaarten)[number]) {
+    const ohwPerNaam = new Map(t.ohwPerTeamlidPeriode.map((l) => [l.naam, l.bedrag]));
+    const totaal: TeamlidKpi = {
+      naam: `Totaal ${t.teamNaam}`,
+      isTeamleider: false,
+      urenAantal: t.teamlidKpiRijenJaar.reduce((sum, l) => sum + l.urenAantal, 0),
+      urenBedrag: t.teamlidKpiRijenJaar.reduce((sum, l) => sum + l.urenBedrag, 0),
+      nietUrenBedrag: t.teamlidKpiRijenJaar.reduce((sum, l) => sum + l.nietUrenBedrag, 0),
+    };
+    const teamTotaal = totaal.urenBedrag + totaal.nietUrenBedrag;
+    return t.teamlidKpiRijenJaar.length === 0 ? (
+      <p className="py-6 text-center text-sm text-muted-foreground">Dit team heeft nog geen teamleden.</p>
+    ) : (
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <TeamlidKaart isTotaal lid={totaal} ohw={t.ohwTeamOnbeperkt} teamTotaal={teamTotaal} />
+        {t.teamlidKpiRijenJaar.map((lid) => (
+          <TeamlidKaart key={lid.naam} lid={lid} ohw={ohwPerNaam.get(lid.naam) ?? 0} teamTotaal={teamTotaal} />
+        ))}
+      </div>
+    );
+  }
+  const teamledenAccordeonItems = (teams: typeof teamKaarten, eigenTitel?: string) =>
+    teams.map((t) => ({
+      id: t.teamId,
+      naam: eigenTitel ?? t.teamNaam,
+      aantalLeden: t.teamlidKpiRijenJaar.length,
+      totaalTekst: euro(t.gefactureerdDitJaar),
+      children: teamledenJaarKaarten(t),
+    }));
   const procentVanTarget = (omzet: number, doel: number) => (doel > 0 ? Math.round((omzet / doel) * 100) : null);
 
   // Aantal tegels bovenaan het periodeblok (voor de kolombreedte).
@@ -566,7 +586,7 @@ export default async function DashboardPage({
               <KpiTegel
                 variant="geel"
                 label="Onderhanden werk"
-                bedrag={ohwTotaalOnbeperkt}
+                bedrag={ohwTotaal}
                 sub="Nog te factureren · hele groep, alle periodes"
               />
               {zietBureaukosten && (
@@ -587,7 +607,7 @@ export default async function DashboardPage({
               label={`Target ${gekozenJaar} · bruto`}
               doel={targetBrutoJaar}
               gefactureerd={jaarBrutoOmzet}
-              ohw={ohwTotaalOnbeperkt}
+              ohw={ohwTotaal}
               deltaBedrag={deltaBrutoJaar}
               deltaPct={deltaBrutoJaarPct}
               maandTarget={maandTargetBruto}
@@ -619,6 +639,13 @@ export default async function DashboardPage({
                     );
                   })}
                 </div>
+              </div>
+            )}
+
+            {teamKaarten.length > 0 && (
+              <div className="flex flex-col gap-3">
+                <SectieKop label="Uitsplitsing" titel={`Per teamlid · ${gekozenJaar}`} />
+                <TeamledenAccordeon items={teamledenAccordeonItems(teamKaarten)} />
               </div>
             )}
 
@@ -732,6 +759,7 @@ export default async function DashboardPage({
                   maandTarget={t.brutoDoel / 12}
                   nettoTekst={t.nettoDoel !== null ? `Nettotarget ${euro(t.nettoDoel)}` : "Nettotarget nog niet ingesteld"}
                 />
+                <TeamledenAccordeon items={teamledenAccordeonItems([t], `Per teamlid · ${gekozenJaar}`)} />
               </div>
             ))}
           </div>
@@ -766,7 +794,7 @@ export default async function DashboardPage({
                   }
                 />
               )}
-              <KpiTegel variant="geel" label="Onderhanden werk" bedrag={ohwTotaalGroep} sub="Nog te factureren in deze periode" />
+              <KpiTegel variant="geel" label="Onderhanden werk" bedrag={ohwTotaal} sub="Al het werk dat nog niet is gefactureerd" />
               {zietDwo && (
                 <KpiTegel
                   variant={dwoTegelVariant(dwoTotaal)}
@@ -780,7 +808,7 @@ export default async function DashboardPage({
             </div>
 
             <div className="flex flex-col gap-3">
-              <SectieKop label="Onderhanden werk" titel={`Per team · ${periodeTekst}`} />
+              <SectieKop label="Onderhanden werk" titel="Per team · alle periodes" />
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 {ohwPerTeam.map((t) => (
                   <KpiTegel key={t.teamId} variant="wit" grootte="middel" className="min-h-[150px]" label={t.teamNaam} bedrag={t.bedrag} />
@@ -827,7 +855,7 @@ export default async function DashboardPage({
                   {!zietAlleTeams && (
                     <div className={cn("grid gap-4", dwoZichtbaar ? "lg:grid-cols-3" : "lg:grid-cols-2")}>
                       <KpiTegel variant="wit" label="Gefactureerd" bedrag={t.gefactureerdPeriode} sub={periodeTekst} />
-                      <KpiTegel variant="geel" label="Onderhanden werk" bedrag={t.ohwPeriode} sub="Nog te factureren in deze periode" />
+                      <KpiTegel variant="geel" label="Onderhanden werk" bedrag={t.ohwPeriode} sub="Al het werk dat nog niet is gefactureerd" />
                       {dwoZichtbaar && (
                         <KpiTegel
                           variant={dwoTegelVariant(t.dwoTeamPeriode)}
