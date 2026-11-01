@@ -1,29 +1,23 @@
-import { Euro, TrendingUp, TrendingDown, Clock, Briefcase, Receipt, Hourglass } from "lucide-react";
+import { TrendingUp, TrendingDown, ChevronsDown } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { euro, isGefactureerd, isNogTeFactureren, regelbedrag, nettoOmzetPlaceholder } from "@/lib/factuurbedragen";
-import { parsePeriodeKey, periodeLabel, inPeriode, DWO_PERIODES } from "@/lib/omzet-periode";
+import { parsePeriodeKey, periodeLabel, inPeriode, STANDAARD_DASHBOARD_PERIODE } from "@/lib/omzet-periode";
 import { codeVoorDienstLabel, PRODUCTGROEP_CODES } from "@/lib/dossiernummer";
 import { haalLandenMap, type LandenMap } from "@/lib/landen";
-import {
-  eersteDienst,
-  groepeerPerProductgroep,
-  groepeerPerLand,
-  groepeerPerProductgroepEnLand,
-} from "@/lib/omzet-aggregatie";
+import { eersteDienst, groepeerPerProductgroep, groepeerPerLand, groepeerPerProductgroepEnLand } from "@/lib/omzet-aggregatie";
 import { dwoKleurToken } from "@/lib/dwo-kleur";
+import { cn } from "@/lib/utils";
 import { OmzetGrafiek, type OmzetRij } from "@/components/omzet-grafiek";
-import { PeriodeSelect } from "@/components/periode-select";
+import { PeriodeKeuze } from "@/components/periode-keuze";
 import { JaarSelect } from "@/components/jaar-select";
-import { MedewerkerPeriodeSelect } from "@/components/medewerker-periode-select";
-import { TabelPeriodeSelect } from "@/components/tabel-periode-select";
-import { MaandomzetDonut } from "@/components/maandomzet-donut";
-import { TeamlidKpiTegel, type TeamlidKpi } from "@/components/teamlid-kpi-tegel";
-import { HeroTile } from "@/components/hero-tile";
+import type { TeamlidKpi } from "@/components/teamlid-kpi-tegel";
+import { TeamlidKaart } from "@/components/teamlid-kaart";
+import { KpiTegel } from "@/components/kpi-tegel";
+import { DashboardSectie, SectieKop } from "@/components/dashboard-sectie";
 import { DashboardHero } from "@/components/dashboard-hero";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SegmentedProgress } from "@/components/segmented-progress";
-import { StatIcon } from "@/components/stat-icon";
 import { AvatarInitials } from "@/components/ui/avatar-initials";
 import { CountryFlag } from "@/components/ui/country-flag";
 import { DienstIcon } from "@/components/ui/dienst-icon";
@@ -38,22 +32,6 @@ const MAX_SERIES = 5;
 function firstName(fullName: string) {
   return fullName.split(" ")[0];
 }
-
-// DWO als "12,4 dagen" — null (geen omzet in de gekozen periode, dus geen
-// zinnig factuurtempo om tegen af te zetten) toont een streepje i.p.v. NaN/Infinity.
-function formatDagen(dagen: number | null): string {
-  if (dagen === null) return "—";
-  return `${new Intl.NumberFormat("nl-NL", { maximumFractionDigits: 1, minimumFractionDigits: 1 }).format(dagen)} dagen`;
-}
-
-// Tailwind kan geen samengestelde class-naam (`text-${token}`) JIT-compileren —
-// daarom een statische lookup i.p.v. de token rechtstreeks in een template te plakken.
-const DWO_TEKST_KLEUR: Record<ReturnType<typeof dwoKleurToken>, string> = {
-  success: "text-success",
-  warning: "text-warning",
-  destructive: "text-destructive",
-  primary: "text-muted-foreground",
-};
 
 type FactuurRegel = {
   medewerker_id: string;
@@ -199,35 +177,13 @@ export default async function DashboardPage({
   searchParams: Promise<{
     periode?: string;
     jaar?: string;
-    medewerkerPeriode?: string;
-    klantPeriode?: string;
-    productgroepPeriode?: string;
-    landPeriode?: string;
-    sectie2Periode?: string;
-    dwoPeriode?: string;
   }>;
 }) {
-  const {
-    periode: periodeParam,
-    jaar: jaarParam,
-    medewerkerPeriode: medewerkerPeriodeParam,
-    klantPeriode: klantPeriodeParam,
-    productgroepPeriode: productgroepPeriodeParam,
-    landPeriode: landPeriodeParam,
-    sectie2Periode: sectie2PeriodeParam,
-    dwoPeriode: dwoPeriodeParam,
-  } = await searchParams;
-  const periode = parsePeriodeKey(periodeParam);
-  const medewerkerPeriode = parsePeriodeKey(medewerkerPeriodeParam, { type: "mtd" });
-  const klantPeriode = parsePeriodeKey(klantPeriodeParam);
-  const productgroepPeriode = parsePeriodeKey(productgroepPeriodeParam);
-  const landPeriode = parsePeriodeKey(landPeriodeParam);
-  // Sectie 2 (Praktijkvoerder/Gebruiker-dashboard) heeft één periodeselector die alles
-  // in die sectie stuurt — Gefactureerd/OHW-tegels, teamlid-tegels, beide "nog te
-  // factureren"-tabellen, productgroep/land(/kruistabel) en DWO — in plaats van de
-  // vroegere, verspreide losse selectors per tabel.
-  const sectie2Periode = parsePeriodeKey(sectie2PeriodeParam);
-  const dwoPeriode = parsePeriodeKey(dwoPeriodeParam, { type: "rolling3m" });
+  const { periode: periodeParam, jaar: jaarParam } = await searchParams;
+  // Het dashboard heeft twee blokken: "Lopend jaar" (vast, het gekozen kalenderjaar) en
+  // "Periode" (alles daarin volgt deze ene periodekeuze: tegels, uitsplitsing per teamlid,
+  // lijsten per klant/productgroep/land en DWO).
+  const periode = parsePeriodeKey(periodeParam, STANDAARD_DASHBOARD_PERIODE);
   const echtHuidigJaar = new Date().getFullYear();
   const gekozenJaar = jaarParam && /^\d{4}$/.test(jaarParam) ? Number(jaarParam) : echtHuidigJaar;
 
@@ -264,9 +220,6 @@ export default async function DashboardPage({
   const rows = (items ?? []) as unknown as FactuurRegel[];
 
   const ditJaar = rows.filter((r) => isGefactureerd(r.status) && new Date(r.datum).getFullYear() === gekozenJaar);
-  // Vast MTD-venster (los van de globale periode-select) — voedt de "Maandomzet
-  // vs. target"-donut in de Finance/Beheerder/Directie-weergave van de Teams-tab.
-  const ditJaarMtd = ditJaar.filter((r) => inPeriode(r.datum, { type: "mtd" }, gekozenJaar));
   // Periode-gefilterd (voor de omzet-uitsplitsingen en de stat-tegels) — los van
   // "ditJaar", dat altijd het volledige gekozen jaar blijft voor de on-target-berekening.
   const inGekozenPeriode = ditJaar.filter((r) => inPeriode(r.datum, periode, gekozenJaar));
@@ -283,6 +236,12 @@ export default async function DashboardPage({
   // "gefactureerd" hierboven).
   const bureaukostenTotaal = (batches ?? [])
     .filter((b) => inPeriode(b.periode_eind, periode, gekozenJaar))
+    .reduce((sum, b) => sum + b.totaal_kantoorkosten, 0);
+
+  // Bureaukosten over het hele gekozen kalenderjaar (vaste "Lopend jaar"-tegel), los van
+  // de periodekeuze hierboven.
+  const bureaukostenJaar = (batches ?? [])
+    .filter((b) => new Date(b.periode_eind).getFullYear() === gekozenJaar)
     .reduce((sum, b) => sum + b.totaal_kantoorkosten, 0);
 
   const namenPerId = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
@@ -326,7 +285,6 @@ export default async function DashboardPage({
     const bedrag = ohwRows.filter((r) => r.team_id === team.id).reduce((sum, r) => sum + regelbedrag(r), 0);
     return { teamId: team.id, teamNaam: team.naam, bedrag };
   });
-  const ohwPerTeamId = new Map(ohwPerTeam.map((t) => [t.teamId, t.bedrag]));
   // Onbeperkte (niet periode-gefilterde) OHW per team — voedt Sectie 1's vaste
   // "Onderhanden werk"-tegel op het Praktijkvoerder/Gebruiker-dashboard, zelfde
   // gedachte als de bedrijfsbrede ohwTotaalOnbeperkt-tegel helemaal boven de pagina.
@@ -358,11 +316,7 @@ export default async function DashboardPage({
   // gemaakt"), niet op de datum van het item zelf.
   const zietDwo = profile?.role === "directie" || profile?.role === "beheerder";
   const goedgekeurdOpPerBatch = new Map((batches ?? []).map((b) => [b.id, b.goedgekeurd_op]));
-  // Losgetrokken van "dwoPeriode" (de bedrijfsbrede, directie/beheerder-only DWO-
-  // sectie hieronder) zodat Sectie 2 op het Praktijkvoerder/Gebruiker-dashboard zijn
-  // eigen periodeselector (sectie2Periode) kan gebruiken zonder die andere sectie
-  // te beïnvloeden.
-  function berekenDwoRegels(dwoPeriodeArg: typeof dwoPeriode) {
+  function berekenDwoRegels(dwoPeriodeArg: typeof periode) {
     return rows.flatMap((r) => {
       const goedgekeurdOp = r.facturatiebatch_id ? goedgekeurdOpPerBatch.get(r.facturatiebatch_id) : undefined;
       if (!goedgekeurdOp || !inPeriode(goedgekeurdOp, dwoPeriodeArg, gekozenJaar)) return [];
@@ -374,21 +328,14 @@ export default async function DashboardPage({
       return [{ teamId: r.team_id, dagen, bedrag: regelbedrag(r) }];
     });
   }
-  const dwoRegels = berekenDwoRegels(dwoPeriode);
-  const dwoRegelsSectie2 = berekenDwoRegels(sectie2Periode);
+  // DWO volgt de gekozen periode van het "Periode"-blok.
+  const dwoRegels = berekenDwoRegels(periode);
   function berekenDwo(regels: ReturnType<typeof berekenDwoRegels>): number | null {
     const totaalBedrag = regels.reduce((sum, r) => sum + r.bedrag, 0);
     if (totaalBedrag <= 0) return null;
     const gewogenDagen = regels.reduce((sum, r) => sum + r.dagen * r.bedrag, 0);
     return gewogenDagen / totaalBedrag;
   }
-  const dwoPerTeam = (teamsBasis ?? []).map((team) => ({
-    teamId: team.id,
-    teamNaam: team.naam,
-    dwo: berekenDwo(dwoRegels.filter((r) => r.teamId === team.id)),
-  }));
-  const dwoGeenTeamRegels = dwoRegels.filter((r) => r.teamId === null);
-  const dwoGeenTeam = dwoGeenTeamRegels.length > 0 ? berekenDwo(dwoGeenTeamRegels) : null;
   const dwoTotaal = berekenDwo(dwoRegels);
 
   const teamKaarten = (teamdoelen ?? [])
@@ -406,68 +353,27 @@ export default async function DashboardPage({
         .filter((r) => r.team_id === team.id)
         .reduce((sum, r) => sum + regelbedrag(r), 0);
 
+      // Alles hieronder volgt de ene gekozen periode (het "Periode"-blok), behalve
+      // gefactureerdDitJaar/ohwTeamOnbeperkt/trend: die horen bij het vaste "Lopend jaar".
       const teamItemsInPeriode = inGekozenPeriode.filter((r) => r.team_id === team.id);
-      const teamItemsUrenInPeriode = teamItemsInPeriode.filter((r) => r.prijstype === "uren");
-      const teamItemsStuksInPeriode = teamItemsInPeriode.filter((r) => r.prijstype === "vast_honorarium");
-      const brutoOmzetTeam = teamItemsInPeriode.reduce((sum, r) => sum + regelbedrag(r), 0);
-      const urenOmzetTeam = teamItemsUrenInPeriode.reduce((sum, r) => sum + regelbedrag(r), 0);
-
-      const perTeamlid = new Map<string, { naam: string; bruto: number; uren: number; stuks: number }>();
-      for (const lidId of leden) {
-        perTeamlid.set(lidId, { naam: namenPerId.get(lidId) ?? "Onbekend", bruto: 0, uren: 0, stuks: 0 });
-      }
-      for (const r of teamItemsInPeriode) {
-        const rij = perTeamlid.get(r.medewerker_id);
-        if (rij) rij.bruto += regelbedrag(r);
-      }
-      for (const r of teamItemsUrenInPeriode) {
-        const rij = perTeamlid.get(r.medewerker_id);
-        if (rij) rij.uren += regelbedrag(r);
-      }
-      for (const r of teamItemsStuksInPeriode) {
-        const rij = perTeamlid.get(r.medewerker_id);
-        if (rij) rij.stuks += regelbedrag(r);
-      }
-      const teamlidRijen = Array.from(perTeamlid.values()).sort((a, b) => b.bruto - a.bruto);
-
+      const gefactureerdPeriode = teamItemsInPeriode.reduce((sum, r) => sum + regelbedrag(r), 0);
+      const teamlidKpiRijen = berekenTeamlidKpiRijen(teamItemsInPeriode, leden, namenPerId, teamleiderIds);
+      const ohwRowsTeamPeriode = ohwRows.filter((r) => r.team_id === team.id);
+      const ohwPeriode = ohwRowsTeamPeriode.reduce((sum, r) => sum + regelbedrag(r), 0);
+      const ohwPerTeamlidPeriode = berekenOhwPerTeamlid(ohwRowsTeamPeriode, leden, namenPerId, teamleiderIds);
+      const nogTeFacturenPerKlantPeriode = berekenNogTeFacturenPerKlant(ohwRowsTeamPeriode);
       const topKlanten = berekenTopKlanten(teamItemsInPeriode, landenMap, 20);
-      const perProductgroep = groepeerPerProductgroep(teamItemsInPeriode);
-      const perLandRegio = groepeerPerLand(teamItemsInPeriode, landenMap, 20);
+      const perProductgroepPeriode = groepeerPerProductgroep(teamItemsInPeriode);
+      const perLandRegioPeriode = groepeerPerLand(teamItemsInPeriode, landenMap, 20);
+      const perProductgroepEnLandPeriode = groepeerPerProductgroepEnLand(teamItemsInPeriode, landenMap, 6);
+      const dwoTeamPeriode = berekenDwo(dwoRegels.filter((r) => r.teamId === team.id));
 
-      const teamLeden = ditJaar.filter((r) => r.team_id === team.id);
-      const { chartData, medewerkerNamen } = buildOmzetGrafiekData(teamLeden, namenPerId);
-
-      // MTD vs. maandtarget — alleen nog gebruikt door de Finance/Beheerder/Directie-
-      // weergave hieronder (de Praktijkvoerder/Gebruiker-weergave toont YTD, zie Sectie 1).
-      const gefactureerdMtd = ditJaarMtd
-        .filter((r) => r.team_id === team.id)
-        .reduce((sum, r) => sum + regelbedrag(r), 0);
-      const maandTargetBruto = d.bruto_bedrag / 12;
-
-      // Sectie 1 (vast, YTD) op het Praktijkvoerder/Gebruiker-dashboard: onbeperkte
-      // (niet periode-gefilterde) OHW voor dit team, naast het al bestaande
-      // gefactureerdDitJaar/brutoDoel hierboven.
+      // Vast "Lopend jaar": onbeperkte OHW van dit team en de trend per teamlid per maand.
       const ohwTeamOnbeperkt = ohwPerTeamOnbeperktId.get(team.id) ?? 0;
-
-      // Sectie 2 (filterbaar, één gedeelde periodeselector: sectie2Periode) — alle
-      // onderdelen hieronder gebruiken bewust dezelfde periode, in plaats van elk
-      // hun eigen losse selector zoals voorheen.
-      const teamItemsSectie2 = ditJaar.filter(
-        (r) => r.team_id === team.id && inPeriode(r.datum, sectie2Periode, gekozenJaar)
+      const { chartData, medewerkerNamen } = buildOmzetGrafiekData(
+        ditJaar.filter((r) => r.team_id === team.id),
+        namenPerId
       );
-      const gefactureerdSectie2 = teamItemsSectie2.reduce((sum, r) => sum + regelbedrag(r), 0);
-      const teamlidKpiRijen = berekenTeamlidKpiRijen(teamItemsSectie2, leden, namenPerId, teamleiderIds);
-      const ohwRowsTeamSectie2 = rows.filter(
-        (r) =>
-          r.team_id === team.id && isNogTeFactureren(r.status, r.declarabel) && inPeriode(r.datum, sectie2Periode, gekozenJaar)
-      );
-      const ohwSectie2 = ohwRowsTeamSectie2.reduce((sum, r) => sum + regelbedrag(r), 0);
-      const ohwPerTeamlidSectie2 = berekenOhwPerTeamlid(ohwRowsTeamSectie2, leden, namenPerId, teamleiderIds);
-      const nogTeFacturenPerKlantSectie2 = berekenNogTeFacturenPerKlant(ohwRowsTeamSectie2);
-      const perProductgroepSectie2 = groepeerPerProductgroep(teamItemsSectie2);
-      const perLandRegioSectie2 = groepeerPerLand(teamItemsSectie2, landenMap, 20);
-      const perProductgroepEnLandSectie2 = groepeerPerProductgroepEnLand(teamItemsSectie2, landenMap, 6);
-      const dwoTeamSectie2 = berekenDwo(dwoRegelsSectie2.filter((r) => r.teamId === team.id));
 
       return {
         teamId: team.id,
@@ -475,25 +381,17 @@ export default async function DashboardPage({
         brutoDoel: d.bruto_bedrag,
         nettoDoel: d.netto_bedrag,
         gefactureerdDitJaar,
-        gefactureerdMtd,
-        maandTargetBruto,
         ohwTeamOnbeperkt,
-        gefactureerdSectie2,
-        ohwSectie2,
-        ohwPerTeamlidSectie2,
-        nogTeFacturenPerKlantSectie2,
+        gefactureerdPeriode,
+        ohwPeriode,
+        ohwPerTeamlidPeriode,
+        nogTeFacturenPerKlantPeriode,
         teamlidKpiRijen,
-        perProductgroepSectie2,
-        perLandRegioSectie2,
-        perProductgroepEnLandSectie2,
-        dwoTeamSectie2,
-        nogTeFactureren: ohwPerTeamId.get(team.id) ?? 0,
-        brutoOmzetTeam,
-        urenOmzetTeam,
-        teamlidRijen,
         topKlanten,
-        perProductgroep,
-        perLandRegio,
+        perProductgroepPeriode,
+        perLandRegioPeriode,
+        perProductgroepEnLandPeriode,
+        dwoTeamPeriode,
         chartData,
         medewerkerNamen,
       };
@@ -525,43 +423,12 @@ export default async function DashboardPage({
   }
   const nietInTeamRijen = Array.from(nietInTeamMap.values()).sort((a, b) => b.bruto - a.bruto);
 
-  // Omzet per medewerker, over alle teams heen — alleen zinvol voor rollen die
-  // meer dan hun eigen team zien; anders is dit hetzelfde als de teamkaart. Deze
-  // tabel heeft een eigen periode-filter (standaard MTD), los van de periode-select
-  // hierboven die de rest van de pagina stuurt.
-  const inMedewerkerPeriode = ditJaar.filter((r) => inPeriode(r.datum, medewerkerPeriode, gekozenJaar));
-  const inMedewerkerPeriodeUren = inMedewerkerPeriode.filter((r) => r.prijstype === "uren");
-  const inMedewerkerPeriodeStuks = inMedewerkerPeriode.filter((r) => r.prijstype === "vast_honorarium");
-  const omzetPerMedewerkerMap = new Map<string, { naam: string; bruto: number; uren: number; stuks: number }>();
-  for (const r of inMedewerkerPeriode) {
-    const naam = namenPerId.get(r.medewerker_id) ?? "Onbekend";
-    const bestaand = omzetPerMedewerkerMap.get(r.medewerker_id) ?? { naam, bruto: 0, uren: 0, stuks: 0 };
-    bestaand.bruto += regelbedrag(r);
-    omzetPerMedewerkerMap.set(r.medewerker_id, bestaand);
-  }
-  for (const r of inMedewerkerPeriodeUren) {
-    const rij = omzetPerMedewerkerMap.get(r.medewerker_id);
-    if (rij) rij.uren += regelbedrag(r);
-  }
-  for (const r of inMedewerkerPeriodeStuks) {
-    const rij = omzetPerMedewerkerMap.get(r.medewerker_id);
-    if (rij) rij.stuks += regelbedrag(r);
-  }
-  const omzetPerMedewerker = Array.from(omzetPerMedewerkerMap.values()).sort((a, b) => b.bruto - a.bruto);
-
-  // Rij 3: "Omzet per klant/productgroep/land" hebben elk hun eigen,
-  // onafhankelijke periodeselector (TabelPeriodeSelect) i.p.v. de globale
-  // periode-select hierboven.
-  const inKlantPeriode = ditJaar.filter((r) => inPeriode(r.datum, klantPeriode, gekozenJaar));
-  const inProductgroepPeriode = ditJaar.filter((r) => inPeriode(r.datum, productgroepPeriode, gekozenJaar));
-  const inLandPeriode = ditJaar.filter((r) => inPeriode(r.datum, landPeriode, gekozenJaar));
-
   // Omzet per productgroep — op basis van de dossiernummer-afgeleide dienst van
   // het eerste dossier op het item (bij meerdere dossiers op één regel is dat
   // de conventie die de rest van de app ook al aanhoudt bij weergave). Geordend
   // op de acht productgroepcodes (TM/D/I/O/CA/S/W/@) die de rapportage vast wil.
   const perDienst = new Map<string, { code: string; aantal: number; omzet: number; uren: number }>();
-  for (const r of inProductgroepPeriode) {
+  for (const r of inGekozenPeriode) {
     const dienst = eersteDienst(r);
     const code = dienst === "Onbekend" ? "—" : codeVoorDienstLabel(dienst);
     const bestaand = perDienst.get(dienst) ?? { code, aantal: 0, omzet: 0, uren: 0 };
@@ -580,11 +447,11 @@ export default async function DashboardPage({
 
   // Omzet per land/regio — zelfde bron en aanpak als "Omzet per productgroep",
   // maar gegroepeerd op de dossiernummer-afgeleide land-ISO van het eerste dossier.
-  const landenTabel = groepeerPerLand(inLandPeriode, landenMap, 20);
+  const landenTabel = groepeerPerLand(inGekozenPeriode, landenMap, 20);
 
   // Omzet per klant, bedrijfsbreed/team- of persoonsgebonden (via RLS al op de
   // juiste rol-scope beperkt) — met per-klant uitsplitsing voor de uitklaprijen.
-  const topKlantenHeleGroep = berekenTopKlanten(inKlantPeriode, landenMap, 20);
+  const topKlantenHeleGroep = berekenTopKlanten(inGekozenPeriode, landenMap, 20);
 
   // Nog te factureren per klant — herbruikbaar, zowel bedrijfsbreed (hieronder,
   // globale periode) als per team op Sectie 2 van het Praktijkvoerder/Gebruiker-
@@ -664,816 +531,680 @@ export default async function DashboardPage({
     nettoVs: verschilEnProcent(extrapolatieNetto, targetNettoJaar),
   };
 
+  const periodeTekst = periodeLabel(periode);
+  const jaarTitel = isLopendJaar ? `${gekozenJaar} tot nu toe` : `Heel ${gekozenJaar}`;
+  const jaarHint = isLopendJaar
+    ? "1 januari t/m vandaag · staat vast en verandert niet met de periodekeuze hieronder"
+    : `Kalenderjaar ${gekozenJaar} · staat vast en verandert niet met de periodekeuze hieronder`;
+  const dwoZichtbaar = zietDwo || !zietAlleTeams;
+  const procentVanTarget = (omzet: number, doel: number) => (doel > 0 ? Math.round((omzet / doel) * 100) : null);
+
+  // Aantal tegels bovenaan het periodeblok (voor de kolombreedte).
+  const groepTegels = 2 + (zietBureaukosten ? 1 : 0) + (zietDwo ? 1 : 0);
+  const groepKolommen = groepTegels >= 4 ? "xl:grid-cols-4" : groepTegels === 3 ? "xl:grid-cols-3" : "xl:grid-cols-2";
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-7">
       <DashboardHero voornaam={profile ? firstName(profile.full_name) : ""} />
 
-      {/* Hero-rij 1/2, periode/jaar-select en de bedrijfsbrede OHW-uitsplitsing zijn
-          voor Praktijkvoerder/Gebruiker vervangen door Sectie 1/2 op de teamkaart
-          hieronder — voor Finance/Beheerder/Directie (zietAlleTeams) ongewijzigd. */}
-      {zietAlleTeams && (
-        <>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <HeroTile label={`Gefactureerd dit jaar (YTD)`} value={euro(jaarBrutoOmzet)} icon={Euro} />
-            <HeroTile label="Onderhanden werk" value={euro(ohwTotaalOnbeperkt)} icon={Briefcase} variant="geel" />
-          </div>
-
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <span className="text-sm text-muted-foreground">Periode:</span>
-            <PeriodeSelect />
-            <JaarSelect huidigJaar={gekozenJaar} />
-          </div>
-
-          {zietBureaukosten ? (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <HeroTile label={`Gefactureerd · ${periodeLabel(periode)}`} value={euro(gefactureerd)} icon={Euro} />
-              <HeroTile
-                label={`Bureaukosten · ${periodeLabel(periode)}`}
-                value={euro(bureaukostenTotaal)}
-                icon={Receipt}
-                variant="wit"
+      {/* ───────────────────────── Lopend jaar (vast) ───────────────────────── */}
+      <DashboardSectie
+        soort="jaar"
+        titel={jaarTitel}
+        hint={jaarHint}
+        rechts={zietAlleTeams ? <JaarSelect huidigJaar={gekozenJaar} /> : undefined}
+      >
+        {zietAlleTeams ? (
+          <>
+            <div className={cn("grid gap-4", zietBureaukosten ? "lg:grid-cols-3" : "lg:grid-cols-2")}>
+              <KpiTegel
+                variant="navy"
+                label={`Gefactureerd ${gekozenJaar}`}
+                bedrag={jaarBrutoOmzet}
+                sub={`Netto (placeholder 67%): ${euro(jaarNettoOmzet)}`}
               />
-            </div>
-          ) : (
-            <HeroTile label={`Gefactureerd · ${periodeLabel(periode)}`} value={euro(gefactureerd)} icon={Euro} />
-          )}
-
-          <div className="flex flex-col gap-3">
-            <h3 className="text-2xl font-light tracking-tight">Onderhanden werk · {periodeLabel(periode)}</h3>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {ohwPerTeam.map((t) => (
-                <Card key={t.teamId} className="rounded-2xl">
-                  <CardContent className="flex items-center gap-4">
-                    <StatIcon icon={Briefcase} tint="warning" className="h-11 w-11" />
-                    <div>
-                      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{t.teamNaam}</p>
-                      <div className="text-xl font-semibold tabular-figures text-warning">{euro(t.bedrag)}</div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-              {ohwGeenTeamRowsAlle.length > 0 && (
-                <Card className="rounded-2xl">
-                  <CardContent className="flex items-center gap-4">
-                    <StatIcon icon={Briefcase} tint="warning" className="h-11 w-11" />
-                    <div>
-                      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Geen team</p>
-                      <div className="text-xl font-semibold tabular-figures text-warning">{euro(ohwGeenTeamAlle)}</div>
-                    </div>
-                  </CardContent>
-                </Card>
+              <KpiTegel
+                variant="geel"
+                label="Onderhanden werk"
+                bedrag={ohwTotaalOnbeperkt}
+                sub="Nog te factureren · hele groep, alle periodes"
+              />
+              {zietBureaukosten && (
+                <KpiTegel
+                  variant="wit"
+                  label={`Bureaukosten ${gekozenJaar}`}
+                  bedrag={bureaukostenJaar}
+                  sub={
+                    jaarBrutoOmzet > 0
+                      ? `${((bureaukostenJaar / jaarBrutoOmzet) * 100).toFixed(1).replace(".", ",")}% van gefactureerd`
+                      : undefined
+                  }
+                />
               )}
-              <HeroTile label="Onderhanden werk · Groep" value={euro(ohwTotaalGroep)} icon={Briefcase} />
             </div>
-          </div>
-        </>
-      )}
 
-      {zietDwo && (
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-2xl font-light tracking-tight">
-              DWO (Days Work Outstanding) · {periodeLabel(dwoPeriode)}
-            </h3>
-            <TabelPeriodeSelect paramNaam="dwoPeriode" periodes={DWO_PERIODES} standaard={{ type: "rolling3m" }} />
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Gemiddeld aantal dagen tussen de datum van een factuuritem en het moment waarop het definitief is gemaakt
-            (gewogen naar bedrag) — voor items die in de gekozen periode definitief zijn gemaakt. Hoger is een
-            langere doorlooptijd.
-          </p>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {dwoPerTeam.map((t) => (
-              <Card key={t.teamId} className="rounded-2xl">
-                <CardContent className="flex items-center gap-4">
-                  <StatIcon icon={Hourglass} tint="warning" className="h-11 w-11" />
-                  <div>
-                    <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{t.teamNaam}</p>
-                    <div className="text-xl font-semibold tabular-figures text-warning">{formatDagen(t.dwo)}</div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-            {dwoGeenTeamRegels.length > 0 && (
-              <Card className="rounded-2xl">
-                <CardContent className="flex items-center gap-4">
-                  <StatIcon icon={Hourglass} tint="warning" className="h-11 w-11" />
-                  <div>
-                    <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Geen team</p>
-                    <div className="text-xl font-semibold tabular-figures text-warning">{formatDagen(dwoGeenTeam)}</div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-            <HeroTile label="DWO · Bedrijfsbreed" value={formatDagen(dwoTotaal)} icon={Hourglass} />
-          </div>
-        </div>
-      )}
+            <TargetStrook
+              label={`Target ${gekozenJaar} · bruto`}
+              doel={targetBrutoJaar}
+              gefactureerd={jaarBrutoOmzet}
+              ohw={ohwTotaalOnbeperkt}
+              deltaBedrag={deltaBrutoJaar}
+              deltaPct={deltaBrutoJaarPct}
+              maandTarget={maandTargetBruto}
+              nettoTekst={`Nettotarget ${euro(targetNettoJaar)}${
+                ontbrekendeNettoDoelen > 0
+                  ? ` — nettotarget van ${ontbrekendeNettoDoelen} van ${alleTeamdoelen.length} team(s) nog niet ingesteld`
+                  : ""
+              }`}
+            />
 
-      {zietAlleTeams && (
-        <div className="flex flex-col gap-6">
-          <h3 className="text-2xl font-light tracking-tight">Omzet vs. target · {gekozenJaar}</h3>
-
-          <div className="grid gap-6 lg:grid-cols-2">
-            <HeroTile
-              label={`Gerealiseerde omzet · ${gekozenJaar}`}
-              value={euro(jaarBrutoOmzet)}
-              sub={`Netto (placeholder 67%): ${euro(jaarNettoOmzet)}`}
-            >
-              <div
-                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium ${
-                  deltaBrutoJaar >= 0 ? "bg-success/15 text-success" : "bg-warning/15 text-warning"
-                }`}
-              >
-                {deltaBrutoJaar >= 0 ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
-                {euro(deltaBrutoJaar)} ({procentLabel(deltaBrutoJaarPct)}) t.o.v. target
-              </div>
-            </HeroTile>
-
-            <Card className="rounded-2xl">
-              <CardHeader>
-                <CardTitle className="text-base">Target · {gekozenJaar}</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">Brutotarget</span>
-                  <span className="tabular-figures text-muted-foreground">{euro(targetBrutoJaar)}</span>
-                </div>
-                <SegmentedProgress value={targetBrutoJaar > 0 ? (jaarBrutoOmzet / targetBrutoJaar) * 100 : 0} />
-                <p className="text-xs text-muted-foreground">Per maand: {euro(maandTargetBruto)}</p>
-
-                <div className="border-t border-border pt-4">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium">Nettotarget</span>
-                    <span className="tabular-figures text-muted-foreground">{euro(targetNettoJaar)}</span>
-                  </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Per maand: {euro(maandTargetNetto)}
-                    {ontbrekendeNettoDoelen > 0 &&
-                      ` — nettotarget van ${ontbrekendeNettoDoelen} van ${alleTeamdoelen.length} team(s) nog niet ingesteld`}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card className="rounded-2xl">
-            <CardHeader>
-              <CardTitle className="text-base">Omzet per maand · {gekozenJaar}</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Maand</TableHead>
-                    <TableHead className="text-right">Bruto-omzet</TableHead>
-                    <TableHead className="text-right">Verschil</TableHead>
-                    <TableHead className="text-right">%</TableHead>
-                    <TableHead className="text-right">Netto-omzet</TableHead>
-                    <TableHead className="text-right">Verschil</TableHead>
-                    <TableHead className="text-right">%</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {omzetPerMaandTabel.map((m) => (
-                    <TableRow key={m.label}>
-                      <TableCell>{m.label}</TableCell>
-                      <TableCell className="text-right tabular-figures">{euro(m.bruto)}</TableCell>
-                      <TableCell
-                        className={`text-right tabular-figures ${m.brutoVs.verschil >= 0 ? "text-success" : "text-warning"}`}
-                      >
-                        {euro(m.brutoVs.verschil)}
-                      </TableCell>
-                      <TableCell
-                        className={`text-right tabular-figures ${m.brutoVs.verschil >= 0 ? "text-success" : "text-warning"}`}
-                      >
-                        {procentLabel(m.brutoVs.procent)}
-                      </TableCell>
-                      <TableCell className="text-right tabular-figures">{euro(m.netto)}</TableCell>
-                      <TableCell
-                        className={`text-right tabular-figures ${m.nettoVs.verschil >= 0 ? "text-success" : "text-warning"}`}
-                      >
-                        {euro(m.nettoVs.verschil)}
-                      </TableCell>
-                      <TableCell
-                        className={`text-right tabular-figures ${m.nettoVs.verschil >= 0 ? "text-success" : "text-warning"}`}
-                      >
-                        {procentLabel(m.nettoVs.procent)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  <TableRow className="font-semibold">
-                    <TableCell>Totaal</TableCell>
-                    <TableCell className="text-right tabular-figures">{euro(omzetTotaalRij.bruto)}</TableCell>
-                    <TableCell className="text-right tabular-figures">{euro(omzetTotaalRij.brutoVs.verschil)}</TableCell>
-                    <TableCell className="text-right tabular-figures">
-                      {procentLabel(omzetTotaalRij.brutoVs.procent)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-figures">{euro(omzetTotaalRij.netto)}</TableCell>
-                    <TableCell className="text-right tabular-figures">{euro(omzetTotaalRij.nettoVs.verschil)}</TableCell>
-                    <TableCell className="text-right tabular-figures">
-                      {procentLabel(omzetTotaalRij.nettoVs.procent)}
-                    </TableCell>
-                  </TableRow>
-                  {isLopendJaar && (
-                    <TableRow className="italic text-success">
-                      <TableCell>Extrapolatie (heel jaar)</TableCell>
-                      <TableCell className="text-right tabular-figures">{euro(omzetExtrapolatieRij.bruto)}</TableCell>
-                      <TableCell className="text-right tabular-figures">
-                        {euro(omzetExtrapolatieRij.brutoVs.verschil)}
-                      </TableCell>
-                      <TableCell className="text-right tabular-figures">
-                        {procentLabel(omzetExtrapolatieRij.brutoVs.procent)}
-                      </TableCell>
-                      <TableCell className="text-right tabular-figures">{euro(omzetExtrapolatieRij.netto)}</TableCell>
-                      <TableCell className="text-right tabular-figures">
-                        {euro(omzetExtrapolatieRij.nettoVs.verschil)}
-                      </TableCell>
-                      <TableCell className="text-right tabular-figures">
-                        {procentLabel(omzetExtrapolatieRij.nettoVs.procent)}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {zietAlleTeams && (
-        <Card className="rounded-2xl">
-          <CardHeader className="flex flex-row items-center justify-between gap-4">
-            <CardTitle className="text-base">Omzet per medewerker · hele groep · {periodeLabel(medewerkerPeriode)}</CardTitle>
-            <MedewerkerPeriodeSelect />
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Medewerker</TableHead>
-                  <TableHead className="text-right">Bruto-omzet</TableHead>
-                  <TableHead className="text-right">Omzet (uren)</TableHead>
-                  <TableHead className="text-right">Omzet (stuks)</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {omzetPerMedewerker.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="py-10 text-center text-sm text-muted-foreground">
-                      Nog geen omzet in deze periode.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  omzetPerMedewerker.map((m) => (
-                    <TableRow key={m.naam}>
-                      <TableCell>{m.naam}</TableCell>
-                      <TableCell className="text-right tabular-figures">{euro(m.bruto)}</TableCell>
-                      <TableCell className="text-right tabular-figures">{euro(m.uren)}</TableCell>
-                      <TableCell className="text-right tabular-figures">{euro(m.stuks)}</TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
-
-      {teamKaarten.length > 0 && (
-        <div className="flex flex-col gap-4">
-          <h3 className="text-2xl font-light tracking-tight">Teams</h3>
-
-          <Tabs defaultValue={teamKaarten[0].teamId}>
-            <TabsList>
-              {teamKaarten.map((t) => (
-                <TabsTrigger key={t.teamId} value={t.teamId}>
-                  {t.teamNaam}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            {teamKaarten.map((t) => (
-              <TabsContent key={t.teamId} value={t.teamId} className="flex flex-col gap-6">
-                {zietAlleTeams ? (
-                  <Card className="rounded-2xl">
-                    <CardContent className="flex flex-col gap-6 pt-6">
-                      <div className="flex flex-col gap-1.5">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="font-medium">Brutotarget {gekozenJaar}</span>
-                          <span className="tabular-figures text-muted-foreground">
-                            {euro(t.gefactureerdDitJaar)} / {euro(t.brutoDoel)}
-                          </span>
+            {teamKaarten.length > 0 && (
+              <div className="flex flex-col gap-3">
+                <SectieKop label="Per team" titel={`Target ${gekozenJaar}`} />
+                <div className="grid gap-3 lg:grid-cols-2">
+                  {teamKaarten.map((t) => {
+                    const pct = procentVanTarget(t.gefactureerdDitJaar, t.brutoDoel);
+                    return (
+                      <div key={t.teamId} className="flex flex-col gap-3 rounded-[24px] bg-tint p-5">
+                        <div className="flex items-baseline justify-between gap-3">
+                          <span className="text-lg">{t.teamNaam}</span>
+                          <span className="text-2xl font-normal tabular-figures">{pct !== null ? `${pct}%` : "—"}</span>
                         </div>
                         <SegmentedProgress value={t.brutoDoel > 0 ? (t.gefactureerdDitJaar / t.brutoDoel) * 100 : 0} />
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Nettotarget {gekozenJaar}: {t.nettoDoel !== null ? euro(t.nettoDoel) : "nog niet ingesteld"}
-                      </p>
-
-                      <div className="grid gap-4 border-t border-border pt-4 sm:grid-cols-3">
-                        <div className="flex items-center gap-3">
-                          <StatIcon icon={TrendingUp} tint="primary" />
-                          <div>
-                            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                              Bruto-omzet team · {periodeLabel(periode)}
-                            </p>
-                            <p className="text-xl font-semibold tabular-figures">{euro(t.brutoOmzetTeam)}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <StatIcon icon={Clock} tint="success" />
-                          <div>
-                            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                              Uren-omzet team · {periodeLabel(periode)}
-                            </p>
-                            <p className="text-xl font-semibold tabular-figures">{euro(t.urenOmzetTeam)}</p>
-                          </div>
-                        </div>
-                        <div className="flex flex-col items-center justify-center gap-1">
-                          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                            Maandomzet vs. target
-                          </p>
-                          <MaandomzetDonut omzet={t.gefactureerdMtd} target={t.maandTargetBruto} ohw={t.nogTeFactureren} />
-                        </div>
-                      </div>
-
-                      <div className="border-t border-border pt-4">
-                        <p className="mb-2 text-sm text-muted-foreground">
-                          Omzet per medewerker (uren/stuks) · {periodeLabel(periode)}
+                        <p className="text-sm text-muted-foreground tabular-figures">
+                          {euro(t.gefactureerdDitJaar)} van {euro(t.brutoDoel)}
+                          {t.nettoDoel !== null ? ` · netto ${euro(t.nettoDoel)}` : ""}
                         </p>
-                        <div className="flex flex-col gap-1 rounded-lg border border-border p-2">
-                          {t.teamlidRijen.map((lid) => (
-                            <div key={lid.naam} className="flex items-center gap-3 rounded-md p-2">
-                              <AvatarInitials naam={lid.naam} />
-                              <span className="flex-1 text-sm font-medium">{lid.naam}</span>
-                              <div className="text-right">
-                                <p className="text-sm font-medium tabular-figures">{euro(lid.bruto)}</p>
-                                <p className="text-xs text-muted-foreground tabular-figures">
-                                  {euro(lid.uren)} uren · {euro(lid.stuks)} stuks
-                                </p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
                       </div>
-
-                      <div className="border-t border-border pt-4">
-                        <p className="mb-2 text-sm text-muted-foreground">
-                          Omzet per klant (top 20) · {periodeLabel(periode)}
-                        </p>
-                        <TopKlantenTabel rijen={t.topKlanten} />
-                      </div>
-
-                      <div className="grid gap-4 border-t border-border pt-4 sm:grid-cols-2">
-                        <div>
-                          <p className="mb-2 text-sm text-muted-foreground">
-                            Omzet per productgroep · {periodeLabel(periode)}
-                          </p>
-                          {t.perProductgroep.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">Geen omzet in deze periode.</p>
-                          ) : (
-                            <div className="flex flex-col gap-1">
-                              {t.perProductgroep.map((d) => (
-                                <div key={d.label} className="flex items-center justify-between text-sm">
-                                  <span className="text-muted-foreground">
-                                    {d.code} · {d.label}
-                                  </span>
-                                  <span className="font-medium tabular-figures">{euro(d.omzet)}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        <div>
-                          <p className="mb-2 text-sm text-muted-foreground">
-                            Omzet per land/regio (top 20) · {periodeLabel(periode)}
-                          </p>
-                          {t.perLandRegio.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">Geen omzet in deze periode.</p>
-                          ) : (
-                            <div className="flex flex-col gap-1">
-                              {t.perLandRegio.map((l) => (
-                                <div key={l.landNaam} className="flex items-center gap-2 text-sm">
-                                  <CountryFlag iso={l.iso} naam={l.landNaam} className="h-5 w-5" />
-                                  <span className="flex-1 truncate">{l.landNaam}</span>
-                                  <span className="font-medium tabular-figures">{euro(l.omzet)}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="border-t border-border pt-4">
-                        <p className="mb-2 text-sm text-muted-foreground">
-                          Bruto-omzet per teamlid, per maand ({gekozenJaar} — ongefilterd, trendweergave)
-                        </p>
-                        {t.medewerkerNamen.length > 0 ? (
-                          <OmzetGrafiek data={t.chartData} medewerkerNamen={t.medewerkerNamen} />
-                        ) : (
-                          <p className="py-6 text-center text-sm text-muted-foreground">
-                            Nog geen gefactureerde factuuritems in {gekozenJaar}.
-                          </p>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <>
-                    {/* Sectie 1 — vast, altijd dit jaar (YTD), niet periode-filterbaar. */}
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                      <Card className="rounded-2xl">
-                        <CardContent className="flex items-center gap-4">
-                          <StatIcon icon={Euro} tint="primary" className="h-11 w-11" />
-                          <div>
-                            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                              Gefactureerd {gekozenJaar}
-                            </p>
-                            <div className="text-xl font-semibold tabular-figures">{euro(t.gefactureerdDitJaar)}</div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                      <Card className="rounded-2xl">
-                        <CardContent className="flex items-center gap-4">
-                          <StatIcon icon={Briefcase} tint="warning" className="h-11 w-11" />
-                          <div>
-                            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                              Onderhanden werk
-                            </p>
-                            <div className="text-xl font-semibold tabular-figures text-warning">
-                              {euro(t.ohwTeamOnbeperkt)}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                      <Card className="rounded-2xl">
-                        <CardContent className="flex flex-col gap-2 p-4">
-                          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                            Target vs. gefactureerd
-                          </p>
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-xl font-semibold tabular-figures">
-                              {t.brutoDoel > 0 ? `${Math.round((t.gefactureerdDitJaar / t.brutoDoel) * 100)}%` : "—"}
-                            </span>
-                            <span className="tabular-figures text-xs text-muted-foreground">
-                              {euro(t.gefactureerdDitJaar)} / {euro(t.brutoDoel)}
-                            </span>
-                          </div>
-                          <SegmentedProgress value={t.brutoDoel > 0 ? (t.gefactureerdDitJaar / t.brutoDoel) * 100 : 0} />
-                        </CardContent>
-                      </Card>
-                      <Card className="rounded-2xl">
-                        <CardContent className="flex flex-col items-center justify-center gap-1 p-4">
-                          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                            Target vs. OHW + gefactureerd
-                          </p>
-                          <MaandomzetDonut omzet={t.gefactureerdDitJaar} ohw={t.ohwTeamOnbeperkt} target={t.brutoDoel} />
-                        </CardContent>
-                      </Card>
-                    </div>
-
-                    {/* Sectie 2 — filterbaar, één gedeelde periodeselector voor alles hieronder. */}
-                    <div className="flex flex-col gap-4 border-t border-border pt-6">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <h4 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
-                          Detail · {periodeLabel(sectie2Periode)}
-                        </h4>
-                        <TabelPeriodeSelect paramNaam="sectie2Periode" />
-                      </div>
-
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <Card className="rounded-2xl">
-                          <CardContent className="flex items-center gap-4">
-                            <StatIcon icon={Euro} tint="primary" className="h-11 w-11" />
-                            <div>
-                              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                                Gefactureerd
-                              </p>
-                              <div className="text-xl font-semibold tabular-figures">{euro(t.gefactureerdSectie2)}</div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                        <Card className="rounded-2xl">
-                          <CardContent className="flex items-center gap-4">
-                            <StatIcon icon={Briefcase} tint="warning" className="h-11 w-11" />
-                            <div>
-                              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                                Onderhanden werk
-                              </p>
-                              <div className="text-xl font-semibold tabular-figures text-warning">
-                                {euro(t.ohwSectie2)}
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </div>
-
-                      <div className="flex flex-col gap-2">
-                        <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                          Uitsplitsing per teamlid
-                        </p>
-                        {t.teamlidKpiRijen.length === 0 ? (
-                          <p className="py-6 text-center text-sm text-muted-foreground">Nog geen omzet in deze periode.</p>
-                        ) : (
-                          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                            {t.teamlidKpiRijen.map((lid) => (
-                              <TeamlidKpiTegel key={lid.naam} lid={lid} />
-                            ))}
-                            <TeamlidKpiTegel
-                              isTotaal
-                              lid={{
-                                naam: "Totaal team",
-                                isTeamleider: false,
-                                urenAantal: t.teamlidKpiRijen.reduce((sum, l) => sum + l.urenAantal, 0),
-                                urenBedrag: t.teamlidKpiRijen.reduce((sum, l) => sum + l.urenBedrag, 0),
-                                nietUrenBedrag: t.teamlidKpiRijen.reduce((sum, l) => sum + l.nietUrenBedrag, 0),
-                              }}
-                            />
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="grid gap-4 lg:grid-cols-2">
-                        <Card className="rounded-2xl">
-                          <CardHeader>
-                            <CardTitle className="text-base">Nog te factureren per teamlid</CardTitle>
-                          </CardHeader>
-                          <CardContent className="flex flex-col gap-1">
-                            {t.ohwPerTeamlidSectie2.length === 0 ? (
-                              <p className="py-6 text-center text-sm text-muted-foreground">Niets nog te factureren.</p>
-                            ) : (
-                              t.ohwPerTeamlidSectie2.map((lid) => (
-                                <div key={lid.naam} className="flex items-center justify-between rounded-md p-2 text-sm">
-                                  <span className="text-muted-foreground">
-                                    {lid.naam}
-                                    {lid.isTeamleider && " (Praktijkvoerder)"}
-                                  </span>
-                                  <span className="tabular-figures font-medium text-warning">{euro(lid.bedrag)}</span>
-                                </div>
-                              ))
-                            )}
-                          </CardContent>
-                        </Card>
-                        <Card className="rounded-2xl">
-                          <CardHeader>
-                            <CardTitle className="text-base">Nog te factureren per klant</CardTitle>
-                          </CardHeader>
-                          <CardContent className="flex flex-col gap-1">
-                            {t.nogTeFacturenPerKlantSectie2.length === 0 ? (
-                              <p className="py-6 text-center text-sm text-muted-foreground">Niets nog te factureren.</p>
-                            ) : (
-                              t.nogTeFacturenPerKlantSectie2.map((r) => (
-                                <div key={r.naam} className="flex items-center gap-3 rounded-md p-2">
-                                  <AvatarInitials naam={r.naam} />
-                                  <span className="flex-1 text-sm font-medium">{r.naam}</span>
-                                  <span className="text-sm font-medium tabular-figures text-warning">{euro(r.bedrag)}</span>
-                                  <Badge variant="warning">Openstaand</Badge>
-                                </div>
-                              ))
-                            )}
-                          </CardContent>
-                        </Card>
-                      </div>
-
-                      <div className="grid gap-4 lg:grid-cols-2">
-                        <Card className="rounded-2xl">
-                          <CardHeader>
-                            <CardTitle className="text-base">Omzet per productgroep</CardTitle>
-                          </CardHeader>
-                          <CardContent className="flex flex-col gap-1">
-                            {t.perProductgroepSectie2.length === 0 ? (
-                              <p className="py-6 text-center text-sm text-muted-foreground">Nog geen omzet in deze periode.</p>
-                            ) : (
-                              t.perProductgroepSectie2.map((d) => (
-                                <div key={d.label} className="flex items-center gap-3 rounded-md p-2">
-                                  <DienstIcon dienst={d.label} />
-                                  <div className="flex-1">
-                                    <p className="text-sm font-medium">
-                                      {d.code} · {d.label}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">{d.aantal} factuuritems</p>
-                                  </div>
-                                  <span className="text-sm font-medium tabular-figures">{euro(d.omzet)}</span>
-                                </div>
-                              ))
-                            )}
-                          </CardContent>
-                        </Card>
-                        <Card className="rounded-2xl">
-                          <CardHeader>
-                            <CardTitle className="text-base">Omzet per land/regio (top 20)</CardTitle>
-                          </CardHeader>
-                          <CardContent className="flex flex-col gap-1">
-                            {t.perLandRegioSectie2.length === 0 ? (
-                              <p className="py-6 text-center text-sm text-muted-foreground">Nog geen omzet in deze periode.</p>
-                            ) : (
-                              t.perLandRegioSectie2.map((l) => (
-                                <div key={l.landNaam} className="flex items-center gap-3 rounded-md p-2">
-                                  <CountryFlag iso={l.iso} naam={l.landNaam} />
-                                  <span className="flex-1 text-sm font-medium">{l.landNaam}</span>
-                                  <span className="text-sm font-medium tabular-figures">{euro(l.omzet)}</span>
-                                </div>
-                              ))
-                            )}
-                          </CardContent>
-                        </Card>
-                      </div>
-
-                      <Card className="rounded-2xl">
-                        <CardHeader>
-                          <CardTitle className="text-base">Omzet per productgroep × land/regio</CardTitle>
-                        </CardHeader>
-                        <CardContent className="overflow-x-auto p-0">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Productgroep</TableHead>
-                                {t.perProductgroepEnLandSectie2.kolommen.map((k) => (
-                                  <TableHead key={k} className="text-right">
-                                    {k}
-                                  </TableHead>
-                                ))}
-                                <TableHead className="text-right">Totaal</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {t.perProductgroepEnLandSectie2.rijen.length === 0 ? (
-                                <TableRow>
-                                  <TableCell
-                                    colSpan={t.perProductgroepEnLandSectie2.kolommen.length + 2}
-                                    className="py-10 text-center text-sm text-muted-foreground"
-                                  >
-                                    Nog geen omzet in deze periode.
-                                  </TableCell>
-                                </TableRow>
-                              ) : (
-                                <>
-                                  {t.perProductgroepEnLandSectie2.rijen.map((rij) => (
-                                    <TableRow key={rij.label}>
-                                      <TableCell className="font-medium">
-                                        {rij.code} · {rij.label}
-                                      </TableCell>
-                                      {rij.perKolom.map((bedrag, i) => (
-                                        <TableCell key={i} className="text-right tabular-figures">
-                                          {bedrag > 0 ? euro(bedrag) : "—"}
-                                        </TableCell>
-                                      ))}
-                                      <TableCell className="text-right font-medium tabular-figures">
-                                        {euro(rij.totaal)}
-                                      </TableCell>
-                                    </TableRow>
-                                  ))}
-                                  <TableRow>
-                                    <TableCell className="font-medium">Totaal</TableCell>
-                                    {t.perProductgroepEnLandSectie2.totaalPerKolom.map((bedrag, i) => (
-                                      <TableCell key={i} className="text-right font-medium tabular-figures">
-                                        {euro(bedrag)}
-                                      </TableCell>
-                                    ))}
-                                    <TableCell className="text-right font-semibold tabular-figures">
-                                      {euro(t.perProductgroepEnLandSectie2.totaal)}
-                                    </TableCell>
-                                  </TableRow>
-                                </>
-                              )}
-                            </TableBody>
-                          </Table>
-                        </CardContent>
-                      </Card>
-
-                      <Card className="rounded-2xl">
-                        <CardHeader>
-                          <CardTitle className="text-base">DWO (Days Work Outstanding)</CardTitle>
-                          <p className="text-xs text-muted-foreground">
-                            Gemiddelde doorlooptijd tussen de datum van een factuuritem en het moment waarop het
-                            definitief is gemaakt, gewogen naar bedrag. Streefwaarde: onder 45 dagen, uiterlijk
-                            onder 60.
-                          </p>
-                        </CardHeader>
-                        <CardContent className="flex items-center gap-4">
-                          <StatIcon icon={Hourglass} tint={dwoKleurToken(t.dwoTeamSectie2)} className="h-11 w-11" />
-                          <div
-                            className={`text-xl font-semibold tabular-figures ${DWO_TEKST_KLEUR[dwoKleurToken(t.dwoTeamSectie2)]}`}
-                          >
-                            {formatDagen(t.dwoTeamSectie2)}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </>
-                )}
-              </TabsContent>
-            ))}
-          </Tabs>
-        </div>
-      )}
-
-      {zietAlleTeams && nietInTeamRijen.length > 0 && (
-        <Card className="rounded-2xl">
-          <CardHeader>
-            <CardTitle className="text-base">Omzet buiten een team · {periodeLabel(periode)}</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Deze medewerkers zijn nog geen lid van een team, dus hun omzet staat niet op een teamkaart —
-              voeg ze toe bij Instellingen &gt; Teams als dat wel zou moeten.
-            </p>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-1">
-            {nietInTeamRijen.map((lid) => (
-              <div key={lid.naam} className="flex items-center gap-3 rounded-md p-2">
-                <AvatarInitials naam={lid.naam} />
-                <span className="flex-1 text-sm font-medium">{lid.naam}</span>
-                <div className="text-right">
-                  <p className="text-sm font-medium tabular-figures">{euro(lid.bruto)}</p>
-                  <p className="text-xs text-muted-foreground tabular-figures">{euro(lid.uren)} uren</p>
+                    );
+                  })}
                 </div>
               </div>
+            )}
+
+            <Card className="rounded-[28px] bg-card">
+              <CardHeader>
+                <CardTitle>Omzet per maand · {gekozenJaar}</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Maand</TableHead>
+                      <TableHead className="text-right">Bruto-omzet</TableHead>
+                      <TableHead className="text-right">Verschil</TableHead>
+                      <TableHead className="text-right">%</TableHead>
+                      <TableHead className="text-right">Netto-omzet</TableHead>
+                      <TableHead className="text-right">Verschil</TableHead>
+                      <TableHead className="text-right">%</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {omzetPerMaandTabel.map((m) => (
+                      <TableRow key={m.label}>
+                        <TableCell>{m.label}</TableCell>
+                        <TableCell className="text-right tabular-figures">{euro(m.bruto)}</TableCell>
+                        <TableCell
+                          className={`text-right tabular-figures ${m.brutoVs.verschil >= 0 ? "text-success" : "text-warning"}`}
+                        >
+                          {euro(m.brutoVs.verschil)}
+                        </TableCell>
+                        <TableCell
+                          className={`text-right tabular-figures ${m.brutoVs.verschil >= 0 ? "text-success" : "text-warning"}`}
+                        >
+                          {procentLabel(m.brutoVs.procent)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-figures">{euro(m.netto)}</TableCell>
+                        <TableCell
+                          className={`text-right tabular-figures ${m.nettoVs.verschil >= 0 ? "text-success" : "text-warning"}`}
+                        >
+                          {euro(m.nettoVs.verschil)}
+                        </TableCell>
+                        <TableCell
+                          className={`text-right tabular-figures ${m.nettoVs.verschil >= 0 ? "text-success" : "text-warning"}`}
+                        >
+                          {procentLabel(m.nettoVs.procent)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow className="font-semibold">
+                      <TableCell>Totaal</TableCell>
+                      <TableCell className="text-right tabular-figures">{euro(omzetTotaalRij.bruto)}</TableCell>
+                      <TableCell className="text-right tabular-figures">{euro(omzetTotaalRij.brutoVs.verschil)}</TableCell>
+                      <TableCell className="text-right tabular-figures">
+                        {procentLabel(omzetTotaalRij.brutoVs.procent)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-figures">{euro(omzetTotaalRij.netto)}</TableCell>
+                      <TableCell className="text-right tabular-figures">{euro(omzetTotaalRij.nettoVs.verschil)}</TableCell>
+                      <TableCell className="text-right tabular-figures">
+                        {procentLabel(omzetTotaalRij.nettoVs.procent)}
+                      </TableCell>
+                    </TableRow>
+                    {isLopendJaar && (
+                      <TableRow className="italic text-success">
+                        <TableCell>Extrapolatie (heel jaar)</TableCell>
+                        <TableCell className="text-right tabular-figures">{euro(omzetExtrapolatieRij.bruto)}</TableCell>
+                        <TableCell className="text-right tabular-figures">
+                          {euro(omzetExtrapolatieRij.brutoVs.verschil)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-figures">
+                          {procentLabel(omzetExtrapolatieRij.brutoVs.procent)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-figures">{euro(omzetExtrapolatieRij.netto)}</TableCell>
+                        <TableCell className="text-right tabular-figures">
+                          {euro(omzetExtrapolatieRij.nettoVs.verschil)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-figures">
+                          {procentLabel(omzetExtrapolatieRij.nettoVs.procent)}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </>
+        ) : teamKaarten.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            Er is nog geen teamtarget voor {gekozenJaar} ingesteld voor jouw team.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-6">
+            {teamKaarten.map((t) => (
+              <div key={t.teamId} className="flex flex-col gap-4">
+                {teamKaarten.length > 1 && <SectieKop label="Team" titel={t.teamNaam} />}
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <KpiTegel variant="navy" label={`Gefactureerd ${gekozenJaar}`} bedrag={t.gefactureerdDitJaar} />
+                  <KpiTegel
+                    variant="geel"
+                    label="Onderhanden werk"
+                    bedrag={t.ohwTeamOnbeperkt}
+                    sub="Nog te factureren · alle periodes"
+                  />
+                </div>
+                <TargetStrook
+                  label={`Target ${gekozenJaar} · bruto`}
+                  doel={t.brutoDoel}
+                  gefactureerd={t.gefactureerdDitJaar}
+                  ohw={t.ohwTeamOnbeperkt}
+                  deltaBedrag={t.gefactureerdDitJaar - t.brutoDoel}
+                  deltaPct={t.brutoDoel > 0 ? ((t.gefactureerdDitJaar - t.brutoDoel) / t.brutoDoel) * 100 : 0}
+                  maandTarget={t.brutoDoel / 12}
+                  nettoTekst={t.nettoDoel !== null ? `Nettotarget ${euro(t.nettoDoel)}` : "Nettotarget nog niet ingesteld"}
+                />
+              </div>
             ))}
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        )}
+      </DashboardSectie>
 
-      {/* Bedrijfsbrede versies — voor Praktijkvoerder/Gebruiker vervangen door de
-          team-gescoped equivalenten in Sectie 2 hierboven. */}
-      {zietAlleTeams && (
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="rounded-2xl">
-          <CardHeader className="flex flex-row items-center justify-between gap-4">
-            <CardTitle className="text-base">Omzet per productgroep · {periodeLabel(productgroepPeriode)}</CardTitle>
-            <TabelPeriodeSelect paramNaam="productgroepPeriode" />
-          </CardHeader>
-          <CardContent className="flex flex-col gap-1">
-            {dienstenTabel.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">Nog geen omzet in deze periode.</p>
-            ) : (
-              dienstenTabel.map((d) => (
-                <div key={d.dienst} className="flex items-center gap-3 rounded-md p-2">
-                  <DienstIcon dienst={d.dienst} />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">
-                      {d.code} · {d.dienst}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{d.aantal} factuuritems</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium tabular-figures">{euro(d.omzet)}</p>
-                    <p className="text-xs text-muted-foreground tabular-figures">{euro(d.uren)} uren</p>
-                  </div>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-2xl">
-          <CardHeader className="flex flex-row items-center justify-between gap-4">
-            <CardTitle className="text-base">Omzet per land/regio (top 20) · {periodeLabel(landPeriode)}</CardTitle>
-            <TabelPeriodeSelect paramNaam="landPeriode" />
-          </CardHeader>
-          <CardContent className="flex flex-col gap-1">
-            {landenTabel.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">Nog geen omzet in deze periode.</p>
-            ) : (
-              landenTabel.map((l) => (
-                <div key={l.landNaam} className="flex items-center gap-3 rounded-md p-2">
-                  <CountryFlag iso={l.iso} naam={l.landNaam} />
-                  <span className="flex-1 text-sm font-medium">{l.landNaam}</span>
-                  <span className="text-sm font-medium tabular-figures">{euro(l.omzet)}</span>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-2xl">
-          <CardHeader className="flex flex-row items-center justify-between gap-4">
-            <CardTitle className="text-base">Omzet per klant (top 20) · {periodeLabel(klantPeriode)}</CardTitle>
-            <TabelPeriodeSelect paramNaam="klantPeriode" />
-          </CardHeader>
-          <CardContent>
-            <TopKlantenTabel rijen={topKlantenHeleGroep} />
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-2xl">
-          <CardHeader>
-            <CardTitle className="text-base">Nog te factureren per klant · {periodeLabel(periode)}</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-1">
-            {nogTeFacturenTabel.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">Niets nog te factureren.</p>
-            ) : (
-              nogTeFacturenTabel.map((r) => (
-                <div key={r.naam} className="flex items-center gap-3 rounded-md p-2">
-                  <AvatarInitials naam={r.naam} />
-                  <span className="flex-1 text-sm font-medium">{r.naam}</span>
-                  <span className="text-sm font-medium tabular-figures text-warning">{euro(r.bedrag)}</span>
-                  <Badge variant="warning">Openstaand</Badge>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
+      <div className="flex items-center gap-3 px-2 text-sm text-muted-foreground print:hidden">
+        <ChevronsDown className="h-4 w-4" />
+        Hieronder kijk je naar een periode naar keuze
       </div>
+
+      {/* ───────────────────────── Periode (keuze) ───────────────────────── */}
+      <DashboardSectie
+        soort="periode"
+        titel={periodeTekst}
+        hint="Alles in dit blok volgt je keuze, ook de uitsplitsing per teamlid."
+        rechts={<PeriodeKeuze />}
+      >
+        {zietAlleTeams && (
+          <>
+            <div className={cn("grid gap-4 sm:grid-cols-2", groepKolommen)}>
+              <KpiTegel variant="wit" label="Gefactureerd" bedrag={gefactureerd} sub={periodeTekst} />
+              {zietBureaukosten && (
+                <KpiTegel
+                  variant="wit"
+                  label="Bureaukosten"
+                  bedrag={bureaukostenTotaal}
+                  sub={
+                    gefactureerd > 0
+                      ? `${((bureaukostenTotaal / gefactureerd) * 100).toFixed(1).replace(".", ",")}% van gefactureerd`
+                      : periodeTekst
+                  }
+                />
+              )}
+              <KpiTegel variant="geel" label="Onderhanden werk" bedrag={ohwTotaalGroep} sub="Nog te factureren in deze periode" />
+              {zietDwo && (
+                <KpiTegel
+                  variant={dwoTegelVariant(dwoTotaal)}
+                  label="DWO · dagen"
+                  dagen={dwoTotaal}
+                  sub="Streef: onder 45 · uiterlijk 60"
+                >
+                  <DwoSchaal dagen={dwoTotaal} />
+                </KpiTegel>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <SectieKop label="Onderhanden werk" titel={`Per team · ${periodeTekst}`} />
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                {ohwPerTeam.map((t) => (
+                  <KpiTegel key={t.teamId} variant="wit" grootte="middel" className="min-h-[150px]" label={t.teamNaam} bedrag={t.bedrag} />
+                ))}
+                {ohwGeenTeamRowsAlle.length > 0 && (
+                  <KpiTegel variant="wit" grootte="middel" className="min-h-[150px]" label="Geen team" bedrag={ohwGeenTeamAlle} />
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {teamKaarten.length > 0 ? (
+          <Tabs defaultValue={teamKaarten[0].teamId} className="gap-6">
+            <SectieKop
+              label="Uitsplitsing"
+              titel={`Per teamlid · ${periodeTekst}`}
+              rechts={
+                teamKaarten.length > 1 ? (
+                  <TabsList className="bg-card">
+                    {teamKaarten.map((t) => (
+                      <TabsTrigger key={t.teamId} value={t.teamId}>
+                        {t.teamNaam}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                ) : (
+                  <span className="rounded-full bg-card px-4 py-2 text-sm">{teamKaarten[0].teamNaam}</span>
+                )
+              }
+            />
+            {teamKaarten.map((t) => {
+              const ohwPerNaam = new Map(t.ohwPerTeamlidPeriode.map((l) => [l.naam, l.bedrag]));
+              const totaalLid: TeamlidKpi = {
+                naam: `Totaal ${t.teamNaam}`,
+                isTeamleider: false,
+                urenAantal: t.teamlidKpiRijen.reduce((sum, l) => sum + l.urenAantal, 0),
+                urenBedrag: t.teamlidKpiRijen.reduce((sum, l) => sum + l.urenBedrag, 0),
+                nietUrenBedrag: t.teamlidKpiRijen.reduce((sum, l) => sum + l.nietUrenBedrag, 0),
+              };
+              const teamTotaal = totaalLid.urenBedrag + totaalLid.nietUrenBedrag;
+              return (
+                <TabsContent key={t.teamId} value={t.teamId} className="flex flex-col gap-6">
+                  {!zietAlleTeams && (
+                    <div className={cn("grid gap-4", dwoZichtbaar ? "lg:grid-cols-3" : "lg:grid-cols-2")}>
+                      <KpiTegel variant="wit" label="Gefactureerd" bedrag={t.gefactureerdPeriode} sub={periodeTekst} />
+                      <KpiTegel variant="geel" label="Onderhanden werk" bedrag={t.ohwPeriode} sub="Nog te factureren in deze periode" />
+                      {dwoZichtbaar && (
+                        <KpiTegel
+                          variant={dwoTegelVariant(t.dwoTeamPeriode)}
+                          label="DWO · dagen"
+                          dagen={t.dwoTeamPeriode}
+                          sub="Streef: onder 45 · uiterlijk 60"
+                        >
+                          <DwoSchaal dagen={t.dwoTeamPeriode} />
+                        </KpiTegel>
+                      )}
+                    </div>
+                  )}
+
+                  {t.teamlidKpiRijen.length === 0 ? (
+                    <p className="rounded-[24px] bg-card py-10 text-center text-sm text-muted-foreground">
+                      Dit team heeft nog geen teamleden.
+                    </p>
+                  ) : (
+                    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                      <TeamlidKaart isTotaal lid={totaalLid} ohw={t.ohwPeriode} teamTotaal={teamTotaal} />
+                      {t.teamlidKpiRijen.map((lid) => (
+                        <TeamlidKaart key={lid.naam} lid={lid} ohw={ohwPerNaam.get(lid.naam) ?? 0} teamTotaal={teamTotaal} />
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <Card className="rounded-[28px] bg-card">
+                      <CardHeader>
+                        <CardTitle>Nog te factureren per klant</CardTitle>
+                      </CardHeader>
+                      <CardContent className="flex flex-col gap-1">
+                        {t.nogTeFacturenPerKlantPeriode.length === 0 ? (
+                          <p className="py-6 text-center text-sm text-muted-foreground">Niets nog te factureren.</p>
+                        ) : (
+                          t.nogTeFacturenPerKlantPeriode.map((r) => (
+                            <div key={r.naam} className="flex items-center gap-3 rounded-md p-2">
+                              <AvatarInitials naam={r.naam} />
+                              <span className="flex-1 text-sm font-medium">{r.naam}</span>
+                              <span className="text-sm font-medium tabular-figures text-warning">{euro(r.bedrag)}</span>
+                              <Badge variant="warning">Openstaand</Badge>
+                            </div>
+                          ))
+                        )}
+                      </CardContent>
+                    </Card>
+                    <Card className="rounded-[28px] bg-card">
+                      <CardHeader>
+                        <CardTitle>Omzet per klant (top 20)</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <TopKlantenTabel rijen={t.topKlanten} />
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <Card className="rounded-[28px] bg-card">
+                      <CardHeader>
+                        <CardTitle>Omzet per productgroep</CardTitle>
+                      </CardHeader>
+                      <CardContent className="flex flex-col gap-1">
+                        {t.perProductgroepPeriode.length === 0 ? (
+                          <p className="py-6 text-center text-sm text-muted-foreground">Nog geen omzet in deze periode.</p>
+                        ) : (
+                          t.perProductgroepPeriode.map((d) => (
+                            <div key={d.label} className="flex items-center gap-3 rounded-md p-2">
+                              <DienstIcon dienst={d.label} />
+                              <div className="flex-1">
+                                <p className="text-sm font-medium">
+                                  {d.code} · {d.label}
+                                </p>
+                                <p className="text-xs text-muted-foreground">{d.aantal} factuuritems</p>
+                              </div>
+                              <span className="text-sm font-medium tabular-figures">{euro(d.omzet)}</span>
+                            </div>
+                          ))
+                        )}
+                      </CardContent>
+                    </Card>
+                    <Card className="rounded-[28px] bg-card">
+                      <CardHeader>
+                        <CardTitle>Omzet per land/regio (top 20)</CardTitle>
+                      </CardHeader>
+                      <CardContent className="flex flex-col gap-1">
+                        {t.perLandRegioPeriode.length === 0 ? (
+                          <p className="py-6 text-center text-sm text-muted-foreground">Nog geen omzet in deze periode.</p>
+                        ) : (
+                          t.perLandRegioPeriode.map((l) => (
+                            <div key={l.landNaam} className="flex items-center gap-3 rounded-md p-2">
+                              <CountryFlag iso={l.iso} naam={l.landNaam} />
+                              <span className="flex-1 text-sm font-medium">{l.landNaam}</span>
+                              <span className="text-sm font-medium tabular-figures">{euro(l.omzet)}</span>
+                            </div>
+                          ))
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  <Card className="rounded-[28px] bg-card">
+                    <CardHeader>
+                      <CardTitle>Omzet per productgroep × land/regio</CardTitle>
+                    </CardHeader>
+                    <CardContent className="overflow-x-auto p-0">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Productgroep</TableHead>
+                            {t.perProductgroepEnLandPeriode.kolommen.map((k) => (
+                              <TableHead key={k} className="text-right">
+                                {k}
+                              </TableHead>
+                            ))}
+                            <TableHead className="text-right">Totaal</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {t.perProductgroepEnLandPeriode.rijen.length === 0 ? (
+                            <TableRow>
+                              <TableCell
+                                colSpan={t.perProductgroepEnLandPeriode.kolommen.length + 2}
+                                className="py-10 text-center text-sm text-muted-foreground"
+                              >
+                                Nog geen omzet in deze periode.
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            <>
+                              {t.perProductgroepEnLandPeriode.rijen.map((rij) => (
+                                <TableRow key={rij.label}>
+                                  <TableCell className="font-medium">
+                                    {rij.code} · {rij.label}
+                                  </TableCell>
+                                  {rij.perKolom.map((bedrag, i) => (
+                                    <TableCell key={i} className="text-right tabular-figures">
+                                      {bedrag > 0 ? euro(bedrag) : "—"}
+                                    </TableCell>
+                                  ))}
+                                  <TableCell className="text-right font-medium tabular-figures">{euro(rij.totaal)}</TableCell>
+                                </TableRow>
+                              ))}
+                              <TableRow>
+                                <TableCell className="font-medium">Totaal</TableCell>
+                                {t.perProductgroepEnLandPeriode.totaalPerKolom.map((bedrag, i) => (
+                                  <TableCell key={i} className="text-right font-medium tabular-figures">
+                                    {euro(bedrag)}
+                                  </TableCell>
+                                ))}
+                                <TableCell className="text-right font-semibold tabular-figures">
+                                  {euro(t.perProductgroepEnLandPeriode.totaal)}
+                                </TableCell>
+                              </TableRow>
+                            </>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+
+                  {t.medewerkerNamen.length > 0 && (
+                    <Card className="rounded-[28px] bg-card">
+                      <CardHeader className="flex flex-row items-center justify-between gap-3">
+                        <CardTitle>Bruto-omzet per teamlid, per maand</CardTitle>
+                        <span className="rounded-full bg-foreground px-3 py-1 text-[11px] font-semibold tracking-[0.12em] text-background uppercase">
+                          Lopend jaar {gekozenJaar} · niet gefilterd
+                        </span>
+                      </CardHeader>
+                      <CardContent>
+                        <OmzetGrafiek data={t.chartData} medewerkerNamen={t.medewerkerNamen} />
+                      </CardContent>
+                    </Card>
+                  )}
+                </TabsContent>
+              );
+            })}
+          </Tabs>
+        ) : (
+          !zietAlleTeams && (
+            <p className="py-6 text-center text-sm text-muted-foreground">Geen teamgegevens om te tonen.</p>
+          )
+        )}
+
+        {zietAlleTeams && nietInTeamRijen.length > 0 && (
+          <Card className="rounded-[28px] bg-card">
+            <CardHeader>
+              <CardTitle>Omzet buiten een team · {periodeTekst}</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Deze medewerkers zijn nog geen lid van een team, dus hun omzet staat niet op een teamkaart — voeg ze
+                toe bij Instellingen &gt; Teams als dat wel zou moeten.
+              </p>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-1">
+              {nietInTeamRijen.map((lid) => (
+                <div key={lid.naam} className="flex items-center gap-3 rounded-md p-2">
+                  <AvatarInitials naam={lid.naam} />
+                  <span className="flex-1 text-sm font-medium">{lid.naam}</span>
+                  <div className="text-right">
+                    <p className="text-sm font-medium tabular-figures">{euro(lid.bruto)}</p>
+                    <p className="text-xs text-muted-foreground tabular-figures">{euro(lid.uren)} uren</p>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {zietAlleTeams && (
+          <div className="flex flex-col gap-4">
+            <SectieKop label="Hele groep" titel={`Alle teams · ${periodeTekst}`} />
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Card className="rounded-[28px] bg-card">
+                <CardHeader>
+                  <CardTitle>Omzet per productgroep</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-1">
+                  {dienstenTabel.length === 0 ? (
+                    <p className="py-6 text-center text-sm text-muted-foreground">Nog geen omzet in deze periode.</p>
+                  ) : (
+                    dienstenTabel.map((d) => (
+                      <div key={d.dienst} className="flex items-center gap-3 rounded-md p-2">
+                        <DienstIcon dienst={d.dienst} />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">
+                            {d.code} · {d.dienst}
+                          </p>
+                          <p className="text-xs text-muted-foreground">{d.aantal} factuuritems</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium tabular-figures">{euro(d.omzet)}</p>
+                          <p className="text-xs text-muted-foreground tabular-figures">{euro(d.uren)} uren</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-[28px] bg-card">
+                <CardHeader>
+                  <CardTitle>Omzet per land/regio (top 20)</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-1">
+                  {landenTabel.length === 0 ? (
+                    <p className="py-6 text-center text-sm text-muted-foreground">Nog geen omzet in deze periode.</p>
+                  ) : (
+                    landenTabel.map((l) => (
+                      <div key={l.landNaam} className="flex items-center gap-3 rounded-md p-2">
+                        <CountryFlag iso={l.iso} naam={l.landNaam} />
+                        <span className="flex-1 text-sm font-medium">{l.landNaam}</span>
+                        <span className="text-sm font-medium tabular-figures">{euro(l.omzet)}</span>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-[28px] bg-card">
+                <CardHeader>
+                  <CardTitle>Omzet per klant (top 20)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <TopKlantenTabel rijen={topKlantenHeleGroep} />
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-[28px] bg-card">
+                <CardHeader>
+                  <CardTitle>Nog te factureren per klant</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-1">
+                  {nogTeFacturenTabel.length === 0 ? (
+                    <p className="py-6 text-center text-sm text-muted-foreground">Niets nog te factureren.</p>
+                  ) : (
+                    nogTeFacturenTabel.map((r) => (
+                      <div key={r.naam} className="flex items-center gap-3 rounded-md p-2">
+                        <AvatarInitials naam={r.naam} />
+                        <span className="flex-1 text-sm font-medium">{r.naam}</span>
+                        <span className="text-sm font-medium tabular-figures text-warning">{euro(r.bedrag)}</span>
+                        <Badge variant="warning">Openstaand</Badge>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+      </DashboardSectie>
+    </div>
+  );
+}
+
+// Voortgang richting het jaartarget: groot percentage, een balk en wat er nog te halen is.
+function TargetStrook({
+  label,
+  doel,
+  gefactureerd,
+  ohw,
+  deltaBedrag,
+  deltaPct,
+  maandTarget,
+  nettoTekst,
+}: {
+  label: string;
+  doel: number;
+  gefactureerd: number;
+  ohw: number;
+  deltaBedrag: number;
+  deltaPct: number;
+  maandTarget: number;
+  nettoTekst: string;
+}) {
+  const pct = doel > 0 ? (gefactureerd / doel) * 100 : 0;
+  const metOhw = doel > 0 ? ((gefactureerd + ohw) / doel) * 100 : 0;
+  const voorloop = deltaBedrag >= 0;
+  return (
+    <div className="flex flex-col gap-5 rounded-[28px] bg-tint p-6 lg:flex-row lg:items-center lg:gap-8 lg:p-7">
+      <div className="lg:min-w-[220px]">
+        <p className="text-[11px] font-medium tracking-[0.1em] text-muted-foreground uppercase">{label}</p>
+        <p className="mt-1 text-4xl font-light tracking-tight tabular-figures">{euro(doel)}</p>
+      </div>
+      <div className="flex flex-1 flex-col gap-3">
+        <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
+          <span>
+            Gefactureerd <b className="font-medium">{doel > 0 ? `${pct.toFixed(1).replace(".", ",")}%` : "—"}</b>
+          </span>
+          <span className="text-muted-foreground tabular-figures">Nog te halen {euro(Math.max(0, doel - gefactureerd))}</span>
+        </div>
+        <div className="h-3.5 overflow-hidden rounded-full bg-card">
+          <div className="h-full rounded-full bg-coral" style={{ width: `${Math.min(100, Math.max(pct, pct > 0 ? 1 : 0))}%` }} />
+        </div>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground tabular-figures">
+          <span
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium",
+              voorloop ? "bg-success/15 text-success" : "bg-warning/15 text-warning"
+            )}
+          >
+            {voorloop ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+            {euro(deltaBedrag)} ({deltaPct > 0 ? "+" : ""}
+            {deltaPct.toFixed(1)}%) t.o.v. target
+          </span>
+          <span>
+            Met onderhanden werk {euro(gefactureerd + ohw)} ({doel > 0 ? `${metOhw.toFixed(1).replace(".", ",")}%` : "—"})
+          </span>
+          <span>Per maand {euro(maandTarget)}</span>
+          <span>{nettoTekst}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// DWO-kleur op de tegel: onder 45 dagen is goed (wit), tot 60 aandacht (geel), daarboven rood.
+function dwoTegelVariant(dagen: number | null): "wit" | "geel" | "coral" {
+  const token = dwoKleurToken(dagen);
+  if (token === "destructive") return "coral";
+  if (token === "warning") return "geel";
+  return "wit";
+}
+
+// Schaal 0–100 dagen met de grenzen 45 en 60 en een markering op de huidige DWO.
+function DwoSchaal({ dagen }: { dagen: number | null }) {
+  const positie = dagen === null ? null : Math.min(100, Math.max(0, dagen));
+  return (
+    <div className="relative mt-4">
+      <div className="flex h-2 gap-0.5 overflow-hidden rounded-full">
+        <i className="block bg-success/70" style={{ flex: 45 }} />
+        <i className="block bg-warning/70" style={{ flex: 15 }} />
+        <i className="block bg-destructive/70" style={{ flex: 40 }} />
+      </div>
+      {positie !== null && (
+        <span
+          className="absolute top-1/2 h-4 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground ring-2 ring-background"
+          style={{ left: `${positie}%` }}
+        />
       )}
     </div>
   );
