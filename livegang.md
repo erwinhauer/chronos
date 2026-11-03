@@ -831,6 +831,13 @@ trigger beide kanten op, tegel 171,3 dagen over 7 items (= 1199 / 7), grafiek to
 migratie draait bij de build automatisch. Op verzoek gepromoot naar `main`/LIVE op 2026-11-03.
 `main` en `beta` staan weer gelijk.
 
+Daarna, op verzoek, een korte uitleg op de DWO-tegels (2026-11-03): in plaats van "Streef: onder
+45 · uiterlijk 60" staat er nu wat DWO is (Days Work-In-Progress Outstanding, dagen tussen werk
+doen en factureren) en dat het streven maximaal 45 dagen is (`DWO_UITLEG` in
+`dashboard/page.tsx`, op de periodetegel en op de teamtegel; de periodetegel toont daaronder het
+aantal items). Versie 1.7.0. Geen migraties. Lokaal getest: de tekst past in de tegel. Op verzoek
+direct naar `beta` en `main`/LIVE gepromoot op 2026-11-03. `main` en `beta` staan weer gelijk.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de
