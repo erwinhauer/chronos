@@ -17,6 +17,7 @@ import { TeamlidKaart } from "@/components/teamlid-kaart";
 import { KpiTegel } from "@/components/kpi-tegel";
 import { DashboardSectie, SectieKop } from "@/components/dashboard-sectie";
 import { DashboardWissel } from "@/components/dashboard-wissel";
+import { DwoGrafiek, type DwoMaandRij } from "@/components/dwo-grafiek";
 import { DashboardHero } from "@/components/dashboard-hero";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SegmentedProgress } from "@/components/segmented-progress";
@@ -40,6 +41,7 @@ type FactuurRegel = {
   klant_id: string;
   team_id: string | null;
   facturatiebatch_id: string | null;
+  definitief_op: string | null;
   honorarium: number;
   externe_kosten: number;
   korting: number;
@@ -208,7 +210,7 @@ export default async function DashboardPage({
     supabase
       .from("factuuritems")
       .select(
-        "medewerker_id, klant_id, team_id, facturatiebatch_id, honorarium, externe_kosten, korting, qty, status, declarabel, datum, prijstype, klanten(naam), factuuritem_dossiers(type_dienst, land, volgorde)"
+        "medewerker_id, klant_id, team_id, facturatiebatch_id, definitief_op, honorarium, externe_kosten, korting, qty, status, declarabel, datum, prijstype, klanten(naam), factuuritem_dossiers(type_dienst, land, volgorde)"
       ),
     supabase.from("teamdoelen").select("bruto_bedrag, netto_bedrag, teams(id, naam)").eq("jaar", gekozenJaar),
     supabase.from("team_members").select("team_id, profile_id"),
@@ -288,42 +290,45 @@ export default async function DashboardPage({
   const ohwGeenTeamRowsAlle = ohwRows.filter((r) => r.team_id === null);
   const ohwGeenTeamAlle = ohwGeenTeamRowsAlle.reduce((sum, r) => sum + regelbedrag(r), 0);
 
-  // DWO (Days Work Outstanding) — hoeveel dagen werk gemiddeld als
-  // onderhanden werk blijft staan vóórdat het definitief wordt gemaakt (in
-  // een specificatie wordt vastgelegd): per factuuritem het aantal dagen
-  // tussen zijn eigen datum en het moment waarop de specificatie waarin het
-  // is opgenomen is goedgekeurd (facturatiebatches.goedgekeurd_op — hetzelfde
-  // moment als "definitief", zie genereerSpecificatie). Dit is dus een
-  // achteraf-gemeten doorlooptijd van al afgeronde items, geen schatting op
-  // basis van het huidige factuurtempo. Gewogen naar bedrag (net als het
-  // gangbare Days Sales Outstanding-kengetal) — een item van €5.000 dat 40
-  // dagen bleef liggen weegt zwaarder dan een item van €50 dat 2 dagen bleef
-  // liggen. De periode-select filtert op wanneer de specificatie is
-  // goedgekeurd (dus "welke items zijn er in deze periode definitief
-  // gemaakt"), niet op de datum van het item zelf.
+  // DWO (Days Work Outstanding) — hoeveel dagen werk gemiddeld als onderhanden werk
+  // blijft staan voordat het definitief wordt gemaakt (in een specificatie wordt vastgelegd):
+  // per factuuritem het aantal dagen tussen zijn eigen datum en `definitief_op`, het moment
+  // waarop het item definitief is geworden (op het item zelf vastgelegd; voor items van vóór
+  // die kolom is het teruggezet naar het goedkeurmoment van de specificatie, en als vangnet
+  // vallen we daar nog op terug). Dit is een achteraf-gemeten doorlooptijd van al afgeronde
+  // items, geen schatting op basis van het huidige factuurtempo. Het is een gewoon gemiddelde
+  // per item: elk item telt even zwaar, ongeacht het bedrag. De periodekeuze filtert op
+  // wanneer het item definitief is geworden (dus "welke items zijn er in deze periode
+  // definitief gemaakt"), niet op de datum van het item zelf.
   const zietDwo = profile?.role === "directie" || profile?.role === "beheerder";
   const goedgekeurdOpPerBatch = new Map((batches ?? []).map((b) => [b.id, b.goedgekeurd_op]));
-  function berekenDwoRegels(dwoPeriodeArg: typeof periode) {
-    return rows.flatMap((r) => {
-      const goedgekeurdOp = r.facturatiebatch_id ? goedgekeurdOpPerBatch.get(r.facturatiebatch_id) : undefined;
-      if (!goedgekeurdOp || !inPeriode(goedgekeurdOp, dwoPeriodeArg, gekozenJaar)) return [];
-      // goedgekeurd_op is een timestamptz (heeft een tijdstip), datum is een
-      // pure date — op kalenderdatum vergelijken (niet op exacte milliseconden,
-      // anders schuift elk resultaat met het tijdstip-op-de-dag mee).
-      const dagen =
-        (new Date(goedgekeurdOp.slice(0, 10)).getTime() - new Date(r.datum).getTime()) / (1000 * 60 * 60 * 24);
-      return [{ teamId: r.team_id, dagen, bedrag: regelbedrag(r) }];
-    });
-  }
+  type DwoRegel = { teamId: string | null; dagen: number; definitiefOp: string };
+  const alleDwoRegels: DwoRegel[] = rows.flatMap((r) => {
+    const definitiefOp =
+      r.definitief_op ?? (r.facturatiebatch_id ? goedgekeurdOpPerBatch.get(r.facturatiebatch_id) : undefined);
+    if (!definitiefOp || !isGefactureerd(r.status)) return [];
+    // definitief_op is een timestamptz (heeft een tijdstip), datum is een pure date: op
+    // kalenderdatum vergelijken (niet op exacte milliseconden, anders schuift elk resultaat
+    // met het tijdstip-op-de-dag mee).
+    const dagen = (new Date(definitiefOp.slice(0, 10)).getTime() - new Date(r.datum).getTime()) / (1000 * 60 * 60 * 24);
+    return [{ teamId: r.team_id, dagen, definitiefOp }];
+  });
   // DWO volgt de gekozen periode van het "Periode"-blok.
-  const dwoRegels = berekenDwoRegels(periode);
-  function berekenDwo(regels: ReturnType<typeof berekenDwoRegels>): number | null {
-    const totaalBedrag = regels.reduce((sum, r) => sum + r.bedrag, 0);
-    if (totaalBedrag <= 0) return null;
-    const gewogenDagen = regels.reduce((sum, r) => sum + r.dagen * r.bedrag, 0);
-    return gewogenDagen / totaalBedrag;
+  const dwoRegels = alleDwoRegels.filter((r) => inPeriode(r.definitiefOp, periode, gekozenJaar));
+  function berekenDwo(regels: DwoRegel[]): number | null {
+    if (regels.length === 0) return null;
+    return regels.reduce((sum, r) => sum + r.dagen, 0) / regels.length;
   }
   const dwoTotaal = berekenDwo(dwoRegels);
+  // DWO per maand van het gekozen jaar (voor de trendgrafiek in "Lopend jaar"), plus het
+  // gemiddelde over het hele jaar.
+  const dwoJaarRegels = alleDwoRegels.filter((r) => new Date(r.definitiefOp).getFullYear() === gekozenJaar);
+  const dwoJaar = berekenDwo(dwoJaarRegels);
+  const dwoPerMaand: DwoMaandRij[] = MAANDEN.map((maand, i) => {
+    const regels = dwoJaarRegels.filter((r) => new Date(r.definitiefOp).getMonth() === i);
+    const dagen = berekenDwo(regels);
+    return { maand, dagen: dagen === null ? null : Math.round(dagen * 10) / 10, aantal: regels.length };
+  });
 
   const teamKaarten = (teamdoelen ?? [])
     .map((d) => {
@@ -629,6 +634,31 @@ export default async function DashboardPage({
               }`}
             />
 
+            {zietDwo && (
+              <div className="flex flex-col gap-3">
+                <SectieKop
+                  label="DWO · dagen"
+                  titel={`Doorlooptijd per maand ${gekozenJaar}`}
+                  rechts={
+                    <p className="text-sm text-muted-foreground">
+                      Gemiddeld dit jaar:{" "}
+                      <span className="font-medium text-foreground">
+                        {dwoJaar === null ? "nog geen data" : `${dwoJaar.toFixed(1).replace(".", ",")} dagen`}
+                      </span>{" "}
+                      · streef onder 45, uiterlijk 60
+                    </p>
+                  }
+                />
+                <div className="rounded-[24px] bg-tint p-5">
+                  <DwoGrafiek data={dwoPerMaand} />
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Gemiddeld aantal dagen tussen de datum van een factuuritem en het moment dat het definitief is gemaakt,
+                    per maand waarin dat gebeurde. Elk item telt even zwaar.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {teamKaarten.length > 0 && (
               <div className="flex flex-col gap-3">
                 <SectieKop label="Per team" titel={`Target ${gekozenJaar}`} />
@@ -806,7 +836,7 @@ export default async function DashboardPage({
                   variant={dwoTegelVariant(dwoTotaal)}
                   label="DWO · dagen"
                   dagen={dwoTotaal}
-                  sub="Streef: onder 45 · uiterlijk 60"
+                  sub={`Gemiddeld over ${dwoRegels.length} ${dwoRegels.length === 1 ? "item" : "items"} · streef onder 45 · uiterlijk 60`}
                 >
                   <DwoSchaal dagen={dwoTotaal} />
                 </KpiTegel>

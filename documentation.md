@@ -120,6 +120,7 @@ zodra opgenomen in een specificatie-batch — zie §6). `qty`/`tarief`/`korting`
 sinds de `factuuritem_negatief_bedrag`-migratie ook negatief zijn (deel-crediteren
 **vóór** facturering, op regelniveau) — de korting-check (`korting <= honorarium`)
 geldt alleen nog als het honorarium niet negatief is.
+`definitief_op` legt vast wanneer het item definitief werd (basis voor de DWO, zie §7.3).
 In het formulier (`src/components/factuuritem-form.tsx`) staan `externe_kosten` en `korting`
 achter de switch "Kosten derden/korting uitsplitsen" (`uitsplitsen`): standaard uit, behalve
 bij een bestaand item dat al kosten of korting heeft. Uitzetten zet kosten en korting terug
@@ -248,9 +249,18 @@ per klant instelbaar (`kantoorkosten_actief`). Zie §5 (`facturatiebatches`) voo
 snapshot-regel.
 
 ### 7.3 DWO (doorlooptijd van werkzaamheid tot omzet)
-Waarde-gewogen gemiddelde van `(facturatiebatch.goedgekeurd_op-datum − factuuritem.datum)`
-voor items waarvan de batch in de gekozen periode is goedgekeurd. Zie §5
-(`facturatiebatches`) voor de timestamptz/date-valkuil.
+Gewoon gemiddelde per item (elk item telt even zwaar, niet gewogen naar bedrag) van
+`(factuuritems.definitief_op-datum − factuuritems.datum)`, in kalenderdagen, voor items
+die in de gekozen periode definitief zijn geworden. `definitief_op` (timestamptz) staat op het
+item zelf: `genereerSpecificatie()` zet hem op hetzelfde moment als `facturatiebatches.goedgekeurd_op`,
+een trigger (`factuuritems_zet_definitief_op`) zet hem bij elke overgang naar `definitief` en maakt
+hem leeg als een item niet definitief is. Migratie `20261103100000_factuuritems_definitief_op`
+vulde hem voor bestaande items met het goedkeurmoment van hun specificatie; in het dashboard is
+`facturatiebatches.goedgekeurd_op` alleen nog een terugvaloptie. Zie §5 (`facturatiebatches`)
+voor de timestamptz/date-valkuil. Het dashboard toont de DWO als tegel (volgt de periodekeuze,
+met het aantal items erbij) en, voor directie/beheerder, als staafgrafiek per maand in
+"Lopend jaar" (`DwoGrafiek`, `src/components/dwo-grafiek.tsx`; kleuren en grenzen 45/60 dagen
+uit `src/lib/dwo-kleur.ts`).
 
 ### 7.4 Dashboard: "Lopend jaar" en "Periode"
 Het dashboard (`src/app/(app)/dashboard/page.tsx`) heeft twee duidelijk gescheiden blokken

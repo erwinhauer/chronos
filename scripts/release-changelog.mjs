@@ -154,9 +154,26 @@ const RELEASE_1_5_0 = {
   gebruikersactie: null,
 };
 
+const RELEASE_1_6_0 = {
+  versienummer: "1.6.0",
+  releasedatum: "2026-11-03",
+  titel: "DWO wordt per factuuritem bijgehouden, met een trend per maand",
+  nieuwe_functies: [
+    "Dashboard: de DWO-grafiek in Lopend jaar toont per maand hoeveel dagen het gemiddeld duurde voordat factuuritems definitief werden (alleen directie en beheerder)",
+    "Het moment waarop een factuuritem definitief wordt, wordt nu op het item zelf vastgelegd, ook voor bestaande items",
+  ],
+  wijzigingen: [
+    "DWO is nu het gewone gemiddelde aantal dagen tussen de datum van een factuuritem en het moment dat het definitief is gemaakt. Elk item telt even zwaar; eerder woog een groter bedrag zwaarder mee",
+    "De DWO-tegel toont erbij over hoeveel items het gemiddelde gaat",
+  ],
+  bugfixes: [],
+  bekende_beperkingen: [],
+  gebruikersactie: null,
+};
+
 // Oudste eerst; de nieuwste release hoort onderaan. package.json "version" moet gelijk zijn
 // aan de laatste (zie de controle hieronder).
-const CHANGELOG_ENTRIES = [RELEASE_1_0_0, RELEASE_1_1_0, RELEASE_1_2_0, RELEASE_1_3_0, RELEASE_1_4_0, RELEASE_1_5_0];
+const CHANGELOG_ENTRIES = [RELEASE_1_0_0, RELEASE_1_1_0, RELEASE_1_2_0, RELEASE_1_3_0, RELEASE_1_4_0, RELEASE_1_5_0, RELEASE_1_6_0];
 
 // Het versienummer in package.json en de nieuwste changelog-entry horen gelijk te lopen.
 {
