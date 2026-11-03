@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
+import { GEEN_FACTUURITEM_AANMAKEN_UITLEG, magFactuuritemAanmaken } from "@/lib/factuuritem-rechten";
 import { haalLandenMap } from "@/lib/landen";
 import { FactuurGroep, type FactuurGroepItem } from "@/components/factuur-groep";
 import { LinkButton } from "@/components/link-button";
@@ -62,6 +63,7 @@ export default async function FactuuritemsPerKlantPagina({
   // Finance is hier bewust weggelaten — zelfde (schrijf-)rechten als directie,
   // zie de RLS-migratie 20260924100000_finance_readonly_als_directie.sql.
   const kanFactureren = profile?.role === "beheerder" || profile?.role === "teamleider";
+  const magAanmaken = magFactuuritemAanmaken(profile?.role);
   const magSpecificatieMaken =
     kanFactureren ||
     (profile?.role === "medewerker" &&
@@ -123,7 +125,11 @@ export default async function FactuuritemsPerKlantPagina({
           )}
           <p className="text-sm text-muted-foreground">Openstaande factuuritems voor deze klant.</p>
         </div>
-        <LinkButton href={`/factuuritems/nieuw?klant_id=${klantId}`}>
+        <LinkButton
+          href={`/factuuritems/nieuw?klant_id=${klantId}`}
+          disabled={!magAanmaken}
+          disabledTitle={GEEN_FACTUURITEM_AANMAKEN_UITLEG}
+        >
           <Plus className="h-4 w-4" />
           Nieuw factuuritem
         </LinkButton>
@@ -142,6 +148,7 @@ export default async function FactuuritemsPerKlantPagina({
           kanFactureren={kanFactureren}
           magSpecificatieMaken={magSpecificatieMaken}
           magVerplaatsen={magVerplaatsen}
+          magAanmaken={magAanmaken}
           magAllesBewerken={magAllesBewerken}
           eigenTeamIds={Array.from(eigenTeamIds)}
           huidigeGebruikerId={profile?.id}

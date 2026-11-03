@@ -97,6 +97,13 @@ brede leestoegang (o.a. voor dashboard-KPI's) maar geen schrijfrechten op operat
 data. Elke tabel heeft eigen, expliciete RLS-policies — er is geen "beheerder ziet
 alles"-bypass; beheerder-rechten zijn per policy toegevoegd.
 
+In de UI volgen alle "Nieuw factuuritem"-knoppen (dashboard, Factuuritems, klantpagina, per
+project, "Kopiëren" in het rijmenu) de insert-policies op `factuuritems`: alleen medewerker,
+teamleider (praktijkvoerder) en beheerder mogen aanmaken (`magFactuuritemAanmaken()`,
+`src/lib/factuuritem-rechten.ts`). Voor directie en finance is de knop grijs en niet klikbaar
+(`LinkButton` met `disabled`, tooltip met uitleg), het kopiëren-item verdwijnt, en
+`/factuuritems/nieuw` stuurt ze terug naar het overzicht.
+
 ## 5. Datamodel
 
 16 tabellen in `public`. De belangrijkste, met wat niet uit de kolomnaam zelf blijkt:

@@ -184,9 +184,23 @@ const RELEASE_1_7_0 = {
   gebruikersactie: null,
 };
 
+const RELEASE_1_8_0 = {
+  versienummer: "1.8.0",
+  releasedatum: "2026-11-03",
+  titel: "Directie en Finance kunnen geen factuuritems meer aanmaken in de interface",
+  nieuwe_functies: [],
+  wijzigingen: [
+    "Nieuw factuuritem: voor gebruikers met de rol Directie of Finance zijn alle knoppen Nieuw factuuritem grijs en niet klikbaar, met uitleg bij het aanwijzen. Wissel naar de rol Medewerker of Praktijkvoerder om een factuuritem aan te maken",
+    "Kopiëren staat niet meer in het menu van een factuuritem voor Directie en Finance, en de pagina Nieuw factuuritem stuurt hen terug naar het overzicht",
+  ],
+  bugfixes: [],
+  bekende_beperkingen: [],
+  gebruikersactie: null,
+};
+
 // Oudste eerst; de nieuwste release hoort onderaan. package.json "version" moet gelijk zijn
 // aan de laatste (zie de controle hieronder).
-const CHANGELOG_ENTRIES = [RELEASE_1_0_0, RELEASE_1_1_0, RELEASE_1_2_0, RELEASE_1_3_0, RELEASE_1_4_0, RELEASE_1_5_0, RELEASE_1_6_0, RELEASE_1_7_0];
+const CHANGELOG_ENTRIES = [RELEASE_1_0_0, RELEASE_1_1_0, RELEASE_1_2_0, RELEASE_1_3_0, RELEASE_1_4_0, RELEASE_1_5_0, RELEASE_1_6_0, RELEASE_1_7_0, RELEASE_1_8_0];
 
 // Het versienummer in package.json en de nieuwste changelog-entry horen gelijk te lopen.
 {

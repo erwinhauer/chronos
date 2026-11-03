@@ -19,6 +19,7 @@ import { DashboardSectie, SectieKop } from "@/components/dashboard-sectie";
 import { DashboardWissel } from "@/components/dashboard-wissel";
 import { DwoGrafiek, type DwoMaandRij } from "@/components/dwo-grafiek";
 import { DashboardHero } from "@/components/dashboard-hero";
+import { magFactuuritemAanmaken } from "@/lib/factuuritem-rechten";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SegmentedProgress } from "@/components/segmented-progress";
 import { AvatarInitials } from "@/components/ui/avatar-initials";
@@ -580,7 +581,10 @@ export default async function DashboardPage({
 
   return (
     <div className="flex flex-col gap-7">
-      <DashboardHero voornaam={profile ? firstName(profile.full_name) : ""} />
+      <DashboardHero
+        voornaam={profile ? firstName(profile.full_name) : ""}
+        kanAanmaken={magFactuuritemAanmaken(profile?.role)}
+      />
 
       {/* Lopend jaar en Periode staan bovenaan achter een wissel: één tegelijk in beeld. */}
       <DashboardWissel

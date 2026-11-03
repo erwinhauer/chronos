@@ -67,7 +67,7 @@ const ROLLEN = [
   { rol: "Praktijkvoerder", kan: "Factuuritems van het eigen team; specificaties maken", ziet: "Team-dashboard" },
   { rol: "Finance", kan: "Specificaties maken over alle klanten", ziet: "Financieel overzicht" },
   { rol: "Beheerder", kan: "Alles, plus gebruikers-, team- en instellingenbeheer", ziet: "Alles" },
-  { rol: "Directie", kan: "Alleen lezen", ziet: "Praktijkbreed dashboard" },
+  { rol: "Directie", kan: "Alleen lezen, geen factuuritems aanmaken (de knop is grijs; wissel daarvoor naar Medewerker of Praktijkvoerder)", ziet: "Praktijkbreed dashboard" },
 ];
 
 function SectieKop({ label, titel }: { label: string; titel: string }) {
