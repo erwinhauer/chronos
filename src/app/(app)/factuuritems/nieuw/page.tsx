@@ -5,6 +5,7 @@ import { createFactuurItem } from "@/actions/factuuritems";
 import { FactuurItemForm } from "@/components/factuuritem-form";
 import { SetBreadcrumb } from "@/lib/breadcrumb-context";
 import { haalLandenMap } from "@/lib/landen";
+import { magFactuuritemAanmaken } from "@/lib/factuuritem-rechten";
 import { haalHerToewijsbareMedewerkers } from "@/lib/team-medewerkers";
 
 export default async function NieuwFactuurItemPage({
@@ -21,6 +22,8 @@ export default async function NieuwFactuurItemPage({
     profile,
   ] = await Promise.all([supabase.auth.getUser(), getCurrentProfile()]);
   if (!user) redirect("/login");
+  // Directie en finance mogen geen factuuritems aanmaken (ook niet via een directe link).
+  if (!magFactuuritemAanmaken(profile?.role)) redirect("/factuuritems");
 
   const [
     { data: klanten },

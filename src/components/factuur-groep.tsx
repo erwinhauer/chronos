@@ -26,6 +26,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { FactuurItemStatus } from "@/lib/supabase/types";
 import { medewerkerKleurStijl, VASTE_TAG_STIJL } from "@/lib/tag-kleur";
+import { GEEN_FACTUURITEM_AANMAKEN_UITLEG } from "@/lib/factuuritem-rechten";
 
 type Project = { id: string; naam: string; po_nummer: string | null };
 
@@ -81,6 +82,7 @@ export function FactuurGroep({
   kanFactureren,
   magSpecificatieMaken,
   magVerplaatsen,
+  magAanmaken = true,
   magAllesBewerken = false,
   eigenTeamIds = [],
   huidigeGebruikerId,
@@ -96,6 +98,7 @@ export function FactuurGroep({
   kanFactureren: boolean;
   magSpecificatieMaken: boolean;
   magVerplaatsen: boolean;
+  magAanmaken?: boolean;
   magAllesBewerken?: boolean;
   eigenTeamIds?: string[];
   huidigeGebruikerId?: string;
@@ -206,6 +209,7 @@ export function FactuurGroep({
                 kanFactureren={kanFactureren}
                 magSpecificatieMaken={magSpecificatieMaken}
                 magVerplaatsen={magVerplaatsen}
+                magAanmaken={magAanmaken}
                 magAllesBewerken={magAllesBewerken}
                 eigenTeamIds={eigenTeamIds}
                 huidigeGebruikerId={huidigeGebruikerId}
@@ -232,6 +236,7 @@ function ProjectSectieBlok({
   kanFactureren,
   magSpecificatieMaken,
   magVerplaatsen,
+  magAanmaken,
   magAllesBewerken,
   eigenTeamIds,
   huidigeGebruikerId,
@@ -250,6 +255,7 @@ function ProjectSectieBlok({
   kanFactureren: boolean;
   magSpecificatieMaken: boolean;
   magVerplaatsen: boolean;
+  magAanmaken: boolean;
   magAllesBewerken: boolean;
   eigenTeamIds: string[];
   huidigeGebruikerId?: string;
@@ -356,6 +362,8 @@ function ProjectSectieBlok({
                 size="sm"
                 variant="outline"
                 href={`/factuuritems/nieuw?klant_id=${klantId}&project_id=${huidigProjectId}`}
+                disabled={!magAanmaken}
+                disabledTitle={GEEN_FACTUURITEM_AANMAKEN_UITLEG}
               >
                 <Plus className="h-4 w-4" />
                 Nieuw factuuritem
@@ -373,6 +381,7 @@ function ProjectSectieBlok({
           valuta={valuta}
           toonMedewerker={toonMedewerker}
           magVerplaatsen={magVerplaatsen}
+          magAanmaken={magAanmaken}
           magAllesBewerken={magAllesBewerken}
           eigenTeamIds={eigenTeamIds}
           huidigeGebruikerId={huidigeGebruikerId}
@@ -392,6 +401,7 @@ function FactuurItemsTabel({
   valuta,
   toonMedewerker,
   magVerplaatsen,
+  magAanmaken,
   magAllesBewerken,
   eigenTeamIds,
   huidigeGebruikerId,
@@ -405,6 +415,7 @@ function FactuurItemsTabel({
   valuta: string;
   toonMedewerker: boolean;
   magVerplaatsen: boolean;
+  magAanmaken: boolean;
   magAllesBewerken: boolean;
   eigenTeamIds: string[];
   huidigeGebruikerId?: string;
@@ -596,10 +607,12 @@ function FactuurItemsTabel({
                         Bewerken
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuItem render={<Link href={`/factuuritems/nieuw?kopie_van=${r.id}`} />}>
-                      <Copy className="h-4 w-4" />
-                      Kopiëren
-                    </DropdownMenuItem>
+                    {magAanmaken && (
+                      <DropdownMenuItem render={<Link href={`/factuuritems/nieuw?kopie_van=${r.id}`} />}>
+                        <Copy className="h-4 w-4" />
+                        Kopiëren
+                      </DropdownMenuItem>
+                    )}
                     {magVerwijderen && (
                       <DropdownMenuItem
                         variant="destructive"

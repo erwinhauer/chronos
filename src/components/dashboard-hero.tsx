@@ -1,5 +1,6 @@
 import { Plus } from "lucide-react";
 import { LinkButton } from "@/components/link-button";
+import { GEEN_FACTUURITEM_AANMAKEN_UITLEG } from "@/lib/factuuritem-rechten";
 
 function vandaagLabel() {
   const nu = new Date();
@@ -9,7 +10,7 @@ function vandaagLabel() {
 }
 
 // Begroeting met de datum van vandaag, plus de snelste route naar een nieuw factuuritem.
-export function DashboardHero({ voornaam }: { voornaam: string }) {
+export function DashboardHero({ voornaam, kanAanmaken = true }: { voornaam: string; kanAanmaken?: boolean }) {
   const { weekdag, datum } = vandaagLabel();
   return (
     <div className="grid gap-5 lg:grid-cols-3">
@@ -50,7 +51,13 @@ export function DashboardHero({ voornaam }: { voornaam: string }) {
       <div className="flex flex-col gap-4 rounded-2xl bg-coral-soft p-8">
         <h3 className="text-2xl font-light tracking-tight">Nieuw factuuritem</h3>
         <p className="text-sm text-muted-foreground">Leg een werkzaamheid, uren of kosten vast op een dossier.</p>
-        <LinkButton href="/factuuritems/nieuw" size="lg" className="mt-auto w-full uppercase tracking-wider">
+        <LinkButton
+          href="/factuuritems/nieuw"
+          size="lg"
+          className="mt-auto w-full uppercase tracking-wider"
+          disabled={!kanAanmaken}
+          disabledTitle={GEEN_FACTUURITEM_AANMAKEN_UITLEG}
+        >
           <Plus className="h-4 w-4" />
           Nieuw factuuritem
         </LinkButton>

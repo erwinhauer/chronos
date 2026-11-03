@@ -838,6 +838,17 @@ doen en factureren) en dat het streven maximaal 45 dagen is (`DWO_UITLEG` in
 aantal items). Versie 1.7.0. Geen migraties. Lokaal getest: de tekst past in de tegel. Op verzoek
 direct naar `beta` en `main`/LIVE gepromoot op 2026-11-03. `main` en `beta` staan weer gelijk.
 
+Daarna, op verzoek, de knop Nieuw factuuritem voor Directie (2026-11-03): in de database mochten
+directie en finance al geen factuuritems aanmaken (insert-policies), maar de UI bood de knop nog
+aan. Nu zijn alle knoppen (dashboard, Factuuritems, klantpagina, per project) grijs en niet
+klikbaar voor die rollen, met een tooltip die uitlegt dat ze naar Medewerker of Praktijkvoerder
+moeten wisselen. Regel: `magFactuuritemAanmaken()` in `src/lib/factuuritem-rechten.ts`, gelijk aan de
+policies (medewerker, teamleider, beheerder). `LinkButton` kreeg een `disabled`-variant. Finance is
+op dezelfde grond meegenomen. Ook weg voor deze rollen: "Kopiëren" in het rijmenu; en
+`/factuuritems/nieuw` stuurt ze terug naar het overzicht (directe link). Versie 1.8.0. Geen
+migraties. Lokaal getest als Diana Directie: de knop is uitgeschakeld op dashboard,
+Factuuritems en klantpagina, en de directe link redirect. Nog niet naar `beta`/`main`.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de

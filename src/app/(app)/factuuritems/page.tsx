@@ -1,6 +1,7 @@
 import { Plus, Receipt } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
+import { GEEN_FACTUURITEM_AANMAKEN_UITLEG, magFactuuritemAanmaken } from "@/lib/factuuritem-rechten";
 import { euro, isNogTeFactureren, regelbedrag } from "@/lib/factuurbedragen";
 import { FactuurGroepenTabel, type FactuurGroepSamenvatting } from "@/components/factuur-groepen-tabel";
 import { LinkButton } from "@/components/link-button";
@@ -124,7 +125,11 @@ export default async function FactuuritemsPage() {
             Factuuritems gegroepeerd per klant. Klik op een klant voor de volledige lijst.
           </p>
         </div>
-        <LinkButton href="/factuuritems/nieuw">
+        <LinkButton
+          href="/factuuritems/nieuw"
+          disabled={!magFactuuritemAanmaken(profile?.role)}
+          disabledTitle={GEEN_FACTUURITEM_AANMAKEN_UITLEG}
+        >
           <Plus className="h-4 w-4" />
           Nieuw factuuritem
         </LinkButton>
