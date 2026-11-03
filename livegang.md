@@ -847,7 +847,8 @@ policies (medewerker, teamleider, beheerder). `LinkButton` kreeg een `disabled`-
 op dezelfde grond meegenomen. Ook weg voor deze rollen: "Kopiëren" in het rijmenu; en
 `/factuuritems/nieuw` stuurt ze terug naar het overzicht (directe link). Versie 1.8.0. Geen
 migraties. Lokaal getest als Diana Directie: de knop is uitgeschakeld op dashboard,
-Factuuritems en klantpagina, en de directe link redirect. Nog niet naar `beta`/`main`.
+Factuuritems en klantpagina, en de directe link redirect. Op verzoek gepromoot naar `main`/LIVE op
+2026-11-03. `main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
