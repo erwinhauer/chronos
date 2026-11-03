@@ -257,6 +257,7 @@ export type Database = {
           created_at: string
           datum: string
           declarabel: boolean
+          definitief_op: string | null
           eenheidstype: string
           externe_kosten: number
           facturatiebatch_id: string | null
@@ -284,6 +285,7 @@ export type Database = {
           created_at?: string
           datum: string
           declarabel?: boolean
+          definitief_op?: string | null
           eenheidstype?: string
           externe_kosten?: number
           facturatiebatch_id?: string | null
@@ -311,6 +313,7 @@ export type Database = {
           created_at?: string
           datum?: string
           declarabel?: boolean
+          definitief_op?: string | null
           eenheidstype?: string
           externe_kosten?: number
           facturatiebatch_id?: string | null

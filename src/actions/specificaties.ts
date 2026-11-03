@@ -100,6 +100,9 @@ export async function genereerSpecificatie(
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Eén moment voor de batch en voor al zijn items: dat is het "definitief"-moment voor de DWO.
+  const goedgekeurdOp = new Date().toISOString();
+
   const { data: batch, error: batchError } = await supabase
     .from("facturatiebatches")
     .insert({
@@ -117,7 +120,7 @@ export async function genereerSpecificatie(
       kolom_externe_kosten_zichtbaar,
       kolom_korting_zichtbaar,
       goedgekeurd_door: user?.id,
-      goedgekeurd_op: new Date().toISOString(),
+      goedgekeurd_op: goedgekeurdOp,
     })
     .select("id")
     .single();
@@ -128,7 +131,7 @@ export async function genereerSpecificatie(
 
   const { error: updateError } = await supabase
     .from("factuuritems")
-    .update({ facturatiebatch_id: batch.id, status: "definitief" })
+    .update({ facturatiebatch_id: batch.id, status: "definitief", definitief_op: goedgekeurdOp })
     .in(
       "id",
       items.map((i) => i.id)

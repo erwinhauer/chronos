@@ -816,6 +816,20 @@ Korting verdwijnen uit "Overzicht regel". Versie 1.5.0. Geen migraties. Lokaal g
 verborgen, aan toont beide velden, uit reset de waarden naar 0. Op verzoek gepromoot naar
 `main`/LIVE op 2026-11-01. `main` en `beta` staan weer gelijk.
 
+Daarna, op verzoek, de DWO (2026-11-03): het moment waarop een factuuritem definitief wordt, staat
+nu op het item zelf (`factuuritems.definitief_op`, migratie `20261103100000`). `genereerSpecificatie()`
+geeft hetzelfde moment mee als `goedgekeurd_op` van de batch, een trigger
+(`factuuritems_zet_definitief_op`) vangt elke andere route op en maakt de waarde leeg als een item
+niet definitief is. De migratie vult bestaande definitieve items met het goedkeurmoment van hun
+specificatie en zet daarbij de trigger `laatst_bewerkt_door` tijdelijk uit, zodat dat veld niet
+leeg raakt. De DWO is nu het gewone gemiddelde per item (voorheen gewogen naar bedrag, op verzoek
+gewijzigd) en filtert op wanneer het item definitief werd; de tegel toont het aantal items. Nieuw
+voor directie/beheerder: staafgrafiek "Doorlooptijd per maand" in Lopend jaar (`dwo-grafiek.tsx`,
+kleuren en grenzen 45/60 dagen zoals de tegel). Praktijkvoerders krijgen hun teamtegel nu ook
+zonder facturatiebatch-gegevens. Versie 1.6.0. Lokaal getest met de seeddata: backfill 7 van 7,
+trigger beide kanten op, tegel 171,3 dagen over 7 items (= 1199 / 7), grafiek toont augustus. Nog
+niet naar `beta`/`main`; de migratie draait bij de eerstvolgende build automatisch.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de

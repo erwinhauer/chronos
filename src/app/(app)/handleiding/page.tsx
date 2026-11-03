@@ -207,7 +207,7 @@ export default function HandleidingPage() {
           <ul className="flex flex-col gap-1 text-sm text-muted-foreground">
             <li>— bovenaan wissel je met één klik tussen &quot;Lopend jaar&quot; en &quot;Periode&quot;; je keuze blijft staan als je ververst,</li>
             <li>— in het blok &quot;Lopend jaar&quot;: wat dit jaar is gefactureerd, het onderhanden werk en de voortgang t.o.v. het jaartarget, met per team een uitklapblok met de KPI&apos;s van je teamleden,</li>
-            <li>— in het blok &quot;Periode&quot;: omzet en DWO voor de periode die je kiest (standaard deze maand), uitgesplitst per teamlid, klant, productgroep en land.</li>
+            <li>— in het blok &quot;Periode&quot;: omzet en DWO voor de periode die je kiest (standaard deze maand), uitgesplitst per teamlid, klant, productgroep en land. De DWO is het gemiddelde aantal dagen tussen de datum van een factuuritem en het moment dat het definitief wordt gemaakt. Directie en beheerder zien in &quot;Lopend jaar&quot; ook het verloop per maand.</li>
           </ul>
           <p className="text-xs text-muted-foreground">
             Onderhanden werk is al het werk dat nog niet is gefactureerd, ook uit eerdere periodes, en verandert dus niet met de periodekeuze. Het blok &quot;Lopend jaar&quot; staat vast. Alleen het blok &quot;Periode&quot; verandert als je rechtsboven in dat blok een
