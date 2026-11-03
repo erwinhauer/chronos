@@ -827,8 +827,9 @@ gewijzigd) en filtert op wanneer het item definitief werd; de tegel toont het aa
 voor directie/beheerder: staafgrafiek "Doorlooptijd per maand" in Lopend jaar (`dwo-grafiek.tsx`,
 kleuren en grenzen 45/60 dagen zoals de tegel). Praktijkvoerders krijgen hun teamtegel nu ook
 zonder facturatiebatch-gegevens. Versie 1.6.0. Lokaal getest met de seeddata: backfill 7 van 7,
-trigger beide kanten op, tegel 171,3 dagen over 7 items (= 1199 / 7), grafiek toont augustus. Nog
-niet naar `beta`/`main`; de migratie draait bij de eerstvolgende build automatisch.
+trigger beide kanten op, tegel 171,3 dagen over 7 items (= 1199 / 7), grafiek toont augustus. De
+migratie draait bij de build automatisch. Op verzoek gepromoot naar `main`/LIVE op 2026-11-03.
+`main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
