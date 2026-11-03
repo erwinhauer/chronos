@@ -171,9 +171,22 @@ const RELEASE_1_6_0 = {
   gebruikersactie: null,
 };
 
+const RELEASE_1_7_0 = {
+  versienummer: "1.7.0",
+  releasedatum: "2026-11-03",
+  titel: "Uitleg bij de DWO-tegel",
+  nieuwe_functies: [],
+  wijzigingen: [
+    "Dashboard: op de DWO-tegel staat nu een korte uitleg van wat DWO is en wat het streven is (maximaal 45 dagen tussen werk doen en factureren)",
+  ],
+  bugfixes: [],
+  bekende_beperkingen: [],
+  gebruikersactie: null,
+};
+
 // Oudste eerst; de nieuwste release hoort onderaan. package.json "version" moet gelijk zijn
 // aan de laatste (zie de controle hieronder).
-const CHANGELOG_ENTRIES = [RELEASE_1_0_0, RELEASE_1_1_0, RELEASE_1_2_0, RELEASE_1_3_0, RELEASE_1_4_0, RELEASE_1_5_0, RELEASE_1_6_0];
+const CHANGELOG_ENTRIES = [RELEASE_1_0_0, RELEASE_1_1_0, RELEASE_1_2_0, RELEASE_1_3_0, RELEASE_1_4_0, RELEASE_1_5_0, RELEASE_1_6_0, RELEASE_1_7_0];
 
 // Het versienummer in package.json en de nieuwste changelog-entry horen gelijk te lopen.
 {

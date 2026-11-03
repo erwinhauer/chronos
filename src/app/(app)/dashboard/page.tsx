@@ -54,6 +54,10 @@ type FactuurRegel = {
   factuuritem_dossiers: { type_dienst: string | null; land: string | null; volgorde: number }[];
 };
 
+// Korte uitleg op de DWO-tegels.
+const DWO_UITLEG =
+  "DWO = Days Work-In-Progress Outstanding, het aantal dagen tussen de dag dat je het werk hebt gedaan en de dag dat je het factureert. Het streven is hier maximaal 45 dagen tussen te hebben zitten en werk dus zo kort mogelijk op te sparen.";
+
 function buildOmzetGrafiekData(
   ditJaar: { medewerker_id: string; datum: string; honorarium: number; externe_kosten: number; korting: number }[],
   namenPerId: Map<string, string>
@@ -836,7 +840,14 @@ export default async function DashboardPage({
                   variant={dwoTegelVariant(dwoTotaal)}
                   label="DWO · dagen"
                   dagen={dwoTotaal}
-                  sub={`Gemiddeld over ${dwoRegels.length} ${dwoRegels.length === 1 ? "item" : "items"} · streef onder 45 · uiterlijk 60`}
+                  sub={
+                    <>
+                      {DWO_UITLEG}
+                      <span className="mt-2 block text-xs">
+                        Gemiddeld over {dwoRegels.length} {dwoRegels.length === 1 ? "item" : "items"}
+                      </span>
+                    </>
+                  }
                 >
                   <DwoSchaal dagen={dwoTotaal} />
                 </KpiTegel>
@@ -897,7 +908,7 @@ export default async function DashboardPage({
                           variant={dwoTegelVariant(t.dwoTeamPeriode)}
                           label="DWO · dagen"
                           dagen={t.dwoTeamPeriode}
-                          sub="Streef: onder 45 · uiterlijk 60"
+                          sub={DWO_UITLEG}
                         >
                           <DwoSchaal dagen={t.dwoTeamPeriode} />
                         </KpiTegel>

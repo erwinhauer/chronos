@@ -258,7 +258,7 @@ hem leeg als een item niet definitief is. Migratie `20261103100000_factuuritems_
 vulde hem voor bestaande items met het goedkeurmoment van hun specificatie; in het dashboard is
 `facturatiebatches.goedgekeurd_op` alleen nog een terugvaloptie. Zie §5 (`facturatiebatches`)
 voor de timestamptz/date-valkuil. Het dashboard toont de DWO als tegel (volgt de periodekeuze,
-met het aantal items erbij) en, voor directie/beheerder, als staafgrafiek per maand in
+met het aantal items en een korte uitleg van wat DWO is, de constante `DWO_UITLEG` in `dashboard/page.tsx`) en, voor directie/beheerder, als staafgrafiek per maand in
 "Lopend jaar" (`DwoGrafiek`, `src/components/dwo-grafiek.tsx`; kleuren en grenzen 45/60 dagen
 uit `src/lib/dwo-kleur.ts`).
 
