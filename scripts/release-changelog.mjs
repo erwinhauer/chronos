@@ -198,9 +198,22 @@ const RELEASE_1_8_0 = {
   gebruikersactie: null,
 };
 
+const RELEASE_1_9_0 = {
+  versienummer: "1.9.0",
+  releasedatum: "2026-11-04",
+  titel: "Nieuw favicon: het koraalkleurige Chronos-klokje",
+  nieuwe_functies: [],
+  wijzigingen: [
+    "Het icoontje in het browsertabblad is nu het koraalkleurige Chronos-klokje, in plaats van het klokje op een donkerblauwe cirkel",
+  ],
+  bugfixes: [],
+  bekende_beperkingen: [],
+  gebruikersactie: "Zie je nog het oude icoontje? Ververs de pagina met Cmd+Shift+R; browsers bewaren favicons soms een tijdje",
+};
+
 // Oudste eerst; de nieuwste release hoort onderaan. package.json "version" moet gelijk zijn
 // aan de laatste (zie de controle hieronder).
-const CHANGELOG_ENTRIES = [RELEASE_1_0_0, RELEASE_1_1_0, RELEASE_1_2_0, RELEASE_1_3_0, RELEASE_1_4_0, RELEASE_1_5_0, RELEASE_1_6_0, RELEASE_1_7_0, RELEASE_1_8_0];
+const CHANGELOG_ENTRIES = [RELEASE_1_0_0, RELEASE_1_1_0, RELEASE_1_2_0, RELEASE_1_3_0, RELEASE_1_4_0, RELEASE_1_5_0, RELEASE_1_6_0, RELEASE_1_7_0, RELEASE_1_8_0, RELEASE_1_9_0];
 
 // Het versienummer in package.json en de nieuwste changelog-entry horen gelijk te lopen.
 {
