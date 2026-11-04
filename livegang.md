@@ -855,8 +855,8 @@ vorm als `ChronosMark`: ring, wijzers en middenpunt, `#ff6368` = `--coral`, tran
 achtergrond) in plaats van het witte klokje op een navy cirkel. `src/app/icon.svg` is het nieuwe
 SVG-icoon; `src/app/favicon.ico` (16, 32 en 48 px) is er zelf van getekend, met iets dikkere
 lijnen dan in de app zodat het op 16 px leesbaar blijft. Geen migraties. Lokaal getest: beide
-bestanden worden uitgeleverd met een nieuwe cache-hash en de SVG toont het klokje. Nog niet
-naar `beta`/`main`.
+bestanden worden uitgeleverd met een nieuwe cache-hash en de SVG toont het klokje. Op verzoek
+gepromoot naar `beta` en `main`/LIVE op 2026-11-04. `main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
