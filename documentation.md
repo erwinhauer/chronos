@@ -139,7 +139,10 @@ Koppeltabel: welke dossiers (kunnen er meerdere zijn) horen bij dit factuuritem,
 `matter_naam` (vrij ingevuld door de gebruiker sinds de Patricia-dummykoppeling is
 weggehaald — zie §9) en `type_dienst`/`land` afgeleid uit het dossiernummer-formaat
 (`parseDossiernummer()` in `src/lib/dossiernummer.ts`, puur client-side parsing van de
-bekende Knijff-dossiernummerconventie, geen database-lookup).
+bekende Knijff-dossiernummerconventie, geen database-lookup). Formaat:
+`<type><nummer><land>[WO]<suffix>[letter]`, bv. `O12345IN00`, `TM64765CNWO01` (via een
+Internationale registratie) en `TM100479CN35A` (de letter achter het suffix is een afgesplitst
+dossier; hij hoort bij het suffix en komt alleen na cijfers voor).
 
 ### `facturatiebatches`
 Een gegenereerde specificatie: groepeert factuuritems van één klant over één periode.

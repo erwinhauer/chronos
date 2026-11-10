@@ -858,6 +858,16 @@ lijnen dan in de app zodat het op 16 px leesbaar blijft. Geen migraties. Lokaal 
 bestanden worden uitgeleverd met een nieuwe cache-hash en de SVG toont het klokje. Op verzoek
 gepromoot naar `beta` en `main`/LIVE op 2026-11-04. `main` en `beta` staan weer gelijk.
 
+Daarna, op verzoek, een extra dossiernummerformaat (2026-11-10): achter het suffix mag één letter
+staan voor een afgesplitst dossier, bv. `TM100479CN35A` (Merken, China). `tryParsePrefix()` in
+`src/lib/dossiernummer.ts` accepteert nu `<nummer><land>[WO]<cijfers>[letter]`; de letter hoort bij
+het `suffix` ("35A") en is alleen toegestaan na cijfers. Alle plekken (formulier, server-actie,
+Patricia-lookup) lopen via `parseDossiernummer()`, dus er is één wijziging nodig. Getest met 14
+gevallen, o.a. `TM100479CN35A`, kleine letters, `TM64765CNWO01(B)`, de bestaande vormen en
+ongeldige varianten (twee letters, letter zonder cijfers, cijfer na de letter). Versie 1.10.0. Geen
+migraties. Op verzoek gepromoot naar `beta` en `main`/LIVE op 2026-11-10. `main` en `beta` staan
+weer gelijk.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de

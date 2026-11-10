@@ -211,9 +211,22 @@ const RELEASE_1_9_0 = {
   gebruikersactie: "Zie je nog het oude icoontje? Ververs de pagina met Cmd+Shift+R; browsers bewaren favicons soms een tijdje",
 };
 
+const RELEASE_1_10_0 = {
+  versienummer: "1.10.0",
+  releasedatum: "2026-11-10",
+  titel: "Dossiernummers van afgesplitste dossiers worden herkend",
+  nieuwe_functies: [],
+  wijzigingen: [
+    "Nieuw factuuritem: een dossiernummer met een letter erachter voor een afgesplitst dossier, zoals TM100479CN35A, wordt nu herkend als Merken-dossier voor China. Eerder gaf Chronos hierbij de melding Onbekend dossiernummerformaat",
+  ],
+  bugfixes: [],
+  bekende_beperkingen: [],
+  gebruikersactie: null,
+};
+
 // Oudste eerst; de nieuwste release hoort onderaan. package.json "version" moet gelijk zijn
 // aan de laatste (zie de controle hieronder).
-const CHANGELOG_ENTRIES = [RELEASE_1_0_0, RELEASE_1_1_0, RELEASE_1_2_0, RELEASE_1_3_0, RELEASE_1_4_0, RELEASE_1_5_0, RELEASE_1_6_0, RELEASE_1_7_0, RELEASE_1_8_0, RELEASE_1_9_0];
+const CHANGELOG_ENTRIES = [RELEASE_1_0_0, RELEASE_1_1_0, RELEASE_1_2_0, RELEASE_1_3_0, RELEASE_1_4_0, RELEASE_1_5_0, RELEASE_1_6_0, RELEASE_1_7_0, RELEASE_1_8_0, RELEASE_1_9_0, RELEASE_1_10_0];
 
 // Het versienummer in package.json en de nieuwste changelog-entry horen gelijk te lopen.
 {

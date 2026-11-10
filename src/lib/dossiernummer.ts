@@ -339,12 +339,16 @@ export const PRODUCTGROEP_CODES = ["TM", "D", "I", "O", "CA", "S", "W", "@"];
 // registratie (WO). Het land dat telt voor rapportage/weergave blijft het
 // eerst genoemde, specifiek gedesigneerde land (CN), niet WO — de optionele
 // "WO" erna is puur een markering dat het via die registratie loopt.
+//
+// Achter het suffix kan ook één letter staan voor een afgesplitst dossier, bv.
+// "TM100479CN35A" = merkenwerk in China (CN), afsplitsing A van TM100479CN35. De
+// letter hoort bij het suffix ("35A") en komt alleen voor ná cijfers.
 function tryParsePrefix(code: string, rest: string): DossiernummerParseResult | null {
   // Landcode is meestal 2 letters, maar Patricia kent ook pseudo-landcodes
   // met een cijfer erin (bv. "K4" = Koerdistan) — vereis alleen dat het
   // eerste teken een letter is, anders zou een dossiernummer zonder
   // landcode (enkel cijfers) hier ook al matchen.
-  const pattern = new RegExp(`^(\\d+)([A-Z][A-Z0-9])(?:WO)?(\\d*)$`);
+  const pattern = new RegExp(`^(\\d+)([A-Z][A-Z0-9])(?:WO)?((?:\\d+[A-Z]?)?)$`);
   const match = pattern.exec(rest);
   if (!match) return null;
   const [, nummer, landIso, suffix] = match;

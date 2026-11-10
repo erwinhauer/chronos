@@ -247,7 +247,8 @@ export default function HandleidingPage() {
             <li>
               2. <strong className="text-foreground">Dossier(s)</strong>: typ het dossiernummer, Enter. Meerdere
               dossiers mag, mits hetzelfde type (bv. twee Merken-dossiers) — een Merken- en een Oppositie-dossier
-              combineren kan niet, en Chronos meldt dat direct. Land mag wel verschillen.
+              combineren kan niet, en Chronos meldt dat direct. Land mag wel verschillen. Een letter achter het
+              nummer, voor een afgesplitst dossier (bv. TM100479CN35A), wordt ook herkend.
             </li>
             <li>3. Vul per dossier de dossiernaam in, kies klant en eventueel project.</li>
             <li>4. Vul de omschrijving voor de klant in — komt op de specificatie. Een interne opmerking niet.</li>
