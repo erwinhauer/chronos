@@ -224,9 +224,25 @@ const RELEASE_1_10_0 = {
   gebruikersactie: null,
 };
 
+const RELEASE_1_10_1 = {
+  versienummer: "1.10.1",
+  releasedatum: "2026-11-11",
+  titel: "Medewerker naar een ander team: eerdere items blijven op het oude team",
+  nieuwe_functies: [],
+  wijzigingen: [],
+  bugfixes: [
+    "Dashboard: als een medewerker naar een ander team gaat, blijft zijn eerdere werk op het oude team staan en zichtbaar op een eigen kaart met het label Voorheen in dit team. Eerder ontbrak die kaart, waardoor de kaarten niet meer optelden tot het teamtotaal",
+    "Factuuritem bewerken: een praktijkvoerder of beheerder kan een nog niet gefactureerd item van een vertrokken teamlid weer bewerken zonder het team te wijzigen. Eerder gaf Chronos dan de melding Ongeldig team gekozen",
+  ],
+  bekende_beperkingen: [
+    "Een medewerker die zelf naar een ander team is gegaan, kan zijn eigen nog niet gefactureerde items van het oude team niet meer bewerken. Een praktijkvoerder of beheerder kan dat wel",
+  ],
+  gebruikersactie: null,
+};
+
 // Oudste eerst; de nieuwste release hoort onderaan. package.json "version" moet gelijk zijn
 // aan de laatste (zie de controle hieronder).
-const CHANGELOG_ENTRIES = [RELEASE_1_0_0, RELEASE_1_1_0, RELEASE_1_2_0, RELEASE_1_3_0, RELEASE_1_4_0, RELEASE_1_5_0, RELEASE_1_6_0, RELEASE_1_7_0, RELEASE_1_8_0, RELEASE_1_9_0, RELEASE_1_10_0];
+const CHANGELOG_ENTRIES = [RELEASE_1_0_0, RELEASE_1_1_0, RELEASE_1_2_0, RELEASE_1_3_0, RELEASE_1_4_0, RELEASE_1_5_0, RELEASE_1_6_0, RELEASE_1_7_0, RELEASE_1_8_0, RELEASE_1_9_0, RELEASE_1_10_0, RELEASE_1_10_1];
 
 // Het versienummer in package.json en de nieuwste changelog-entry horen gelijk te lopen.
 {

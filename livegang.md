@@ -868,6 +868,25 @@ ongeldige varianten (twee letters, letter zonder cijfers, cijfer na de letter). 
 migraties. Op verzoek gepromoot naar `beta` en `main`/LIVE op 2026-11-10. `main` en `beta` staan
 weer gelijk.
 
+Daarna, op verzoek, een controle van wat er gebeurt als een medewerker een ander team krijgt
+(2026-11-11). Lokaal getest met Lucas Berg (Team International naar Team Benelux): `team_members`
+wordt vervangen (`setTeamLeden`/`updateGebruiker`), maar items houden hun eigen `team_id` en
+`medewerker_id`, dus ze blijven op het oude team staan met zijn initialen. Zichtbaarheid (RLS) volgt
+`team_id`: de oude teamleden en Lucas zelf blijven de items zien. Twee dingen klopten niet: (1) het
+dashboard bouwde de kaarten per teamlid alleen uit de huidige leden, waardoor Team International
+€ 760 omzet had maar de kaarten € 0 toonden (Lucas ontbrak, ook zijn € 900 onderhanden werk).
+`berekenTeamlidKpiRijen` en `berekenOhwPerTeamlid` maken nu ook een rij voor een oud-teamlid met
+items op het team (achteraan, label "Voorheen in dit team", niet meegeteld in het aantal
+teamleden). (2) `updateFactuuritem` weigerde elke bewerking van een niet-gefactureerd item van
+een vertrokken lid met "Ongeldig team gekozen", omdat `teamIdGeldigVoorMedewerker` het huidige
+lidmaatschap toetst. Voor teamleider en beheerder die het team niet wijzigen is het bestaande team
+nu geldig. Bewust niet aangepast: de RLS-policies voor medewerker en teamgenoot eisen nog steeds
+lidmaatschap van het team, dus de vertrokken medewerker zelf kan zijn oude, nog niet gefactureerde
+items niet meer bewerken. Items zonder `team_id` (van vóór 26 augustus, zonder of met meerdere
+teams) volgen voor zichtbaarheid nog het huidige lidmaatschap. Versie 1.10.1. Geen migraties.
+Lokaal getest: dashboard vóór en na de fix, de servercheck, RLS als Lucas, Tom en Bram. Nog niet
+naar `beta`/`main`.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de

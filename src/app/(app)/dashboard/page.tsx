@@ -102,6 +102,12 @@ function buildOmzetGrafiekData(
 // Per teamlid (teamleider eerst, dan alfabetisch): uren gefactureerd (aantal
 // + €) en niet-uren gefactureerd (€) — gebruikt voor de MTD- en YTD-rij van
 // vierkante KPI-tegels op het teamleider/medewerker-dashboard.
+//
+// Items horen bij het team waarvoor ze zijn aangemaakt (`team_id`), ook als de
+// medewerker daarna naar een ander team is gegaan. Zo iemand staat niet meer in
+// `leden`, maar zijn werk telt wel mee in het team; daarom krijgt hij hier alsnog
+// een rij (achteraan, met `voorheen`), anders tellen de kaarten niet meer op tot
+// het teamtotaal.
 function berekenTeamlidKpiRijen(
   rows: FactuurRegel[],
   leden: Set<string>,
@@ -119,8 +125,18 @@ function berekenTeamlidKpiRijen(
     });
   }
   for (const r of rows) {
-    const rij = map.get(r.medewerker_id);
-    if (!rij) continue;
+    let rij = map.get(r.medewerker_id);
+    if (!rij) {
+      rij = {
+        naam: namenPerId.get(r.medewerker_id) ?? "Onbekend",
+        isTeamleider: false,
+        urenAantal: 0,
+        urenBedrag: 0,
+        nietUrenBedrag: 0,
+        voorheen: true,
+      };
+      map.set(r.medewerker_id, rij);
+    }
     if (r.prijstype === "uren") {
       rij.urenAantal += r.qty;
       rij.urenBedrag += regelbedrag(r);
@@ -129,6 +145,7 @@ function berekenTeamlidKpiRijen(
     }
   }
   return Array.from(map.values()).sort((a, b) => {
+    if (Boolean(a.voorheen) !== Boolean(b.voorheen)) return a.voorheen ? 1 : -1;
     if (a.isTeamleider !== b.isTeamleider) return a.isTeamleider ? -1 : 1;
     return a.naam.localeCompare(b.naam);
   });
@@ -147,8 +164,13 @@ function berekenOhwPerTeamlid(
     map.set(lidId, { naam: namenPerId.get(lidId) ?? "Onbekend", isTeamleider: teamleiderIds.has(lidId), bedrag: 0 });
   }
   for (const r of ohwRows) {
-    const rij = map.get(r.medewerker_id);
-    if (rij) rij.bedrag += regelbedrag(r);
+    let rij = map.get(r.medewerker_id);
+    if (!rij) {
+      // Oud-teamlid met werk dat nog op dit team staat (zie berekenTeamlidKpiRijen).
+      rij = { naam: namenPerId.get(r.medewerker_id) ?? "Onbekend", isTeamleider: false, bedrag: 0 };
+      map.set(r.medewerker_id, rij);
+    }
+    rij.bedrag += regelbedrag(r);
   }
   return Array.from(map.values()).sort((a, b) => {
     if (a.isTeamleider !== b.isTeamleider) return a.isTeamleider ? -1 : 1;
@@ -569,7 +591,7 @@ export default async function DashboardPage({
     teams.map((t) => ({
       id: t.teamId,
       naam: eigenTitel ?? t.teamNaam,
-      aantalLeden: t.teamlidKpiRijenJaar.length,
+      aantalLeden: t.teamlidKpiRijenJaar.filter((l) => !l.voorheen).length,
       totaalTekst: euro(t.gefactureerdDitJaar),
       children: teamledenJaarKaarten(t),
     }));
