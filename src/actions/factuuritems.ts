@@ -515,7 +515,13 @@ export async function updateFactuurItem(
   }
 
   const effectieveMedewerkerId = medewerkerUpdate.medewerker_id ?? voor?.medewerker_id ?? user.id;
-  if (!(await teamIdGeldigVoorMedewerker(supabase, input.team_id, effectieveMedewerkerId))) {
+  // Een item blijft op het team staan waarvoor het is aangemaakt, ook als de medewerker daarna naar
+  // een ander team is gegaan. Voor een teamleider/beheerder die zo'n item bewerkt en het team niet
+  // wijzigt, is het bestaande team dus geldig, ook al is de medewerker er geen lid meer van. Elk
+  // ander team moet nog steeds bij de medewerker horen.
+  const teamOngewijzigd = input.team_id !== null && voor?.team_id === input.team_id;
+  const magOudTeamBehouden = teamOngewijzigd && (profile?.role === "teamleider" || profile?.role === "beheerder");
+  if (!magOudTeamBehouden && !(await teamIdGeldigVoorMedewerker(supabase, input.team_id, effectieveMedewerkerId))) {
     return { error: "Ongeldig team gekozen.", success: false };
   }
 

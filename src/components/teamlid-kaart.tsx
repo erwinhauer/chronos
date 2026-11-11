@@ -39,6 +39,7 @@ export function TeamlidKaart({
           {lid.isTeamleider && (
             <p className={cn("text-xs", isTotaal ? "text-white/70" : "text-muted-foreground")}>Praktijkvoerder</p>
           )}
+          {lid.voorheen && !isTotaal && <p className="text-xs text-muted-foreground">Voorheen in dit team</p>}
         </div>
       </div>
 
