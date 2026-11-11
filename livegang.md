@@ -884,8 +884,8 @@ nu geldig. Bewust niet aangepast: de RLS-policies voor medewerker en teamgenoot 
 lidmaatschap van het team, dus de vertrokken medewerker zelf kan zijn oude, nog niet gefactureerde
 items niet meer bewerken. Items zonder `team_id` (van vóór 26 augustus, zonder of met meerdere
 teams) volgen voor zichtbaarheid nog het huidige lidmaatschap. Versie 1.10.1. Geen migraties.
-Lokaal getest: dashboard vóór en na de fix, de servercheck, RLS als Lucas, Tom en Bram. Nog niet
-naar `beta`/`main`.
+Lokaal getest: dashboard vóór en na de fix, de servercheck, RLS als Lucas, Tom en Bram. Op
+verzoek gepromoot naar `beta` en `main`/LIVE op 2026-11-11. `main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
