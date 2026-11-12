@@ -90,6 +90,12 @@ gebruikt binnen RLS-policies):
 | `supplement_klant_vanuit_hubspot(klant_id, adres, patricia_id)` | Vult adres/patricia_id aan vanuit HubSpot-koppeling, alleen als leeg |
 | `resolve_tarief(klant_id, medewerker_id, datum)` | Bepaalt het geldende uurtarief (zie `tarieven`-tabel, per-klant/medewerker/datum-geldigheid) |
 
+**Rol van een nieuw account**: `handle_new_user()` (trigger op `auth.users`) neemt de rol alleen
+over uit `raw_app_meta_data` (alleen met de service-role te schrijven) en valt anders terug op
+`medewerker`. `createGebruiker` (`src/actions/admin.ts`) stuurt de rol als `app_metadata` mee en zet
+`profiles.role` daarna expliciet. Zelf-registratie is bovendien uitgeschakeld in het Supabase-project
+(Authentication, "Allow new users to sign up" uit); de app roept nergens `signUp` aan.
+
 **Globaal patroon**: `medewerker` ziet/bewerkt vooral eigen werk binnen het eigen team;
 `teamleider` ziet het hele team en kan factureren voor het team; `finance` en
 `beheerder` hebben kantoorbrede leestoegang en factureringsrechten; `directie` heeft

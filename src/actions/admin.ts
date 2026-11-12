@@ -116,7 +116,10 @@ export async function createGebruiker(
     email,
     email_confirm: true,
     password: STANDAARD_WACHTWOORD,
-    user_metadata: { voornaam, achternaam, role: actieveRol, must_change_password: true },
+    user_metadata: { voornaam, achternaam, must_change_password: true },
+    // De rol staat in app_metadata: dat veld kan een gebruiker niet zelf schrijven
+    // (anders dan user_metadata, dat via signUp/updateUser door de client komt).
+    app_metadata: { role: actieveRol },
   });
 
   if (error || !data.user) {
@@ -127,6 +130,10 @@ export async function createGebruiker(
       success: false,
     };
   }
+
+  // Zet de actieve rol ook expliciet (service-role), zodat de volgorde van
+  // migratie en deploy niet uitmaakt.
+  await admin.from("profiles").update({ role: actieveRol }).eq("id", data.user.id);
 
   // handle_new_user() zet de eerste rol al in profile_roles; de rest hier aanvullen.
   await admin

@@ -240,9 +240,22 @@ const RELEASE_1_10_1 = {
   gebruikersactie: null,
 };
 
+const RELEASE_1_10_2 = {
+  versienummer: "1.10.2",
+  releasedatum: "2026-11-12",
+  titel: "Beveiliging: een nieuwe gebruiker krijgt zijn rol alleen van een beheerder",
+  nieuwe_functies: [],
+  wijzigingen: [],
+  bugfixes: [
+    "Beveiliging: de rol van een nieuwe gebruiker kan niet meer door de gebruiker zelf worden meegegeven. Alleen een beheerder die een gebruiker aanmaakt in Instellingen bepaalt de rol. Voor gebruikers van Chronos verandert er niets",
+  ],
+  bekende_beperkingen: [],
+  gebruikersactie: null,
+};
+
 // Oudste eerst; de nieuwste release hoort onderaan. package.json "version" moet gelijk zijn
 // aan de laatste (zie de controle hieronder).
-const CHANGELOG_ENTRIES = [RELEASE_1_0_0, RELEASE_1_1_0, RELEASE_1_2_0, RELEASE_1_3_0, RELEASE_1_4_0, RELEASE_1_5_0, RELEASE_1_6_0, RELEASE_1_7_0, RELEASE_1_8_0, RELEASE_1_9_0, RELEASE_1_10_0, RELEASE_1_10_1];
+const CHANGELOG_ENTRIES = [RELEASE_1_0_0, RELEASE_1_1_0, RELEASE_1_2_0, RELEASE_1_3_0, RELEASE_1_4_0, RELEASE_1_5_0, RELEASE_1_6_0, RELEASE_1_7_0, RELEASE_1_8_0, RELEASE_1_9_0, RELEASE_1_10_0, RELEASE_1_10_1, RELEASE_1_10_2];
 
 // Het versienummer in package.json en de nieuwste changelog-entry horen gelijk te lopen.
 {

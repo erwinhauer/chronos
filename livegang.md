@@ -887,6 +887,19 @@ teams) volgen voor zichtbaarheid nog het huidige lidmaatschap. Versie 1.10.1. Ge
 Lokaal getest: dashboard vóór en na de fix, de servercheck, RLS als Lucas, Tom en Bram. Op
 verzoek gepromoot naar `beta` en `main`/LIVE op 2026-11-11. `main` en `beta` staan weer gelijk.
 
+Daarna, op verzoek, een beveiligingsfix (2026-11-12): `handle_new_user()` nam de rol van een nieuw
+account over uit `raw_user_meta_data`, een veld dat een gebruiker bij zelf-registreren zelf meestuurt.
+Met "Allow new users to sign up" aan in Supabase kon iedereen met de publieke anon key zich als
+beheerder registreren. Die instelling is op 2026-11-12 in productie uitgezet (Erwin, na controle: geen
+onbekende accounts, anonymous sign-ins uit, geen andere providers). De fix maakt de database ook zelf
+veilig: de functie leest de rol nu alleen uit `raw_app_meta_data` (alleen met de service-role te
+schrijven), `createGebruiker` in `src/actions/admin.ts` stuurt de rol als `app_metadata` mee en zet
+`profiles.role` daarna ook expliciet. Migratie `20261112120000_handle_new_user_alleen_app_metadata.sql`.
+Versie 1.10.2. Lokaal getest (transactie, teruggedraaid): zelf-registratie met `role: beheerder` geeft
+medewerker, het admin-pad met `app_metadata.role` geeft de gekozen rol. Op BETA nog te testen: een
+gebruiker aanmaken in Instellingen met een eigen rol en met twee rollen. Terugdraaien: nieuwe migratie
+met de oude functie (`security/02_rollback_handle_new_user.sql` in de analysemap). Nog niet naar `main`.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de
