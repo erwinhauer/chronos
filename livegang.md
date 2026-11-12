@@ -896,9 +896,10 @@ veilig: de functie leest de rol nu alleen uit `raw_app_meta_data` (alleen met de
 schrijven), `createGebruiker` in `src/actions/admin.ts` stuurt de rol als `app_metadata` mee en zet
 `profiles.role` daarna ook expliciet. Migratie `20261112120000_handle_new_user_alleen_app_metadata.sql`.
 Versie 1.10.2. Lokaal getest (transactie, teruggedraaid): zelf-registratie met `role: beheerder` geeft
-medewerker, het admin-pad met `app_metadata.role` geeft de gekozen rol. Op BETA nog te testen: een
-gebruiker aanmaken in Instellingen met een eigen rol en met twee rollen. Terugdraaien: nieuwe migratie
-met de oude functie (`security/02_rollback_handle_new_user.sql` in de analysemap). Nog niet naar `main`.
+medewerker, het admin-pad met `app_metadata.role` geeft de gekozen rol. Op BETA getest door Erwin
+(gebruiker aanmaken met een eigen rol en met twee rollen: werkt). Terugdraaien: nieuwe migratie met de
+oude functie (`security/02_rollback_handle_new_user.sql` in de analysemap). Op verzoek gepromoot naar
+`main`/LIVE op 2026-11-12. `main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
