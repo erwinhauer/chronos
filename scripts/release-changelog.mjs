@@ -273,9 +273,27 @@ const RELEASE_1_11_0 = {
   gebruikersactie: null,
 };
 
+const RELEASE_1_12_0 = {
+  versienummer: "1.12.0",
+  releasedatum: "2026-11-17",
+  titel: "Meldingen: één keer per sessie, verloopdatum en duidelijkere kleuren",
+  nieuwe_functies: [
+    "Meldingen: een beheerder kan een datum en tijd instellen waarop een melding verloopt. Daarna wordt de melding niet meer getoond en verdwijnt hij uit de lijst met meldingen in Instellingen",
+  ],
+  wijzigingen: [
+    "Meldingen: een wegklikbare melding verschijnt één keer per inlogsessie. Na opnieuw inloggen zie je hem weer, tenzij hij is verlopen of uitgezet. Een niet-wegklikbare melding blijft op elke pagina staan",
+    "Meldingen: de tekst in de balk is vet. Rood en oranje hebben witte tekst, groen heeft zwarte tekst",
+  ],
+  bugfixes: [
+    "Meldingen: de lijst met meldingen in Instellingen was leeg, ook als er meldingen waren. De meldingen zelf werden wel goed getoond bovenin Chronos",
+  ],
+  bekende_beperkingen: [],
+  gebruikersactie: null,
+};
+
 // Oudste eerst; de nieuwste release hoort onderaan. package.json "version" moet gelijk zijn
 // aan de laatste (zie de controle hieronder).
-const CHANGELOG_ENTRIES = [RELEASE_1_0_0, RELEASE_1_1_0, RELEASE_1_2_0, RELEASE_1_3_0, RELEASE_1_4_0, RELEASE_1_5_0, RELEASE_1_6_0, RELEASE_1_7_0, RELEASE_1_8_0, RELEASE_1_9_0, RELEASE_1_10_0, RELEASE_1_10_1, RELEASE_1_10_2, RELEASE_1_11_0];
+const CHANGELOG_ENTRIES = [RELEASE_1_0_0, RELEASE_1_1_0, RELEASE_1_2_0, RELEASE_1_3_0, RELEASE_1_4_0, RELEASE_1_5_0, RELEASE_1_6_0, RELEASE_1_7_0, RELEASE_1_8_0, RELEASE_1_9_0, RELEASE_1_10_0, RELEASE_1_10_1, RELEASE_1_10_2, RELEASE_1_11_0, RELEASE_1_12_0];
 
 // Het versienummer in package.json en de nieuwste changelog-entry horen gelijk te lopen.
 {

@@ -516,32 +516,35 @@ export type Database = {
         }
         Relationships: []
       }
-      melding_gesloten: {
+      melding_gezien: {
         Row: {
-          gesloten_op: string
+          gezien_op: string
           melding_id: string
           profile_id: string
+          sessie_id: string
         }
         Insert: {
-          gesloten_op?: string
+          gezien_op?: string
           melding_id: string
           profile_id: string
+          sessie_id: string
         }
         Update: {
-          gesloten_op?: string
+          gezien_op?: string
           melding_id?: string
           profile_id?: string
+          sessie_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "melding_gesloten_melding_id_fkey"
+            foreignKeyName: "melding_gezien_melding_id_fkey"
             columns: ["melding_id"]
             isOneToOne: false
             referencedRelation: "meldingen"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "melding_gesloten_profile_id_fkey"
+            foreignKeyName: "melding_gezien_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -558,6 +561,7 @@ export type Database = {
           soort: Database["public"]["Enums"]["melding_soort"]
           tekst: string
           updated_at: string
+          verloopt_op: string | null
           wegklikbaar: boolean
         }
         Insert: {
@@ -568,6 +572,7 @@ export type Database = {
           soort?: Database["public"]["Enums"]["melding_soort"]
           tekst: string
           updated_at?: string
+          verloopt_op?: string | null
           wegklikbaar?: boolean
         }
         Update: {
@@ -578,6 +583,7 @@ export type Database = {
           soort?: Database["public"]["Enums"]["melding_soort"]
           tekst?: string
           updated_at?: string
+          verloopt_op?: string | null
           wegklikbaar?: boolean
         }
         Relationships: [

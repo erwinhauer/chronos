@@ -918,6 +918,20 @@ en de schermen in de browser (functie aanmaken en koppelen, melding plaatsen en 
 volgt medewerker). Op BETA getest door Erwin (werkt goed) en op verzoek gepromoot naar `main`/LIVE op 2026-11-17, met
 `documentation.md` bijgewerkt. `main` en `beta` staan weer gelijk.
 
+Daarna een aanpassing van de meldingen (2026-11-17, versie 1.12.0, op verzoek van Erwin): een
+wegklikbare melding verschijnt één keer per inlogsessie (nieuwe tabel `melding_gezien` met het
+`session_id` uit het Supabase-token, die `melding_gesloten` vervangt; een niet-wegklikbare melding blijft
+altijd staan), een melding krijgt een optionele verloopdatum en tijd (`meldingen.verloopt_op`, ingevoerd in
+Amsterdamse tijd; de leespolicy en het layout verbergen verlopen meldingen, en Instellingen ruimt ze op),
+en de balk heeft vaste kleuren met vette tekst (rood en oranje wit, groen zwart). Ook een bugfix: de lijst
+in Instellingen > Meldingen bleef leeg omdat PostgREST de koppeling meldingen naar profiles niet
+eenduidig vond (zowel via `created_by` als via de gezien/gesloten-tabel); de query kiest nu expliciet
+`meldingen_created_by_fkey`. Die fout zat al in v1.11.0 op LIVE. Migratie
+`20261117120000_meldingen_per_sessie_en_verloop.sql`. Lokaal getest: sessie-id in het token, herladen
+in dezelfde sessie, opnieuw inloggen, verlopen melding verdwijnt uit een open pagina, opruimen bij het
+openen van Instellingen, tijdzone-conversie (zomer- en wintertijd). Staat op BETA. Bij promotie naar
+LIVE: `documentation.md` bijwerken (melding_gezien, verloopt_op, sessielogica).
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { purgeVerweesGebruikers } from "@/actions/admin";
+import { purgeVerlopenMeldingen } from "@/actions/meldingen";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { GebruikersTab } from "@/components/instellingen/gebruikers-tab";
 import { TeamsTab } from "@/components/instellingen/teams-tab";
@@ -18,6 +19,7 @@ export default async function InstellingenPage() {
   if (profile?.role !== "beheerder") redirect("/dashboard");
 
   await purgeVerweesGebruikers();
+  await purgeVerlopenMeldingen();
 
   const supabase = await createClient();
   const jaar = new Date().getFullYear();
@@ -57,7 +59,7 @@ export default async function InstellingenPage() {
     supabase.from("tarieven").select("functie_id, tarief, ingangsdatum, einddatum").not("functie_id", "is", null),
     supabase
       .from("meldingen")
-      .select("id, soort, tekst, wegklikbaar, actief, created_at, profiles(full_name)")
+      .select("id, soort, tekst, wegklikbaar, actief, verloopt_op, created_at, profiles!meldingen_created_by_fkey(full_name)")
       .order("created_at", { ascending: false }),
   ]);
 
@@ -83,6 +85,7 @@ export default async function InstellingenPage() {
     tekst: m.tekst,
     wegklikbaar: m.wegklikbaar,
     actief: m.actief,
+    verloopt_op: m.verloopt_op,
     created_at: m.created_at,
     gemaaktDoor: (m.profiles as unknown as { full_name: string } | null)?.full_name ?? null,
   }));

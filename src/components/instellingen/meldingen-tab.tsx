@@ -15,8 +15,10 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { NativeSelect } from "@/components/ui/native-select";
+import { dateNaAmsterdamInvoer, formatteerAmsterdam } from "@/lib/amsterdam-tijd";
 import {
   Dialog,
   DialogContent,
@@ -33,23 +35,13 @@ export type MeldingRij = {
   tekst: string;
   wegklikbaar: boolean;
   actief: boolean;
+  verloopt_op: string | null;
   created_at: string;
   gemaaktDoor: string | null;
 };
 
 const MAX_TEKST = 500;
 const initialState: MeldingFormState = { error: null, success: false };
-
-function datumTijd(iso: string) {
-  return new Date(iso).toLocaleString("nl-NL", {
-    timeZone: "Europe/Amsterdam",
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 export function MeldingenTab({ meldingen }: { meldingen: MeldingRij[] }) {
   const [formKey, setFormKey] = useState(0);
@@ -60,8 +52,9 @@ export function MeldingenTab({ meldingen }: { meldingen: MeldingRij[] }) {
       <div className="flex items-start justify-between gap-4">
         <p className="max-w-2xl text-sm text-muted-foreground">
           Een melding staat bovenin Chronos bij alle gebruikers, bijvoorbeeld bij een storing of gepland onderhoud. Een
-          wegklikbare melding kan elke gebruiker voor zichzelf sluiten. Een niet-wegklikbare melding blijft staan tot je
-          hem uitzet of verwijdert. Open tabbladen pakken een nieuwe melding binnen vijf minuten op.
+          wegklikbare melding verschijnt één keer per inlogsessie en kan de gebruiker sluiten. Een niet-wegklikbare
+          melding blijft op elke pagina staan. Met een verloopdatum verdwijnt de melding vanzelf, ook uit deze lijst.
+          Open tabbladen pakken een nieuwe melding binnen vijf minuten op.
         </p>
         <Dialog
           open={nieuwOpen}
@@ -118,13 +111,14 @@ function MeldingKaart({ melding }: { melding: MeldingRij }) {
   }
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="gap-0 py-0">
       <MeldingBlok soort={melding.soort} tekst={melding.tekst} className={melding.actief ? "" : "opacity-50"} />
       <CardContent className="flex flex-wrap items-center justify-between gap-3 py-3">
         <div className="text-xs text-muted-foreground">
           {melding.actief ? "Staat aan" : "Staat uit"} · {melding.wegklikbaar ? "wegklikbaar" : "niet wegklikbaar"} ·
-          geplaatst {datumTijd(melding.created_at)}
-          {melding.gemaaktDoor ? ` door ${melding.gemaaktDoor}` : ""}
+          geplaatst {formatteerAmsterdam(melding.created_at)}
+          {melding.gemaaktDoor ? ` door ${melding.gemaaktDoor}` : ""} ·{" "}
+          {melding.verloopt_op ? `verloopt op ${formatteerAmsterdam(melding.verloopt_op)}` : "verloopt niet"}
         </div>
         <div className="flex items-center gap-3">
           <label className="flex items-center gap-2 text-sm">
@@ -144,7 +138,7 @@ function MeldingKaart({ melding }: { melding: MeldingRij }) {
             <DialogContent>
               <MeldingDialogBody
                 titel="Melding bewerken"
-                omschrijving="Na het opslaan zien ook gebruikers die de melding al hadden weggeklikt hem weer."
+                omschrijving="Na het opslaan krijgt iedereen de melding opnieuw te zien, ook wie hem in deze sessie al had gezien."
                 knop="Opslaan"
                 melding={melding}
                 actie={(prev, formData) => updateMelding(melding.id, prev, formData)}
@@ -233,6 +227,21 @@ function MeldingDialogBody({
         <Checkbox checked={wegklikbaar} onCheckedChange={(checked) => setWegklikbaar(checked === true)} />
         Gebruikers mogen deze melding wegklikken
       </label>
+
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="melding_verloopt_op">Verloopt op (optioneel)</Label>
+        <Input
+          id="melding_verloopt_op"
+          name="verloopt_op"
+          type="datetime-local"
+          className="w-64"
+          defaultValue={dateNaAmsterdamInvoer(melding?.verloopt_op ?? null)}
+        />
+        <p className="text-xs text-muted-foreground">
+          Vanaf dit moment (Nederlandse tijd) wordt de melding niet meer getoond en verdwijnt hij uit deze lijst. Laat
+          leeg als de melding niet moet verlopen.
+        </p>
+      </div>
 
       <div className="flex flex-col gap-2">
         <span className="text-xs text-muted-foreground">Zo ziet de melding eruit</span>

@@ -10,10 +10,24 @@ export const MELDING_SOORT_LABELS: Record<MeldingSoort, string> = {
   urgent: "Urgent (rood)",
 };
 
-const STIJL: Record<MeldingSoort, { vlak: string; icoon: string; Icon: typeof Info }> = {
-  info: { vlak: "border-success/40 bg-success/10", icoon: "text-success", Icon: Info },
-  waarschuwing: { vlak: "border-warning/50 bg-warning/15", icoon: "text-warning", Icon: TriangleAlert },
-  urgent: { vlak: "border-destructive/50 bg-destructive/15 font-medium", icoon: "text-destructive", Icon: OctagonAlert },
+// Vaste kleuren, los van het thema: rood en oranje met witte tekst, groen met zwarte tekst.
+// De tinten zijn zo gekozen dat de tekst in zowel de lichte als de donkere weergave leesbaar blijft.
+const STIJL: Record<MeldingSoort, { vlak: string; sluit: string; Icon: typeof Info }> = {
+  info: {
+    vlak: "bg-[oklch(0.8_0.16_150)] text-black",
+    sluit: "hover:bg-black/10",
+    Icon: Info,
+  },
+  waarschuwing: {
+    vlak: "bg-[oklch(0.57_0.17_48)] text-white",
+    sluit: "hover:bg-white/20",
+    Icon: TriangleAlert,
+  },
+  urgent: {
+    vlak: "bg-[oklch(0.55_0.22_27)] text-white",
+    sluit: "hover:bg-white/20",
+    Icon: OctagonAlert,
+  },
 };
 
 // Eén melding als balk. Wordt zowel bovenin Chronos als als voorbeeld in Instellingen gebruikt.
@@ -28,13 +42,13 @@ export function MeldingBlok({
   onSluit?: () => void;
   className?: string;
 }) {
-  const { vlak, icoon, Icon } = STIJL[soort];
+  const { vlak, sluit, Icon } = STIJL[soort];
   return (
     <div
       role={soort === "urgent" ? "alert" : "status"}
-      className={cn("flex items-start gap-3 border-b px-4 py-2.5 text-sm text-foreground lg:px-9", vlak, className)}
+      className={cn("flex items-start gap-3 px-4 py-2.5 text-sm font-bold lg:px-9", vlak, className)}
     >
-      <Icon className={cn("mt-0.5 h-4 w-4 shrink-0", icoon)} aria-hidden="true" />
+      <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
       <p className="min-w-0 flex-1 whitespace-pre-line break-words">{tekst}</p>
       {onSluit && (
         <button
@@ -42,7 +56,7 @@ export function MeldingBlok({
           onClick={onSluit}
           aria-label="Melding sluiten"
           title="Melding sluiten"
-          className="-mr-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground"
+          className={cn("-mr-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors", sluit)}
         >
           <X className="h-4 w-4" />
         </button>

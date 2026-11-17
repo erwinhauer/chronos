@@ -162,8 +162,9 @@ export default function HandleidingPage() {
             <strong>Gebruikers → Bewerken</strong> koppel je een functie aan een gebruiker. Onder{" "}
             <strong>Instellingen → Meldingen</strong> plaatst een beheerder een melding bovenin Chronos, bijvoorbeeld
             bij een storing of onderhoud: groen is ter info, oranje een waarschuwing en rood urgent. Een wegklikbare
-            melding sluit je met het kruisje, dan komt hij voor jou niet terug. Een melding zonder kruisje blijft
-            staan tot de beheerder hem uitzet.
+            melding zie je één keer per inlogsessie en sluit je met het kruisje. Na opnieuw inloggen zie je hem weer.
+            Een melding zonder kruisje blijft op elke pagina staan. De beheerder kan een melding laten verlopen op een
+            vaste datum en tijd, of hem zelf uitzetten.
           </p>
         </CardContent>
       </Card>

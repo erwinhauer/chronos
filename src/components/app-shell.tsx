@@ -23,6 +23,7 @@ export function AppShell({
   toegekendeRollen,
   impersonatieDoor,
   meldingen,
+  actieveMeldingIds,
   versienummer,
   children,
 }: {
@@ -30,6 +31,7 @@ export function AppShell({
   toegekendeRollen: UserRole[];
   impersonatieDoor?: string | null;
   meldingen: ActieveMelding[];
+  actieveMeldingIds: string[];
   versienummer?: string | null;
   children: React.ReactNode;
 }) {
@@ -40,6 +42,7 @@ export function AppShell({
         toegekendeRollen={toegekendeRollen}
         impersonatieDoor={impersonatieDoor}
         meldingen={meldingen}
+        actieveMeldingIds={actieveMeldingIds}
         versienummer={versienummer}
       >
         {children}
@@ -153,6 +156,7 @@ function AppShellContent({
   toegekendeRollen,
   impersonatieDoor,
   meldingen,
+  actieveMeldingIds,
   versienummer,
   children,
 }: {
@@ -160,6 +164,7 @@ function AppShellContent({
   toegekendeRollen: UserRole[];
   impersonatieDoor?: string | null;
   meldingen: ActieveMelding[];
+  actieveMeldingIds: string[];
   versienummer?: string | null;
   children: React.ReactNode;
 }) {
@@ -219,7 +224,7 @@ function AppShellContent({
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* In deze kolom i.p.v. over de volle breedte, zodat de zijbalk zijn volle schermhoogte houdt. */}
-        <MeldingenBalk meldingen={meldingen} />
+        <MeldingenBalk meldingen={meldingen} actieveIds={actieveMeldingIds} />
         <header className="flex h-[76px] shrink-0 items-center justify-between bg-mist px-4 lg:px-9 print:hidden">
           <div className="flex items-center gap-3">
             <Button
