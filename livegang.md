@@ -915,7 +915,8 @@ bewaard), balk in de rechterkolom van de app-shell, open tabbladen verversen elk
 Migraties `20261117100000_functies_met_uurtarief.sql` en `20261117110000_meldingen.sql`. Lokaal
 getest: rangorde van de tarieven in een teruggedraaide transactie, RLS als medewerker en beheerder,
 en de schermen in de browser (functie aanmaken en koppelen, melding plaatsen en wegklikken, tarief
-volgt medewerker). Nog te doen bij promotie naar LIVE: `documentation.md` bijwerken.
+volgt medewerker). Op BETA getest door Erwin (werkt goed) en op verzoek gepromoot naar `main`/LIVE op 2026-11-17, met
+`documentation.md` bijgewerkt. `main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,

@@ -1,6 +1,6 @@
 # Chronos — technische documentatie
 
-*Laatst bijgewerkt: 2026-09-23.*
+*Laatst bijgewerkt: 2026-11-17.*
 
 Dit is een **actuele momentopname** van hoe Chronos technisch in elkaar zit en waarom,
 bedoeld voor een developer die het systeem voor het eerst onder ogen krijgt. Dit is
@@ -88,7 +88,8 @@ gebruikt binnen RLS-policies):
 | `switch_active_role(target_role)` | Wisselt actieve rol (met check dat gebruiker die rol heeft) |
 | `set_klant_taal` / `set_klant_valuta` | Beheerder-only setters met neveneffecten (zie §7) |
 | `supplement_klant_vanuit_hubspot(klant_id, adres, patricia_id)` | Vult adres/patricia_id aan vanuit HubSpot-koppeling, alleen als leeg |
-| `resolve_tarief(klant_id, medewerker_id, datum)` | Bepaalt het geldende uurtarief (zie `tarieven`-tabel, per-klant/medewerker/datum-geldigheid) |
+| `resolve_tarief(klant_id, medewerker_id, datum)` | Bepaalt het geldende uurtarief (zie `tarieven`). Rangorde: klant+medewerker, medewerker, klant, functie van de medewerker, algemeen; binnen een niveau de meest recente geldige ingangsdatum |
+| `resolve_standaardtarief(medewerker_id, datum)` | Functietarief van de medewerker, anders het algemene tarief. Voedt de regel "Voorgesteld tarief" in het factuuritem-formulier |
 
 **Rol van een nieuw account**: `handle_new_user()` (trigger op `auth.users`) neemt de rol alleen
 over uit `raw_app_meta_data` (alleen met de service-role te schrijven) en valt anders terug op
@@ -112,7 +113,7 @@ teamleider (praktijkvoerder) en beheerder mogen aanmaken (`magFactuuritemAanmake
 
 ## 5. Datamodel
 
-16 tabellen in `public`. De belangrijkste, met wat niet uit de kolomnaam zelf blijkt:
+19 tabellen in `public`. De belangrijkste, met wat niet uit de kolomnaam zelf blijkt:
 
 ### `klanten`
 Klant/opdrachtgever. `hubspot_id`/`patricia_id`/`accountview_debiteurnummer` zijn
@@ -180,9 +181,22 @@ retentie-/opslaggrootte-mechanisme (`auditlog_opslaggrootte()`).
 
 ### `tarieven`, `teams`, `team_members`, `teamdoelen`, `profiles`, `profile_roles`,
 ### `projecten`, `landcodes`, `productchangelog`, `factuuritem_wijzigingen`
-- `tarieven`: uurtarief per klant/medewerker met geldigheidsperiode; `resolve_tarief()`
-  bepaalt wat op een gegeven datum geldt. Standaard uurtarief €330 als er geen
-  klant/medewerker-specifiek tarief geldt.
+- `tarieven`: uurtarief per klant/medewerker/functie met geldigheidsperiode;
+  `resolve_tarief()` bepaalt wat op een gegeven datum geldt. Een rij met `functie_id`
+  heeft altijd klant en medewerker leeg (check-constraint). Standaard uurtarief €330 als
+  er geen specifieker tarief geldt. Een tariefwijziging sluit de lopende rij af (einddatum
+  gisteren) en voegt een nieuwe toe; registraties bewaren hun eigen tarief.
+- `functies`: functies (bv. Partner) die een beheerder in Instellingen beheert en aan
+  gebruikers koppelt via `profiles.functie_id` (`on delete set null`). Het uurtarief van een
+  functie staat in `tarieven` (`functie_id`, `on delete cascade`). De server-acties staan in
+  `src/actions/functies.ts`. `enforce_profile_self_edit_limits` beschermt `functie_id` tegen
+  zelfbewerking.
+- `meldingen` en `melding_gesloten`: meldingen van een beheerder bovenin de app (`soort`
+  info/waarschuwing/urgent, `wegklikbaar`, `actief`) en wie welke melding heeft weggeklikt.
+  Iedereen leest de actieve meldingen, alleen een beheerder schrijft. Het layout
+  (`src/app/(app)/layout.tsx`) laadt ze, `MeldingenBalk` toont ze in de rechterkolom van de
+  app-shell en ververst elke vijf minuten via `router.refresh()`. Na een tekstwijziging of
+  heractivering worden de `melding_gesloten`-rijen gewist, zodat iedereen de melding weer ziet.
 - `teams`/`team_members`: teamindeling; `teams.email` is een team-e-mailadres
   (vandaag ongebruikt in de app — potentieel relevant als reply-to/CC-adres zodra
   Chronos zelf e-mails gaat versturen, zie facturatieplan).
