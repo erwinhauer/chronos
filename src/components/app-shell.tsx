@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Menu, LogOut, ChevronRight, UserRoundCog } from "lucide-react";
 import { ChronosMark } from "@/components/chronos-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { MeldingenBalk, type ActieveMelding } from "@/components/meldingen-balk";
 import { NavLinks } from "@/components/nav-links";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -21,12 +22,14 @@ export function AppShell({
   profile,
   toegekendeRollen,
   impersonatieDoor,
+  meldingen,
   versienummer,
   children,
 }: {
   profile: Profile;
   toegekendeRollen: UserRole[];
   impersonatieDoor?: string | null;
+  meldingen: ActieveMelding[];
   versienummer?: string | null;
   children: React.ReactNode;
 }) {
@@ -36,6 +39,7 @@ export function AppShell({
         profile={profile}
         toegekendeRollen={toegekendeRollen}
         impersonatieDoor={impersonatieDoor}
+        meldingen={meldingen}
         versienummer={versienummer}
       >
         {children}
@@ -148,12 +152,14 @@ function AppShellContent({
   profile,
   toegekendeRollen,
   impersonatieDoor,
+  meldingen,
   versienummer,
   children,
 }: {
   profile: Profile;
   toegekendeRollen: UserRole[];
   impersonatieDoor?: string | null;
+  meldingen: ActieveMelding[];
   versienummer?: string | null;
   children: React.ReactNode;
 }) {
@@ -212,6 +218,8 @@ function AppShellContent({
       </Sheet>
 
       <div className="flex min-w-0 flex-1 flex-col">
+        {/* In deze kolom i.p.v. over de volle breedte, zodat de zijbalk zijn volle schermhoogte houdt. */}
+        <MeldingenBalk meldingen={meldingen} />
         <header className="flex h-[76px] shrink-0 items-center justify-between bg-mist px-4 lg:px-9 print:hidden">
           <div className="flex items-center gap-3">
             <Button

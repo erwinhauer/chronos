@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { NativeSelect } from "@/components/ui/native-select";
 import { AvatarInitials } from "@/components/ui/avatar-initials";
 import { StatusDot } from "@/components/ui/status-dot";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -38,20 +39,24 @@ type ProfileRow = {
   role: UserRole;
   actief: boolean;
   initialen: string | null;
+  functie_id: string | null;
 };
 type Team = { id: string; naam: string };
+export type FunctieOptie = { id: string; naam: string };
 
-type SortKey = "naam" | "rol" | "teams" | "actief";
+type SortKey = "naam" | "functie" | "rol" | "teams" | "actief";
 
 export function GebruikersTab({
   profiles,
   teams,
+  functies,
   teamIdsPerProfile,
   rolIdsPerProfile,
   eigenProfielId,
 }: {
   profiles: ProfileRow[];
   teams: Team[];
+  functies: FunctieOptie[];
   teamIdsPerProfile: Record<string, string[]>;
   rolIdsPerProfile: Record<string, UserRole[]>;
   eigenProfielId: string;
@@ -77,6 +82,8 @@ export function GebruikersTab({
         : lijst;
       const keyFn = {
         naam: (p: ProfileRow) => p.full_name,
+        // Wie geen functie heeft komt onderaan (oplopend).
+        functie: (p: ProfileRow) => functies.find((f) => f.id === p.functie_id)?.naam ?? "\uffff",
         rol: (p: ProfileRow) => ROLE_LABELS[p.role],
         // Teamnamen alfabetisch achter elkaar; wie in geen enkel team zit komt onderaan (oplopend).
         teams: (p: ProfileRow) => {
@@ -90,7 +97,7 @@ export function GebruikersTab({
       }[sortKey];
       return sortRows(gefilterd, keyFn, sortRichting);
     },
-    [zoek, sortKey, sortRichting, teams, teamIdsPerProfile]
+    [zoek, sortKey, sortRichting, teams, functies, teamIdsPerProfile]
   );
 
   const actieveProfiles = useMemo(
@@ -114,7 +121,7 @@ export function GebruikersTab({
             className="pl-8"
           />
         </div>
-        <NewGebruikerDialog teams={teams} />
+        <NewGebruikerDialog teams={teams} functies={functies} />
       </div>
       <Tabs defaultValue="actief">
         <TabsList>
@@ -125,6 +132,7 @@ export function GebruikersTab({
           <GebruikersTabel
             rijen={actieveProfiles}
             teams={teams}
+            functies={functies}
             teamIdsPerProfile={teamIdsPerProfile}
             rolIdsPerProfile={rolIdsPerProfile}
             eigenProfielId={eigenProfielId}
@@ -138,6 +146,7 @@ export function GebruikersTab({
           <GebruikersTabel
             rijen={inactieveProfiles}
             teams={teams}
+            functies={functies}
             teamIdsPerProfile={teamIdsPerProfile}
             rolIdsPerProfile={rolIdsPerProfile}
             eigenProfielId={eigenProfielId}
@@ -155,6 +164,7 @@ export function GebruikersTab({
 function GebruikersTabel({
   rijen,
   teams,
+  functies,
   teamIdsPerProfile,
   rolIdsPerProfile,
   eigenProfielId,
@@ -165,6 +175,7 @@ function GebruikersTabel({
 }: {
   rijen: ProfileRow[];
   teams: Team[];
+  functies: FunctieOptie[];
   teamIdsPerProfile: Record<string, string[]>;
   rolIdsPerProfile: Record<string, UserRole[]>;
   eigenProfielId: string;
@@ -180,6 +191,12 @@ function GebruikersTabel({
           <TableHeader>
             <TableRow>
               <SortableTh label="Naam" actief={sortKey === "naam"} richting={sortRichting} onClick={() => toggleSort("naam")} />
+              <SortableTh
+                label="Functie"
+                actief={sortKey === "functie"}
+                richting={sortRichting}
+                onClick={() => toggleSort("functie")}
+              />
               <SortableTh label="Rol" actief={sortKey === "rol"} richting={sortRichting} onClick={() => toggleSort("rol")} />
               <SortableTh
                 label="Teams"
@@ -200,7 +217,7 @@ function GebruikersTabel({
           <TableBody>
             {rijen.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={7} className="py-8 text-center text-sm text-muted-foreground">
                   {leegBericht}
                 </TableCell>
               </TableRow>
@@ -210,6 +227,7 @@ function GebruikersTabel({
                   key={p.id}
                   profile={p}
                   teams={teams}
+                  functies={functies}
                   huidigeTeamIds={teamIdsPerProfile[p.id] ?? []}
                   huidigeRolIds={rolIdsPerProfile[p.id] ?? [p.role]}
                   toontInloggenAls={p.id !== eigenProfielId}
@@ -226,16 +244,19 @@ function GebruikersTabel({
 function GebruikerRij({
   profile,
   teams,
+  functies,
   huidigeTeamIds,
   huidigeRolIds,
   toontInloggenAls,
 }: {
   profile: ProfileRow;
   teams: Team[];
+  functies: FunctieOptie[];
   huidigeTeamIds: string[];
   huidigeRolIds: UserRole[];
   toontInloggenAls: boolean;
 }) {
+  const functieNaam = functies.find((f) => f.id === profile.functie_id)?.naam ?? null;
   const teamNamen = teams.filter((t) => huidigeTeamIds.includes(t.id)).map((t) => t.naam);
 
   return (
@@ -248,6 +269,9 @@ function GebruikerRij({
             <div className="text-xs text-muted-foreground">{profile.email}</div>
           </div>
         </div>
+      </TableCell>
+      <TableCell>
+        {functieNaam ?? <span className="text-sm text-muted-foreground">—</span>}
       </TableCell>
       <TableCell>
         <div className="flex flex-wrap gap-1">
@@ -282,6 +306,7 @@ function GebruikerRij({
           <GebruikerBewerkenDialog
             profile={profile}
             teams={teams}
+            functies={functies}
             huidigeTeamIds={huidigeTeamIds}
             huidigeRolIds={huidigeRolIds}
           />
@@ -390,11 +415,13 @@ const initialState: UpdateGebruikerFormState = { error: null, success: false };
 function GebruikerBewerkenDialog({
   profile,
   teams,
+  functies,
   huidigeTeamIds,
   huidigeRolIds,
 }: {
   profile: ProfileRow;
   teams: Team[];
+  functies: FunctieOptie[];
   huidigeTeamIds: string[];
   huidigeRolIds: UserRole[];
 }) {
@@ -465,6 +492,23 @@ function GebruikerBewerkenDialog({
               value={initialen}
               onChange={(e) => setInitialen(e.target.value.toUpperCase().slice(0, 3))}
             />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label htmlFor={`functie-${profile.id}`} className="text-sm font-medium">
+              Functie
+            </label>
+            <NativeSelect id={`functie-${profile.id}`} name="functie_id" defaultValue={profile.functie_id ?? ""}>
+              <option value="">Geen functie</option>
+              {functies.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.naam}
+                </option>
+              ))}
+            </NativeSelect>
+            <p className="text-xs text-muted-foreground">
+              Het uurtarief van de functie wordt voorgesteld bij een nieuw factuuritem.
+            </p>
           </div>
 
           <label className="flex items-center gap-2 text-sm">

@@ -382,6 +382,24 @@ export type Database = {
           },
         ]
       }
+      functies: {
+        Row: {
+          created_at: string
+          id: string
+          naam: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          naam: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          naam?: string
+        }
+        Relationships: []
+      }
       klanten: {
         Row: {
           accountview_debiteurnummer: string | null
@@ -498,6 +516,80 @@ export type Database = {
         }
         Relationships: []
       }
+      melding_gesloten: {
+        Row: {
+          gesloten_op: string
+          melding_id: string
+          profile_id: string
+        }
+        Insert: {
+          gesloten_op?: string
+          melding_id: string
+          profile_id: string
+        }
+        Update: {
+          gesloten_op?: string
+          melding_id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "melding_gesloten_melding_id_fkey"
+            columns: ["melding_id"]
+            isOneToOne: false
+            referencedRelation: "meldingen"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "melding_gesloten_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meldingen: {
+        Row: {
+          actief: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          soort: Database["public"]["Enums"]["melding_soort"]
+          tekst: string
+          updated_at: string
+          wegklikbaar: boolean
+        }
+        Insert: {
+          actief?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          soort?: Database["public"]["Enums"]["melding_soort"]
+          tekst: string
+          updated_at?: string
+          wegklikbaar?: boolean
+        }
+        Update: {
+          actief?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          soort?: Database["public"]["Enums"]["melding_soort"]
+          tekst?: string
+          updated_at?: string
+          wegklikbaar?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meldingen_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       productchangelog: {
         Row: {
           bekende_beperkingen: string[]
@@ -574,6 +666,7 @@ export type Database = {
           created_at: string
           email: string
           full_name: string
+          functie_id: string | null
           id: string
           initialen: string | null
           role: Database["public"]["Enums"]["user_role"]
@@ -587,6 +680,7 @@ export type Database = {
           created_at?: string
           email: string
           full_name?: string
+          functie_id?: string | null
           id: string
           initialen?: string | null
           role?: Database["public"]["Enums"]["user_role"]
@@ -600,13 +694,22 @@ export type Database = {
           created_at?: string
           email?: string
           full_name?: string
+          functie_id?: string | null
           id?: string
           initialen?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
           voornaam?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_functie_id_fkey"
+            columns: ["functie_id"]
+            isOneToOne: false
+            referencedRelation: "functies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       projecten: {
         Row: {
@@ -705,6 +808,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           einddatum: string | null
+          functie_id: string | null
           id: string
           ingangsdatum: string
           klant_id: string | null
@@ -715,6 +819,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           einddatum?: string | null
+          functie_id?: string | null
           id?: string
           ingangsdatum: string
           klant_id?: string | null
@@ -725,6 +830,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           einddatum?: string | null
+          functie_id?: string | null
           id?: string
           ingangsdatum?: string
           klant_id?: string | null
@@ -737,6 +843,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tarieven_functie_id_fkey"
+            columns: ["functie_id"]
+            isOneToOne: false
+            referencedRelation: "functies"
             referencedColumns: ["id"]
           },
           {
@@ -865,6 +978,10 @@ export type Database = {
         Args: { target: Database["public"]["Enums"]["user_role"] }
         Returns: boolean
       }
+      resolve_standaardtarief: {
+        Args: { p_datum: string; p_medewerker_id: string }
+        Returns: number
+      }
       resolve_tarief: {
         Args: { p_datum: string; p_klant_id: string; p_medewerker_id: string }
         Returns: number
@@ -918,6 +1035,7 @@ export type Database = {
       factuuritem_status: "aangemaakt" | "definitief"
       klant_status: "actief" | "inactief"
       korting_type: "bedrag" | "percentage"
+      melding_soort: "info" | "waarschuwing" | "urgent"
       prijstype: "uren" | "vast_honorarium"
       specificatietaal: "nl" | "en"
       specificatietype: "simple" | "extended"
@@ -1078,6 +1196,7 @@ export const Constants = {
       factuuritem_status: ["aangemaakt", "definitief"],
       klant_status: ["actief", "inactief"],
       korting_type: ["bedrag", "percentage"],
+      melding_soort: ["info", "waarschuwing", "urgent"],
       prijstype: ["uren", "vast_honorarium"],
       specificatietaal: ["nl", "en"],
       specificatietype: ["simple", "extended"],

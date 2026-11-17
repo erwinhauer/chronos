@@ -253,9 +253,29 @@ const RELEASE_1_10_2 = {
   gebruikersactie: null,
 };
 
+const RELEASE_1_11_0 = {
+  versienummer: "1.11.0",
+  releasedatum: "2026-11-17",
+  titel: "Functies met een uurtarief en meldingen bovenin Chronos",
+  nieuwe_functies: [
+    "Functies: een beheerder maakt in Instellingen onder Functies functies aan (bijvoorbeeld Partner of Paralegal) en geeft ze een uurtarief. Bij Gebruikers koppel je een functie aan een gebruiker. Bij een nieuw factuuritem stelt Chronos dan het tarief van die functie voor",
+    "Meldingen: een beheerder plaatst in Instellingen onder Meldingen een melding bovenin Chronos, bijvoorbeeld bij een storing of gepland onderhoud. Er zijn drie soorten: ter info (groen), waarschuwing (oranje) en urgent (rood). Een melding is wegklikbaar of blijft staan tot de beheerder hem uitzet",
+  ],
+  wijzigingen: [
+    "Nieuw factuuritem: het voorgestelde tarief volgt nu de gekozen medewerker. Kies je een andere medewerker, dan verandert het tarief mee, tenzij je het tarief zelf hebt aangepast",
+    "Nieuw factuuritem: de regel Voorgesteld tarief toont nu het standaardtarief van de medewerker (het tarief van zijn functie, anders het kantoortarief) in plaats van altijd 330 euro",
+  ],
+  bugfixes: [],
+  bekende_beperkingen: [
+    "Een tarief dat voor een klant of voor één medewerker is afgesproken, gaat voor het tarief van een functie",
+    "Een nieuwe melding verschijnt bij gebruikers die Chronos al open hebben binnen vijf minuten, of direct na het verversen van de pagina",
+  ],
+  gebruikersactie: null,
+};
+
 // Oudste eerst; de nieuwste release hoort onderaan. package.json "version" moet gelijk zijn
 // aan de laatste (zie de controle hieronder).
-const CHANGELOG_ENTRIES = [RELEASE_1_0_0, RELEASE_1_1_0, RELEASE_1_2_0, RELEASE_1_3_0, RELEASE_1_4_0, RELEASE_1_5_0, RELEASE_1_6_0, RELEASE_1_7_0, RELEASE_1_8_0, RELEASE_1_9_0, RELEASE_1_10_0, RELEASE_1_10_1, RELEASE_1_10_2];
+const CHANGELOG_ENTRIES = [RELEASE_1_0_0, RELEASE_1_1_0, RELEASE_1_2_0, RELEASE_1_3_0, RELEASE_1_4_0, RELEASE_1_5_0, RELEASE_1_6_0, RELEASE_1_7_0, RELEASE_1_8_0, RELEASE_1_9_0, RELEASE_1_10_0, RELEASE_1_10_1, RELEASE_1_10_2, RELEASE_1_11_0];
 
 // Het versienummer in package.json en de nieuwste changelog-entry horen gelijk te lopen.
 {

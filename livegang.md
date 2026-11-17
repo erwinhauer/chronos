@@ -901,6 +901,22 @@ medewerker, het admin-pad met `app_metadata.role` geeft de gekozen rol. Op BETA 
 oude functie (`security/02_rollback_handle_new_user.sql` in de analysemap). Op verzoek gepromoot naar
 `main`/LIVE op 2026-11-12. `main` en `beta` staan weer gelijk.
 
+Daarna, op verzoek, twee optimalisaties (2026-11-17, branch `feature/functies-en-meldingen`, versie
+1.11.0). (1) Functies met een uurtarief: een beheerder beheert functies in Instellingen en koppelt ze
+aan gebruikers (`profiles.functie_id`). Het tarief van een functie staat in `tarieven` (nieuwe kolom
+`functie_id`), dus met ingangs- en einddatum en in de auditlog. `resolve_tarief` kent nu de rangorde
+klant+medewerker, medewerker, klant, functie, algemeen. Nieuw: `resolve_standaardtarief` (functietarief,
+anders algemeen), gebruikt voor de regel "Voorgesteld tarief" in het factuuritem-formulier (die stond
+vast op 330). Het voorgestelde tarief volgt nu de gekozen medewerker zolang de gebruiker het tarief niet
+zelf aanpast. De zelfbedienings-trigger op `profiles` beschermt `functie_id`. (2) Meldingen: een
+beheerder plaatst een melding bovenin Chronos (ter info groen, waarschuwing oranje, urgent rood),
+wegklikbaar of niet. Tabellen `meldingen` en `melding_gesloten` (wegklikken wordt per gebruiker
+bewaard), balk in de rechterkolom van de app-shell, open tabbladen verversen elke vijf minuten.
+Migraties `20261117100000_functies_met_uurtarief.sql` en `20261117110000_meldingen.sql`. Lokaal
+getest: rangorde van de tarieven in een teruggedraaide transactie, RLS als medewerker en beheerder,
+en de schermen in de browser (functie aanmaken en koppelen, melding plaatsen en wegklikken, tarief
+volgt medewerker). Nog te doen bij promotie naar LIVE: `documentation.md` bijwerken.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de

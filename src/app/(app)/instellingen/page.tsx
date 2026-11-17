@@ -8,6 +8,8 @@ import { TeamsTab } from "@/components/instellingen/teams-tab";
 import { ChangelogTab } from "@/components/instellingen/changelog-tab";
 import { sorteerReleasesNieuwsteEerst } from "@/lib/versie";
 import { LandenTab } from "@/components/instellingen/landen-tab";
+import { FunctiesTab, type FunctieRij } from "@/components/instellingen/functies-tab";
+import { MeldingenTab, type MeldingRij } from "@/components/instellingen/meldingen-tab";
 import { AuditlogTab, type AuditlogRij } from "@/components/instellingen/auditlog-tab";
 import type { UserRole } from "@/lib/supabase/types";
 
@@ -29,8 +31,14 @@ export default async function InstellingenPage() {
     { data: landen },
     { data: auditRijen, count: auditAantal },
     { data: opslaggrootteBytes },
+    { data: functies },
+    { data: functieTarieven },
+    { data: meldingen },
   ] = await Promise.all([
-    supabase.from("profiles").select("id, full_name, voornaam, achternaam, email, role, actief, initialen").order("full_name"),
+    supabase
+      .from("profiles")
+      .select("id, full_name, voornaam, achternaam, email, role, actief, initialen, functie_id")
+      .order("full_name"),
     supabase.from("teams").select("id, naam, email").order("naam"),
     supabase.from("team_members").select("team_id, profile_id"),
     supabase.from("productchangelog").select("*").order("releasedatum", { ascending: false }),
@@ -45,7 +53,39 @@ export default async function InstellingenPage() {
       .order("created_at", { ascending: false })
       .limit(200),
     supabase.rpc("auditlog_opslaggrootte"),
+    supabase.from("functies").select("id, naam").order("naam"),
+    supabase.from("tarieven").select("functie_id, tarief, ingangsdatum, einddatum").not("functie_id", "is", null),
+    supabase
+      .from("meldingen")
+      .select("id, soort, tekst, wegklikbaar, actief, created_at, profiles(full_name)")
+      .order("created_at", { ascending: false }),
   ]);
+
+  // Huidig tarief per functie: de geldige rij met de meest recente ingangsdatum.
+  const vandaag = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Amsterdam" }).format(new Date());
+  const tariefPerFunctie: Record<string, { tarief: number; ingangsdatum: string }> = {};
+  for (const t of functieTarieven ?? []) {
+    if (!t.functie_id || t.ingangsdatum > vandaag || (t.einddatum && t.einddatum < vandaag)) continue;
+    const huidig = tariefPerFunctie[t.functie_id];
+    if (!huidig || t.ingangsdatum > huidig.ingangsdatum) {
+      tariefPerFunctie[t.functie_id] = { tarief: t.tarief, ingangsdatum: t.ingangsdatum };
+    }
+  }
+  const functieRijen: FunctieRij[] = (functies ?? []).map((f) => ({
+    id: f.id,
+    naam: f.naam,
+    uurtarief: tariefPerFunctie[f.id]?.tarief ?? null,
+    aantalGebruikers: (profiles ?? []).filter((p) => p.functie_id === f.id).length,
+  }));
+  const meldingRijen: MeldingRij[] = (meldingen ?? []).map((m) => ({
+    id: m.id,
+    soort: m.soort,
+    tekst: m.tekst,
+    wegklikbaar: m.wegklikbaar,
+    actief: m.actief,
+    created_at: m.created_at,
+    gemaaktDoor: (m.profiles as unknown as { full_name: string } | null)?.full_name ?? null,
+  }));
 
   const teamIdsPerProfile: Record<string, string[]> = {};
   const ledenPerTeam: Record<string, string[]> = {};
@@ -77,12 +117,14 @@ export default async function InstellingenPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h2 className="text-3xl font-light tracking-tight">Instellingen</h2>
-        <p className="text-sm text-muted-foreground">Gebruikers, teams en de changelog beheren.</p>
+        <p className="text-sm text-muted-foreground">Gebruikers, functies, teams, meldingen en de changelog beheren.</p>
       </div>
       <Tabs defaultValue="gebruikers">
         <TabsList>
           <TabsTrigger value="gebruikers">Gebruikers</TabsTrigger>
+          <TabsTrigger value="functies">Functies</TabsTrigger>
           <TabsTrigger value="teams">Teams</TabsTrigger>
+          <TabsTrigger value="meldingen">Meldingen</TabsTrigger>
           <TabsTrigger value="landen">Landen</TabsTrigger>
           <TabsTrigger value="changelog">Changelog</TabsTrigger>
           <TabsTrigger value="auditlog">Auditlog</TabsTrigger>
@@ -91,10 +133,17 @@ export default async function InstellingenPage() {
           <GebruikersTab
             profiles={profiles ?? []}
             teams={teams ?? []}
+            functies={(functies ?? []).map((f) => ({ id: f.id, naam: f.naam }))}
             teamIdsPerProfile={teamIdsPerProfile}
             rolIdsPerProfile={rolIdsPerProfile}
             eigenProfielId={profile.id}
           />
+        </TabsContent>
+        <TabsContent value="functies">
+          <FunctiesTab functies={functieRijen} />
+        </TabsContent>
+        <TabsContent value="meldingen">
+          <MeldingenTab meldingen={meldingRijen} />
         </TabsContent>
         <TabsContent value="teams">
           <TeamsTab

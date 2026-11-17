@@ -102,6 +102,7 @@ export async function createGebruiker(
   const roles = formData.getAll("role_ids").map(String) as UserRole[];
   const teamIds = formData.getAll("team_ids").map(String);
   const initialen = String(formData.get("initialen") ?? "").trim().toUpperCase().slice(0, 3);
+  const functieId = String(formData.get("functie_id") ?? "") || null;
 
   if (!email || !voornaam || roles.length === 0) {
     return { error: "Voornaam, e-mailadres en minimaal één rol zijn verplicht.", success: false };
@@ -146,6 +147,9 @@ export async function createGebruiker(
   if (initialen) {
     await admin.from("profiles").update({ initialen }).eq("id", data.user.id);
   }
+  if (functieId) {
+    await admin.from("profiles").update({ functie_id: functieId }).eq("id", data.user.id);
+  }
   if (teamIds.length > 0) {
     await admin.from("team_members").insert(teamIds.map((team_id) => ({ team_id, profile_id: data.user.id })));
   }
@@ -170,6 +174,7 @@ export async function updateGebruiker(
   const actief = formData.get("actief") === "on";
   const teamIds = formData.getAll("team_ids").map(String);
   const initialen = String(formData.get("initialen") ?? "").trim().toUpperCase().slice(0, 3);
+  const functieId = String(formData.get("functie_id") ?? "") || null;
 
   if (!voornaam || roles.length === 0 || !email) {
     return { error: "Voornaam, e-mailadres en minimaal één rol zijn verplicht.", success: false };
@@ -199,7 +204,7 @@ export async function updateGebruiker(
 
   const { error } = await admin
     .from("profiles")
-    .update({ voornaam, achternaam, email, role: actieveRol, actief, initialen: initialen || null })
+    .update({ voornaam, achternaam, email, role: actieveRol, actief, initialen: initialen || null, functie_id: functieId })
     .eq("id", profileId);
   if (error) {
     return { error: "Bijwerken van de gebruiker is mislukt.", success: false };

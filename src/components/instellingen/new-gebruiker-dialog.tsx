@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { NativeSelect } from "@/components/ui/native-select";
 import {
   Dialog,
   DialogContent,
@@ -22,7 +23,9 @@ import type { UserRole } from "@/lib/supabase/types";
 
 const initialState: GebruikerFormState = { error: null, success: false };
 
-export function NewGebruikerDialog({ teams }: { teams: { id: string; naam: string }[] }) {
+type Optie = { id: string; naam: string };
+
+export function NewGebruikerDialog({ teams, functies }: { teams: Optie[]; functies: Optie[] }) {
   const [open, setOpen] = useState(false);
   const [formKey, setFormKey] = useState(0);
 
@@ -39,13 +42,13 @@ export function NewGebruikerDialog({ teams }: { teams: { id: string; naam: strin
         Nieuwe gebruiker
       </DialogTrigger>
       <DialogContent>
-        <GebruikerDialogBody key={formKey} teams={teams} onDone={() => setOpen(false)} />
+        <GebruikerDialogBody key={formKey} teams={teams} functies={functies} onDone={() => setOpen(false)} />
       </DialogContent>
     </Dialog>
   );
 }
 
-function GebruikerDialogBody({ teams, onDone }: { teams: { id: string; naam: string }[]; onDone: () => void }) {
+function GebruikerDialogBody({ teams, functies, onDone }: { teams: Optie[]; functies: Optie[]; onDone: () => void }) {
   const [teamIds, setTeamIds] = useState<string[]>([]);
   const [roleIds, setRoleIds] = useState<UserRole[]>(["medewerker"]);
   const [voornaam, setVoornaam] = useState("");
@@ -116,6 +119,17 @@ function GebruikerDialogBody({ teams, onDone }: { teams: { id: string; naam: str
             }}
           />
         </div>
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="functie_id">Functie</Label>
+        <NativeSelect id="functie_id" name="functie_id" defaultValue="">
+          <option value="">Geen functie</option>
+          {functies.map((f) => (
+            <option key={f.id} value={f.id}>
+              {f.naam}
+            </option>
+          ))}
+        </NativeSelect>
       </div>
       <div className="flex flex-col gap-2">
         <Label>Rollen</Label>

@@ -66,7 +66,7 @@ const ROLLEN = [
   },
   { rol: "Praktijkvoerder", kan: "Factuuritems van het eigen team; specificaties maken", ziet: "Team-dashboard" },
   { rol: "Finance", kan: "Specificaties maken over alle klanten", ziet: "Financieel overzicht" },
-  { rol: "Beheerder", kan: "Alles, plus gebruikers-, team- en instellingenbeheer", ziet: "Alles" },
+  { rol: "Beheerder", kan: "Alles, plus gebruikers-, functie-, team- en instellingenbeheer, en meldingen plaatsen", ziet: "Alles" },
   { rol: "Directie", kan: "Alleen lezen, geen factuuritems aanmaken (de knop is grijs; wissel daarvoor naar Medewerker of Praktijkvoerder)", ziet: "Praktijkbreed dashboard" },
 ];
 
@@ -156,6 +156,14 @@ export default function HandleidingPage() {
             Een beheerder kan via <strong>Instellingen → Gebruikers → &ldquo;Inloggen als&rdquo;</strong> tijdelijk een
             andere rol bekijken. Via <strong>Instellingen → Auditlog</strong> zie je wie wat heeft aangemaakt of
             gewijzigd op klanten, factuuritems, specificaties en tarieven (60 dagen bewaard).
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Onder <strong>Instellingen → Functies</strong> maakt een beheerder functies aan met een uurtarief. Bij{" "}
+            <strong>Gebruikers → Bewerken</strong> koppel je een functie aan een gebruiker. Onder{" "}
+            <strong>Instellingen → Meldingen</strong> plaatst een beheerder een melding bovenin Chronos, bijvoorbeeld
+            bij een storing of onderhoud: groen is ter info, oranje een waarschuwing en rood urgent. Een wegklikbare
+            melding sluit je met het kruisje, dan komt hij voor jou niet terug. Een melding zonder kruisje blijft
+            staan tot de beheerder hem uitzet.
           </p>
         </CardContent>
       </Card>
@@ -252,7 +260,7 @@ export default function HandleidingPage() {
             </li>
             <li>3. Vul per dossier de dossiernaam in, kies klant en eventueel project.</li>
             <li>4. Vul de omschrijving voor de klant in — komt op de specificatie. Een interne opmerking niet.</li>
-            <li>5. Kies prijstype (Uren of Fixed fee); Chronos stelt een tarief voor.</li>
+            <li>5. Kies prijstype (Uren of Fixed fee); Chronos stelt een tarief voor. Is er voor deze klant of voor de medewerker een tarief afgesproken, dan is dat het voorstel. Anders is het voorstel het tarief van de functie van de medewerker, en zonder functie het standaardtarief van het kantoor. Je kunt het tarief altijd aanpassen.</li>
             <li>6. Heb je kosten van derden of korting? Zet dan de schakelaar &ldquo;Kosten derden/korting uitsplitsen&rdquo; aan en vul ze in. Anders laat je die uit, en klik je op &ldquo;Factuuritem aanmaken&rdquo;.</li>
           </ol>
         </div>

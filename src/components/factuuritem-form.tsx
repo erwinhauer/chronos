@@ -74,14 +74,12 @@ type Initial = {
 
 const initialState: FactuurItemFormState = { error: null, success: false };
 
-// Standaard uurtarief van het kantoor (zie de wildcard-rij in `tarieven`,
-// klant_id/medewerker_id beide null) — hier ook als vaste ondergrens
-// gebruikt voor de "voorgesteld tarief"-nudge: een oudere, lagere
-// klant-/medewerkerspecifieke afspraak in `tarieven` blijft gewoon geldig
-// (en vult het veld nog steeds automatisch in), maar de gebruiker krijgt
-// per regel een duwtje richting het huidige standaardtarief i.p.v. dat
-// alleen via een aparte, kantoorbrede tariefwijziging op te lossen.
-const STANDAARD_UURTARIEF = 330;
+// De "voorgesteld tarief"-nudge hieronder vergelijkt met het standaard uurtarief van de medewerker
+// (resolve_standaardtarief): het tarief van zijn functie, of het algemene kantoortarief als hij geen
+// functie heeft. Een oudere, lagere klant-/medewerkerspecifieke afspraak in `tarieven` blijft gewoon
+// geldig (en vult het veld nog steeds automatisch in), maar de gebruiker krijgt per regel een duwtje
+// richting het standaardtarief i.p.v. dat alleen via een aparte, kantoorbrede tariefwijziging op te
+// lossen.
 
 export function FactuurItemForm({
   klanten: klantenProp,
@@ -162,6 +160,7 @@ export function FactuurItemForm({
   const qty = Number(qtyInput) || 0;
   const [prijstype, setPrijstype] = useState<PrijsType | "">(initial?.prijstype ?? "");
   const [tarief, setTarief] = useState<number | null>(initial?.tarief ?? null);
+  const [tariefHandmatig, setTariefHandmatig] = useState(false);
   const [externeKosten, setExterneKosten] = useState(initial?.externe_kosten ?? 0);
   const [kortingType, setKortingType] = useState<KortingType>(initial?.korting_type ?? "bedrag");
   const [kortingBedrag, setKortingBedrag] = useState(initial?.korting ?? 0);
@@ -240,15 +239,17 @@ export function FactuurItemForm({
     setProjectId("");
   }
 
+  // Voorzet: het tarief dat voor deze klant, medewerker (en diens functie) en datum geldt. Zolang de
+  // gebruiker het tarief niet zelf heeft aangepast, volgt het veld klant, datum en medewerker.
   useEffect(() => {
     if (!klantId || !datum) return;
     let cancelled = false;
     const supabase = createClient();
     supabase
-      .rpc("resolve_tarief", { p_klant_id: klantId, p_medewerker_id: medewerkerId, p_datum: datum })
+      .rpc("resolve_tarief", { p_klant_id: klantId, p_medewerker_id: medewerkerIdVeld, p_datum: datum })
       .then(({ data }) => {
         if (cancelled) return;
-        if (!initial && typeof data === "number" && tarief === null) {
+        if (!initial && !tariefHandmatig && typeof data === "number") {
           setTarief(data);
         }
       });
@@ -256,7 +257,22 @@ export function FactuurItemForm({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [klantId, datum, medewerkerId]);
+  }, [klantId, datum, medewerkerIdVeld]);
+
+  const [standaardTarief, setStandaardTarief] = useState<number | null>(null);
+  useEffect(() => {
+    if (!datum) return;
+    let cancelled = false;
+    const supabase = createClient();
+    supabase
+      .rpc("resolve_standaardtarief", { p_medewerker_id: medewerkerIdVeld, p_datum: datum })
+      .then(({ data }) => {
+        if (!cancelled) setStandaardTarief(typeof data === "number" ? data : null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [datum, medewerkerIdVeld]);
 
   const honorarium = round2(qty * (tarief ?? 0));
   const kortingBerekend = kortingType === "percentage" ? round2(honorarium * (kortingPercentage / 100)) : kortingBedrag;
@@ -551,13 +567,16 @@ export function FactuurItemForm({
                         step="0.01"
                         className="pl-6"
                         value={tarief ?? ""}
-                        onChange={(e) => setTarief(e.target.value === "" ? null : Number(e.target.value))}
+                        onChange={(e) => {
+                          setTariefHandmatig(true);
+                          setTarief(e.target.value === "" ? null : Number(e.target.value));
+                        }}
                         required
                       />
                     </div>
-                    {prijstype === "uren" && tarief !== null && tarief < STANDAARD_UURTARIEF && (
+                    {prijstype === "uren" && tarief !== null && standaardTarief !== null && tarief < standaardTarief && (
                       <p className="text-xs text-muted-foreground">
-                        Voorgesteld tarief: {euro(STANDAARD_UURTARIEF, klant?.valuta ?? "EUR")}
+                        Voorgesteld tarief: {euro(standaardTarief, klant?.valuta ?? "EUR")}
                       </p>
                     )}
                     {tarief !== null && tarief < 0 && (
