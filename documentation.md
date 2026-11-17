@@ -191,12 +191,20 @@ retentie-/opslaggrootte-mechanisme (`auditlog_opslaggrootte()`).
   functie staat in `tarieven` (`functie_id`, `on delete cascade`). De server-acties staan in
   `src/actions/functies.ts`. `enforce_profile_self_edit_limits` beschermt `functie_id` tegen
   zelfbewerking.
-- `meldingen` en `melding_gesloten`: meldingen van een beheerder bovenin de app (`soort`
-  info/waarschuwing/urgent, `wegklikbaar`, `actief`) en wie welke melding heeft weggeklikt.
-  Iedereen leest de actieve meldingen, alleen een beheerder schrijft. Het layout
-  (`src/app/(app)/layout.tsx`) laadt ze, `MeldingenBalk` toont ze in de rechterkolom van de
-  app-shell en ververst elke vijf minuten via `router.refresh()`. Na een tekstwijziging of
-  heractivering worden de `melding_gesloten`-rijen gewist, zodat iedereen de melding weer ziet.
+- `meldingen` en `melding_gezien`: meldingen van een beheerder bovenin de app (`soort`
+  info/waarschuwing/urgent, `wegklikbaar`, `actief`, optioneel `verloopt_op`) en in welke
+  inlogsessie een gebruiker een wegklikbare melding al heeft gezien. Iedereen leest de actieve,
+  niet-verlopen meldingen (RLS), alleen een beheerder schrijft en ziet ook de rest. Het layout
+  (`src/app/(app)/layout.tsx`) laadt ze en bepaalt wat deze gebruiker nog moet zien: een
+  wegklikbare melding één keer per inlogsessie (`session_id` uit het Supabase-token, via
+  `huidigeSessieId()`), een niet-wegklikbare altijd. `MeldingenBalk` toont ze in de rechterkolom van
+  de app-shell, legt via `markeerMeldingenGezien` vast dat ze getoond zijn, controleert elke 30
+  seconden op verloop en ververst elke vijf minuten via `router.refresh()`. `verloopt_op` wordt in
+  Amsterdamse tijd ingevoerd (`src/lib/amsterdam-tijd.ts`). Instellingen ruimt verlopen meldingen
+  op (`purgeVerlopenMeldingen`). Na een wijziging of heractivering worden de `melding_gezien`-rijen
+  gewist, zodat iedereen de melding weer ziet. Let op: `meldingen` heeft twee routes naar `profiles`
+  (`created_by` en via `melding_gezien`); een embed moet dus `profiles!meldingen_created_by_fkey`
+  noemen.
 - `teams`/`team_members`: teamindeling; `teams.email` is een team-e-mailadres
   (vandaag ongebruikt in de app — potentieel relevant als reply-to/CC-adres zodra
   Chronos zelf e-mails gaat versturen, zie facturatieplan).

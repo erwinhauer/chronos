@@ -929,8 +929,9 @@ eenduidig vond (zowel via `created_by` als via de gezien/gesloten-tabel); de que
 `meldingen_created_by_fkey`. Die fout zat al in v1.11.0 op LIVE. Migratie
 `20261117120000_meldingen_per_sessie_en_verloop.sql`. Lokaal getest: sessie-id in het token, herladen
 in dezelfde sessie, opnieuw inloggen, verlopen melding verdwijnt uit een open pagina, opruimen bij het
-openen van Instellingen, tijdzone-conversie (zomer- en wintertijd). Staat op BETA. Bij promotie naar
-LIVE: `documentation.md` bijwerken (melding_gezien, verloopt_op, sessielogica).
+openen van Instellingen, tijdzone-conversie (zomer- en wintertijd). Op BETA getest door Erwin (werkt
+goed) en op verzoek gepromoot naar `main`/LIVE op 2026-11-17, met `documentation.md` bijgewerkt. `main`
+en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
