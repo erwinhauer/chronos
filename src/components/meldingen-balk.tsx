@@ -81,12 +81,16 @@ export function MeldingenBalk({
   if (zichtbaar.length === 0) return null;
 
   return (
-    <div className="shrink-0 print:hidden">
+    // Op brede schermen loopt de balk 36px (de straal van de afgeronde zijbalk) onder de zijbalk door,
+    // zodat er geen gat ontstaat bij die ronding. De opvulling links compenseert dat, zodat de tekst
+    // gecentreerd blijft in het zichtbare deel.
+    <div className="shrink-0 print:hidden lg:-ml-9">
       {zichtbaar.map((m) => (
         <MeldingBlok
           key={m.id}
           soort={m.soort}
           tekst={m.tekst}
+          className="lg:pl-[calc(3rem+2.25rem)]"
           onSluit={m.wegklikbaar ? () => setGesloten((prev) => [...prev, m.id]) : undefined}
         />
       ))}

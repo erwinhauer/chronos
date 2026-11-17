@@ -184,7 +184,7 @@ function AppShellContent({
         </div>
       )}
       <div className="flex min-h-0 flex-1">
-      <aside className="sticky top-0 hidden h-screen w-[272px] shrink-0 flex-col rounded-r-[36px] bg-sidebar px-5 pt-8 pb-5 text-sidebar-foreground lg:flex print:hidden">
+      <aside className="sticky top-0 z-10 hidden h-screen w-[272px] shrink-0 flex-col rounded-r-[36px] bg-sidebar px-5 pt-8 pb-5 text-sidebar-foreground lg:flex print:hidden">
         <SidebarBrand />
         <div className="mt-10 flex-1 overflow-y-auto">
           <NavLinks role={profile.role} />

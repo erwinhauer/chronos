@@ -46,17 +46,20 @@ export function MeldingBlok({
   return (
     <div
       role={soort === "urgent" ? "alert" : "status"}
-      className={cn("flex items-start gap-3 px-4 py-2.5 text-sm font-bold lg:px-9", vlak, className)}
+      className={cn("relative flex items-start justify-center gap-3 px-12 py-2.5 text-sm font-bold", vlak, className)}
     >
       <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-      <p className="min-w-0 flex-1 whitespace-pre-line break-words">{tekst}</p>
+      <p className="min-w-0 text-center whitespace-pre-line break-words">{tekst}</p>
       {onSluit && (
         <button
           type="button"
           onClick={onSluit}
           aria-label="Melding sluiten"
           title="Melding sluiten"
-          className={cn("-mr-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors", sluit)}
+          className={cn(
+            "absolute right-3 top-2 flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors lg:right-6",
+            sluit
+          )}
         >
           <X className="h-4 w-4" />
         </button>

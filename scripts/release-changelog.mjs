@@ -291,9 +291,24 @@ const RELEASE_1_12_0 = {
   gebruikersactie: null,
 };
 
+const RELEASE_1_12_1 = {
+  versienummer: "1.12.1",
+  releasedatum: "2026-11-17",
+  titel: "Meldingen: gecentreerde tekst en geen wit gat bij de zijbalk",
+  nieuwe_functies: [],
+  wijzigingen: [
+    "Meldingen: de tekst in de balk staat nu gecentreerd",
+  ],
+  bugfixes: [
+    "Meldingen: bij de afgeronde hoek van de zijbalk zat een wit gat tussen de zijbalk en de melding. De balk loopt nu door tot onder de zijbalk",
+  ],
+  bekende_beperkingen: [],
+  gebruikersactie: null,
+};
+
 // Oudste eerst; de nieuwste release hoort onderaan. package.json "version" moet gelijk zijn
 // aan de laatste (zie de controle hieronder).
-const CHANGELOG_ENTRIES = [RELEASE_1_0_0, RELEASE_1_1_0, RELEASE_1_2_0, RELEASE_1_3_0, RELEASE_1_4_0, RELEASE_1_5_0, RELEASE_1_6_0, RELEASE_1_7_0, RELEASE_1_8_0, RELEASE_1_9_0, RELEASE_1_10_0, RELEASE_1_10_1, RELEASE_1_10_2, RELEASE_1_11_0, RELEASE_1_12_0];
+const CHANGELOG_ENTRIES = [RELEASE_1_0_0, RELEASE_1_1_0, RELEASE_1_2_0, RELEASE_1_3_0, RELEASE_1_4_0, RELEASE_1_5_0, RELEASE_1_6_0, RELEASE_1_7_0, RELEASE_1_8_0, RELEASE_1_9_0, RELEASE_1_10_0, RELEASE_1_10_1, RELEASE_1_10_2, RELEASE_1_11_0, RELEASE_1_12_0, RELEASE_1_12_1];
 
 // Het versienummer in package.json en de nieuwste changelog-entry horen gelijk te lopen.
 {

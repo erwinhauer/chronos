@@ -933,6 +933,11 @@ openen van Instellingen, tijdzone-conversie (zomer- en wintertijd). Op BETA gete
 goed) en op verzoek gepromoot naar `main`/LIVE op 2026-11-17, met `documentation.md` bijgewerkt. `main`
 en `beta` staan weer gelijk.
 
+Daarna een kleine opmaakfix aan de meldingen (2026-11-17, versie 1.12.1): bij de afgeronde hoek van de
+zijbalk viel een wit gat tussen zijbalk en melding. De balk loopt nu 36px onder de zijbalk door (zijbalk
+`z-10`, balk `lg:-ml-9` met compenserende opvulling), de tekst staat gecentreerd in het zichtbare deel en
+het sluitkruisje staat absoluut rechts. Geen migraties. Lokaal gemeten in de browser. Staat op BETA.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de
