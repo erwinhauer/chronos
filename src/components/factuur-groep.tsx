@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Receipt, Pencil, Copy, Trash2, MoreVertical, Search, ChevronDown, ChevronUp, Plus } from "lucide-react";
+import { Receipt, Pencil, Copy, Trash2, MoreVertical, Search, ChevronDown, ChevronUp, Plus, CalendarClock, Lock } from "lucide-react";
 import { landNaamVoorIso } from "@/lib/dossiernummer";
 import { euro, regelbedrag } from "@/lib/factuurbedragen";
+import { datumKort, overHoeLang, vandaagAmsterdam } from "@/lib/vandaag";
 import type { LandenMap } from "@/lib/landen";
 import { VerplaatsProjectDialog } from "@/components/verplaats-project-dialog";
 import { EditProjectDialog } from "@/components/edit-project-dialog";
@@ -88,10 +89,12 @@ export function FactuurGroep({
   huidigeGebruikerId,
   landen,
   medewerkerIds = [],
+  vandaag = vandaagAmsterdam(),
 }: {
   klantId: string;
   klantNaam: string;
   valuta?: string;
+  // Alle openstaande items van de klant; items met een datum na `vandaag` worden apart getoond.
   items: FactuurGroepItem[];
   projecten: Project[];
   toonMedewerker: boolean;
@@ -104,10 +107,11 @@ export function FactuurGroep({
   huidigeGebruikerId?: string;
   landen: LandenMap;
   medewerkerIds?: string[];
+  vandaag?: string;
 }) {
   const [zoekterm, setZoekterm] = useState("");
   const [groepeerOp, setGroepeerOp] = useState<Groepering>("project");
-  const gefilterdeItems = useMemo(() => {
+  const gefilterdeAlle = useMemo(() => {
     const q = zoekterm.trim().toLowerCase();
     if (!q) return items;
     return items.filter((item) => {
@@ -118,6 +122,13 @@ export function FactuurGroep({
       return dossierTekst.includes(q) || item.omschrijving_klant.toLowerCase().includes(q);
     });
   }, [items, zoekterm]);
+
+  // Factureerbaar: de datum is bereikt. Gepland: de datum ligt na vandaag, nog niet te factureren.
+  const gefilterdeItems = useMemo(() => gefilterdeAlle.filter((r) => r.datum <= vandaag), [gefilterdeAlle, vandaag]);
+  const geplandeItems = useMemo(
+    () => gefilterdeAlle.filter((r) => r.datum > vandaag).sort((a, b) => a.datum.localeCompare(b.datum)),
+    [gefilterdeAlle, vandaag]
+  );
 
   const subtotaalHonorarium = gefilterdeItems.reduce((sum, r) => sum + r.honorarium, 0);
   const subtotaalKosten = gefilterdeItems.reduce((sum, r) => sum + r.externe_kosten, 0);
@@ -192,7 +203,9 @@ export function FactuurGroep({
           </label>
         </div>
         {secties.length === 0 ? (
-          <p className="py-10 text-center text-sm text-muted-foreground">Geen factuuritems gevonden.</p>
+          <p className="py-10 text-center text-sm text-muted-foreground">
+            {geplandeItems.length > 0 ? "Er zijn nu geen factureerbare items." : "Geen factuuritems gevonden."}
+          </p>
         ) : (
           <div className={toonProjectHeaders ? "flex flex-col gap-6" : "contents"}>
             {secties.map((sectie, index) => (
@@ -219,8 +232,97 @@ export function FactuurGroep({
             ))}
           </div>
         )}
+        {geplandeItems.length > 0 && (
+          <GeplandeItemsSectie
+            items={geplandeItems}
+            valuta={valuta}
+            vandaag={vandaag}
+            toonMedewerker={toonMedewerker}
+            magVerplaatsen={magVerplaatsen}
+            magAanmaken={magAanmaken}
+            magAllesBewerken={magAllesBewerken}
+            eigenTeamIds={eigenTeamIds}
+            huidigeGebruikerId={huidigeGebruikerId}
+            landen={landen}
+            medewerkerIds={medewerkerIds}
+          />
+        )}
       </CardContent>
     </Card>
+  );
+}
+
+// Duidelijk afgescheiden sectie onder de factureerbare items: werk met een datum in de toekomst.
+// Het telt nog niet mee in onderhanden werk en kan niet in een specificatie (geen selectievakje).
+// Op de datum zelf staat het item vanzelf in de gewone lijst hierboven.
+function GeplandeItemsSectie({
+  items,
+  valuta,
+  vandaag,
+  toonMedewerker,
+  magVerplaatsen,
+  magAanmaken,
+  magAllesBewerken,
+  eigenTeamIds,
+  huidigeGebruikerId,
+  landen,
+  medewerkerIds,
+}: {
+  items: FactuurGroepItem[];
+  valuta: string;
+  vandaag: string;
+  toonMedewerker: boolean;
+  magVerplaatsen: boolean;
+  magAanmaken: boolean;
+  magAllesBewerken: boolean;
+  eigenTeamIds: string[];
+  huidigeGebruikerId?: string;
+  landen: LandenMap;
+  medewerkerIds: string[];
+}) {
+  const totaal = items.reduce((sum, r) => sum + regelbedrag(r), 0);
+  return (
+    <section
+      aria-label="Gepland, nog niet factureerbaar"
+      className="mt-2 flex flex-col gap-3 rounded-2xl border-2 border-dashed border-border bg-muted/30 p-4"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="flex items-center gap-2 text-base font-medium">
+            <CalendarClock className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+            Gepland, nog niet factureerbaar
+            <Badge variant="secondary">{items.length}</Badge>
+          </h3>
+          <p className="text-xs text-muted-foreground">
+            Deze items hebben een datum in de toekomst. Ze tellen nog niet mee in onderhanden werk en kunnen nog niet in
+            een specificatie. Vanaf de datum staan ze vanzelf bij de factureerbare items.
+          </p>
+        </div>
+        <div className="text-right text-sm">
+          <div className="font-semibold tabular-figures">{euro(totaal, valuta)}</div>
+          <div className="text-xs text-muted-foreground">eerste vanaf {datumKort(items[0].datum)}</div>
+        </div>
+      </div>
+      <div className="overflow-hidden rounded-lg border border-border bg-background">
+        <FactuurItemsTabel
+          items={items}
+          valuta={valuta}
+          toonMedewerker={toonMedewerker}
+          magVerplaatsen={magVerplaatsen}
+          magAanmaken={magAanmaken}
+          magAllesBewerken={magAllesBewerken}
+          eigenTeamIds={eigenTeamIds}
+          huidigeGebruikerId={huidigeGebruikerId}
+          geselecteerd={new Set()}
+          onToggle={() => {}}
+          onToggleAlle={() => {}}
+          landen={landen}
+          medewerkerIds={medewerkerIds}
+          gepland
+          vandaag={vandaag}
+        />
+      </div>
+    </section>
   );
 }
 
@@ -410,6 +512,8 @@ function FactuurItemsTabel({
   onToggleAlle,
   landen,
   medewerkerIds,
+  gepland = false,
+  vandaag,
 }: {
   items: FactuurGroepItem[];
   valuta: string;
@@ -424,8 +528,11 @@ function FactuurItemsTabel({
   onToggle: (id: string, checked: boolean) => void;
   onToggleAlle: (ids: string[], checked: boolean) => void;
   landen: LandenMap;
+  // Geplande items (datum na vandaag) zijn niet te selecteren voor een specificatie.
+  gepland?: boolean;
+  vandaag?: string;
 }) {
-  const selecteerbareIds = items.filter((r) => r.status === "aangemaakt").map((r) => r.id);
+  const selecteerbareIds = gepland ? [] : items.filter((r) => r.status === "aangemaakt").map((r) => r.id);
   const aantalGeselecteerd = selecteerbareIds.filter((id) => geselecteerd.has(id)).length;
   const alleGeselecteerd = selecteerbareIds.length > 0 && aantalGeselecteerd === selecteerbareIds.length;
   const gedeeltelijkGeselecteerd = aantalGeselecteerd > 0 && !alleGeselecteerd;
@@ -493,16 +600,23 @@ function FactuurItemsTabel({
             <TableRow key={r.id}>
               {magVerplaatsen && (
                 <TableCell>
-                  {r.status === "aangemaakt" && (
-                    <Checkbox
-                      checked={geselecteerd.has(r.id)}
-                      onCheckedChange={(checked) => onToggle(r.id, checked === true)}
-                    />
+                  {gepland ? (
+                    <span title="Nog niet factureerbaar: de datum van dit item ligt in de toekomst">
+                      <Lock className="h-4 w-4 text-muted-foreground" aria-label="Nog niet factureerbaar" />
+                    </span>
+                  ) : (
+                    r.status === "aangemaakt" && (
+                      <Checkbox
+                        checked={geselecteerd.has(r.id)}
+                        onCheckedChange={(checked) => onToggle(r.id, checked === true)}
+                      />
+                    )
                   )}
                 </TableCell>
               )}
               <TableCell className="whitespace-nowrap text-muted-foreground">
                 {new Date(r.datum).toLocaleDateString("nl-NL")}
+                {gepland && vandaag && <div className="text-xs">{overHoeLang(r.datum, vandaag)}</div>}
               </TableCell>
               <TableCell>
                 {eerste && (

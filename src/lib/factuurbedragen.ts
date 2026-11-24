@@ -14,8 +14,19 @@ export function regelbedrag(item: { honorarium: number; externe_kosten: number; 
   return item.honorarium + item.externe_kosten - item.korting;
 }
 
-export function isNogTeFactureren(status: FactuurItemStatus, declarabel: boolean) {
-  return declarabel && status === "aangemaakt";
+// Onderhanden werk: declarabel, nog niet gefactureerd en de datum is bereikt. Een item met een
+// datum na vandaag is "gepland" (zie vandaag.ts) en telt pas mee vanaf die datum.
+export function isNogTeFactureren(
+  item: { status: FactuurItemStatus; declarabel: boolean; datum: string },
+  vandaag: string
+) {
+  return item.declarabel && item.status === "aangemaakt" && item.datum <= vandaag;
+}
+
+// Gepland: nog niet gefactureerd en de datum ligt na vandaag. Telt niet mee in onderhanden werk
+// en kan niet in een specificatie.
+export function isGepland(item: { status: FactuurItemStatus; datum: string }, vandaag: string) {
+  return item.status === "aangemaakt" && item.datum > vandaag;
 }
 
 export function isGefactureerd(status: FactuurItemStatus) {

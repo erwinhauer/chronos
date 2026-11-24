@@ -14,6 +14,7 @@ import type { LandenMap } from "@/lib/landen";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DatumInput } from "@/components/ui/datum-input";
+import { datumKort, isToekomstig, ligtVeelTeVerVooruit, overHoeLang, vandaagAmsterdam } from "@/lib/vandaag";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -153,7 +154,7 @@ export function FactuurItemForm({
   const [teamId, setTeamId] = useState(
     initial?.team_id ?? standaardTeamId ?? (teams.length === 1 ? teams[0].id : "")
   );
-  const [datum, setDatum] = useState(initial?.datum ?? new Date().toISOString().slice(0, 10));
+  const [datum, setDatum] = useState(initial?.datum ?? vandaagAmsterdam());
   const [omschrijvingKlant, setOmschrijvingKlant] = useState(initial?.omschrijving_klant ?? "");
   const [interneOpmerking, setInterneOpmerking] = useState(initial?.interne_opmerking ?? "");
   const [qtyInput, setQtyInput] = useState((initial?.qty ?? 1).toFixed(1));
@@ -507,6 +508,20 @@ export function FactuurItemForm({
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="datum">Datum</Label>
                   <DatumInput id="datum" value={datum} onChange={setDatum} required />
+                  {/^\d{4}-\d{2}-\d{2}$/.test(datum) && isToekomstig(datum) && (
+                    <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+                      <p>
+                        Gepland: deze datum ligt in de toekomst ({overHoeLang(datum)}). Het item staat bij de geplande items
+                        van de klant, telt pas mee in onderhanden werk en kan pas worden gefactureerd vanaf{" "}
+                        {datumKort(datum)}.
+                      </p>
+                      {ligtVeelTeVerVooruit(datum) && (
+                        <p role="alert" className="font-medium text-warning">
+                          Let op: dit is meer dan 12 maanden vooruit. Klopt het jaar?
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
                 {klant && <TaalVeld klant={klant} />}
                 {klant && <ValutaVeld klant={klant} />}

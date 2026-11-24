@@ -4,6 +4,7 @@ import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { berekenFactuurtotalen } from "@/lib/factuurbedragen";
 import { haalLandenMap } from "@/lib/landen";
 import { SetBreadcrumb } from "@/lib/breadcrumb-context";
+import { vandaagAmsterdam } from "@/lib/vandaag";
 import { NieuweSpecificatieForm } from "@/components/nieuwe-specificatie-form";
 
 export default async function NieuweSpecificatiePagina({
@@ -37,6 +38,9 @@ export default async function NieuweSpecificatiePagina({
       )
       .eq("klant_id", klant_id)
       .eq("status", "aangemaakt")
+      // Geplande items (datum na vandaag) kunnen nog niet in een specificatie: dan klopt het aantal
+      // hieronder niet en sturen we terug naar het overzicht.
+      .lte("datum", vandaagAmsterdam())
       .in("id", itemIds)
       .order("datum", { ascending: true }),
     haalLandenMap(supabase),

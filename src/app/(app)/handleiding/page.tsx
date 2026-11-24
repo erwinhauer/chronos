@@ -260,6 +260,12 @@ export default function HandleidingPage() {
               nummer, voor een afgesplitst dossier (bv. TM100479CN35A), wordt ook herkend.
             </li>
             <li>3. Vul per dossier de dossiernaam in, kies klant en eventueel project.</li>
+            <li>
+              Wil je werk vooruit inplannen, bijvoorbeeld voor over drie maanden? Zet dan een datum in de toekomst.
+              Het item is dan <strong className="text-foreground">gepland</strong>: het staat apart onderaan bij de
+              klant, telt nog niet mee in onderhanden werk en kan nog niet in een specificatie. Op de datum zelf staat
+              het vanzelf bij de gewone, factureerbare items.
+            </li>
             <li>4. Vul de omschrijving voor de klant in — komt op de specificatie. Een interne opmerking niet.</li>
             <li>5. Kies prijstype (Uren of Fixed fee); Chronos stelt een tarief voor. Is er voor deze klant of voor de medewerker een tarief afgesproken, dan is dat het voorstel. Anders is het voorstel het tarief van de functie van de medewerker, en zonder functie het standaardtarief van het kantoor. Je kunt het tarief altijd aanpassen.</li>
             <li>6. Heb je kosten van derden of korting? Zet dan de schakelaar &ldquo;Kosten derden/korting uitsplitsen&rdquo; aan en vul ze in. Anders laat je die uit, en klik je op &ldquo;Factuuritem aanmaken&rdquo;.</li>
@@ -371,7 +377,10 @@ export default function HandleidingPage() {
             Een specificatie bundelt één of meer factuuritems van dezelfde klant tot één geheel.
           </p>
           <ol className="flex flex-col gap-2 text-sm text-muted-foreground">
-            <li>1. Vink de gewenste factuuritems aan en klik &ldquo;Specificatie maken&rdquo;.</li>
+            <li>
+              1. Vink de gewenste factuuritems aan en klik &ldquo;Specificatie maken&rdquo;. Geplande items (datum in
+              de toekomst) hebben een slotje in plaats van een vinkje: die kunnen pas worden gefactureerd vanaf hun datum.
+            </li>
             <li>2. Vul eventueel een extra korting op de hele specificatie in.</li>
             <li>
               3. Kies het <strong className="text-foreground">detailniveau</strong>: standaard alleen datum, dossier,

@@ -939,6 +939,22 @@ zijbalk viel een wit gat tussen zijbalk en melding. De balk loopt nu 36px onder 
 het sluitkruisje staat absoluut rechts. Geen migraties. Lokaal gemeten in de browser. Op BETA getest door
 Erwin (werkt goed) en op verzoek gepromoot naar `main`/LIVE op 2026-11-17. `main` en `beta` staan weer gelijk.
 
+Daarna een nieuwe feature op verzoek van Erwin (2026-11-24, versie 1.13.0, branch `feature/geplande-items`):
+toekomstige factuuritems. Een item met een datum na vandaag (Amsterdamse tijd, nieuwe helper
+`src/lib/vandaag.ts`) is "gepland", afgeleid van de datum, zonder nieuwe status of kolom. Onderhanden werk telt
+alleen items met een datum tot en met vandaag (`isNogTeFactureren(item, vandaag)`); de OHW-tegels tonen het
+geplande bedrag in een subregel. Overzicht Factuuritems: per klant alleen factureerbare items in aantal, bedrag en
+totaal, plus een gepland-regel. Klantpagina: een afgescheiden sectie "Gepland, nog niet factureerbaar" met slotje in
+plaats van selectievakje (`GeplandeItemsSectie` in `factuur-groep.tsx`). Specificaties: de pagina
+`/specificaties/nieuw` filtert op datum, `genereerSpecificatie` weigert geplande items, en een database-trigger
+(`factuuritems_blokkeer_toekomstig_definitief`, migratie `20261124100000_geplande_items_niet_definitief.sql`)
+blokkeert de overgang naar definitief bij een toekomstige datum. Formulier: uitleg bij een toekomstige datum en een
+zachte waarschuwing bij meer dan 12 maanden vooruit. DWO-formule ongewijzigd (telt alleen definitieve items en meet
+vanaf de itemdatum; historische negatieve waarden blijven staan). Lokaal getest: de trigger in een teruggedraaide
+transactie, en in de browser het overzicht, de klantpagina, de URL-blokkade, de server-actie, het dashboard en het
+formulier. Staat op BETA. Bij promotie naar LIVE: eerst de controlequery op LIVE (hoeveel openstaande items hebben
+een toekomstige datum), en `documentation.md` bijwerken (gepland, `vandaag.ts`, trigger, OHW-definitie).
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de

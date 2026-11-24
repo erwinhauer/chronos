@@ -8,6 +8,7 @@ import { FactuurGroep, type FactuurGroepItem } from "@/components/factuur-groep"
 import { LinkButton } from "@/components/link-button";
 import { SetBreadcrumb } from "@/lib/breadcrumb-context";
 import { suggestInitialen } from "@/lib/initials";
+import { vandaagAmsterdam } from "@/lib/vandaag";
 
 export default async function FactuuritemsPerKlantPagina({
   params,
@@ -123,7 +124,7 @@ export default async function FactuuritemsPerKlantPagina({
                 .join(" · ")}
             </p>
           )}
-          <p className="text-sm text-muted-foreground">Openstaande factuuritems voor deze klant.</p>
+          <p className="text-sm text-muted-foreground">Openstaande factuuritems voor deze klant. Items met een datum in de toekomst staan apart onderaan.</p>
         </div>
         <LinkButton
           href={`/factuuritems/nieuw?klant_id=${klantId}`}
@@ -154,6 +155,7 @@ export default async function FactuuritemsPerKlantPagina({
           huidigeGebruikerId={profile?.id}
           landen={landen}
           medewerkerIds={(alleMedewerkers ?? []).map((m) => m.id)}
+          vandaag={vandaagAmsterdam()}
         />
       )}
     </div>

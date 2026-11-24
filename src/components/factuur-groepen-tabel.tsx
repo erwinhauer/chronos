@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { CalendarClock, Search } from "lucide-react";
 import Link from "next/link";
 import { euro } from "@/lib/factuurbedragen";
+import { datumKort, overHoeLang, vandaagAmsterdam } from "@/lib/vandaag";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,15 +17,19 @@ export type FactuurGroepSamenvatting = {
   klantNaam: string;
   patriciaId: string | null;
   valuta: string;
+  // Alleen items waarvan de datum bereikt is (factureerbaar).
   aantalItems: number;
-  oudsteDatum: string;
+  oudsteDatum: string | null;
   bedrag: number;
+  // Items met een datum na vandaag: nog niet factureerbaar.
+  gepland: { aantal: number; bedrag: number; eersteDatum: string } | null;
 };
 
 type SortKey = "klant" | "aantal" | "oudste" | "bedrag";
 
 export function FactuurGroepenTabel({ groepen }: { groepen: FactuurGroepSamenvatting[] }) {
   const [zoek, setZoek] = useState("");
+  const vandaag = useMemo(() => vandaagAmsterdam(), []);
   const [sortKey, setSortKey] = useState<SortKey>("klant");
   const [sortRichting, setSortRichting] = useState<SortRichting>("asc");
 
@@ -43,7 +48,8 @@ export function FactuurGroepenTabel({ groepen }: { groepen: FactuurGroepSamenvat
     const keyFn = {
       klant: (g: FactuurGroepSamenvatting) => g.klantNaam,
       aantal: (g: FactuurGroepSamenvatting) => g.aantalItems,
-      oudste: (g: FactuurGroepSamenvatting) => g.oudsteDatum,
+      // Een klant met alleen geplande items komt bij oplopend sorteren onderaan.
+      oudste: (g: FactuurGroepSamenvatting) => g.oudsteDatum ?? "9999-12-31",
       bedrag: (g: FactuurGroepSamenvatting) => g.bedrag,
     }[sortKey];
     return sortRows(gefilterd, keyFn, sortRichting);
@@ -106,12 +112,28 @@ export function FactuurGroepenTabel({ groepen }: { groepen: FactuurGroepSamenvat
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary">{g.aantalItems}</Badge>
+                      {g.aantalItems > 0 ? (
+                        <Badge variant="secondary">{g.aantalItems}</Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">alleen gepland</span>
+                      )}
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-muted-foreground">
-                      {new Date(g.oudsteDatum).toLocaleDateString("nl-NL")}
+                      {g.oudsteDatum ? new Date(g.oudsteDatum).toLocaleDateString("nl-NL") : "—"}
                     </TableCell>
-                    <TableCell className="text-right tabular-figures">{euro(g.bedrag, g.valuta)}</TableCell>
+                    <TableCell className="text-right tabular-figures">
+                      {euro(g.bedrag, g.valuta)}
+                      {g.gepland && (
+                        <div
+                          className="mt-0.5 flex items-center justify-end gap-1 text-xs font-normal text-muted-foreground"
+                          title="Nog niet factureerbaar: de datum van deze items ligt in de toekomst"
+                        >
+                          <CalendarClock className="h-3 w-3" aria-hidden="true" />
+                          Gepland: {g.gepland.aantal} {g.gepland.aantal === 1 ? "item" : "items"}, {euro(g.gepland.bedrag, g.valuta)}, eerste op{" "}
+                          {datumKort(g.gepland.eersteDatum)} ({overHoeLang(g.gepland.eersteDatum, vandaag)})
+                        </div>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))
               )}

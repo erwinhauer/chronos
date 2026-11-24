@@ -2,7 +2,8 @@ import { Plus, Receipt } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { GEEN_FACTUURITEM_AANMAKEN_UITLEG, magFactuuritemAanmaken } from "@/lib/factuuritem-rechten";
-import { euro, isNogTeFactureren, regelbedrag } from "@/lib/factuurbedragen";
+import { euro, isGepland, isNogTeFactureren, regelbedrag } from "@/lib/factuurbedragen";
+import { vandaagAmsterdam } from "@/lib/vandaag";
 import { FactuurGroepenTabel, type FactuurGroepSamenvatting } from "@/components/factuur-groepen-tabel";
 import { LinkButton } from "@/components/link-button";
 import { StatIcon } from "@/components/stat-icon";
@@ -22,7 +23,12 @@ type FactuurRegel = {
   klanten: { naam: string; patricia_id: string | null; valuta: string } | null;
 };
 
-function groepeerPerKlant(items: FactuurRegel[]): {
+// Per klant tellen alleen items mee waarvan de datum bereikt is (aantal, bedrag, oudste datum en het
+// totaal openstaand). Items met een datum na vandaag zijn "gepland": die staan apart per klant.
+function groepeerPerKlant(
+  items: FactuurRegel[],
+  vandaag: string
+): {
   groepen: FactuurGroepSamenvatting[];
   totaalOpenstaand: number;
 } {
@@ -35,17 +41,26 @@ function groepeerPerKlant(items: FactuurRegel[]): {
       patriciaId: klant?.patricia_id ?? null,
       valuta: klant?.valuta ?? "EUR",
       aantalItems: 0,
-      oudsteDatum: item.datum,
+      oudsteDatum: null,
       bedrag: 0,
+      gepland: null,
     };
-    bestaand.aantalItems += 1;
-    bestaand.bedrag += regelbedrag(item);
-    if (item.datum < bestaand.oudsteDatum) bestaand.oudsteDatum = item.datum;
+    if (isGepland(item, vandaag)) {
+      const gepland = bestaand.gepland ?? { aantal: 0, bedrag: 0, eersteDatum: item.datum };
+      gepland.aantal += 1;
+      gepland.bedrag += regelbedrag(item);
+      if (item.datum < gepland.eersteDatum) gepland.eersteDatum = item.datum;
+      bestaand.gepland = gepland;
+    } else {
+      bestaand.aantalItems += 1;
+      bestaand.bedrag += regelbedrag(item);
+      if (bestaand.oudsteDatum === null || item.datum < bestaand.oudsteDatum) bestaand.oudsteDatum = item.datum;
+    }
     groepenMap.set(item.klant_id, bestaand);
   }
   const groepen = Array.from(groepenMap.values()).sort((a, b) => a.klantNaam.localeCompare(b.klantNaam));
   const totaalOpenstaand = items
-    .filter((r) => isNogTeFactureren(r.status, r.declarabel))
+    .filter((r) => isNogTeFactureren(r, vandaag))
     .reduce((sum, r) => sum + regelbedrag(r), 0);
   return { groepen, totaalOpenstaand };
 }
@@ -101,7 +116,8 @@ export default async function FactuuritemsPage() {
       item.medewerker_id === profile?.id || (item.team_id !== null && mijnTeamIds.has(item.team_id))
   );
 
-  const scopeAlle = groepeerPerKlant(alleItems);
+  const vandaag = vandaagAmsterdam();
+  const scopeAlle = groepeerPerKlant(alleItems, vandaag);
 
   // Alleen bij lidmaatschap van meerdere teams tonen we tabs — bij 0 of 1
   // team is er niets te filteren en blijft de bestaande, simpele weergave
@@ -110,11 +126,11 @@ export default async function FactuuritemsPage() {
   const scopesPerTeam = toonTeamTabs
     ? mijnTeams.map((team) => ({
         team,
-        ...groepeerPerKlant(alleItems.filter((item) => item.team_id === team.id)),
+        ...groepeerPerKlant(alleItems.filter((item) => item.team_id === team.id), vandaag),
       }))
     : [];
   const zonderTeam = toonTeamTabs ? alleItems.filter((item) => item.team_id === null) : [];
-  const scopeZonderTeam = zonderTeam.length > 0 ? groepeerPerKlant(zonderTeam) : null;
+  const scopeZonderTeam = zonderTeam.length > 0 ? groepeerPerKlant(zonderTeam, vandaag) : null;
 
   return (
     <div className="flex flex-col gap-6">

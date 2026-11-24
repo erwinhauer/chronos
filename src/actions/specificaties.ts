@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { berekenFactuurtotalen, round2 } from "@/lib/factuurbedragen";
+import { vandaagAmsterdam } from "@/lib/vandaag";
 
 export type SpecificatieFormState = { error: string | null; success: boolean };
 
@@ -55,7 +56,7 @@ export async function genereerSpecificatie(
 
   const { data: items, error: itemsError } = await supabase
     .from("factuuritems")
-    .select("id, honorarium, externe_kosten, korting, kantoorkosten_van_toepassing, project_id")
+    .select("id, datum, honorarium, externe_kosten, korting, kantoorkosten_van_toepassing, project_id")
     .eq("klant_id", klant_id)
     .eq("status", "aangemaakt")
     .in("id", itemIds);
@@ -66,6 +67,17 @@ export async function genereerSpecificatie(
   if (!items || items.length !== itemIds.length) {
     return {
       error: "Een of meer geselecteerde items zijn niet meer beschikbaar (mogelijk al gefactureerd door iemand anders).",
+      success: false,
+    };
+  }
+
+  // Een gepland item (datum na vandaag) kan nog niet worden gefactureerd, ook niet als iemand de
+  // selectie in de interface omzeilt. De database-trigger op factuuritems is het vangnet hierachter.
+  const vandaag = vandaagAmsterdam();
+  const geplande = items.filter((i) => i.datum > vandaag);
+  if (geplande.length > 0) {
+    return {
+      error: `${geplande.length === 1 ? "Een geselecteerd item heeft" : `${geplande.length} geselecteerde items hebben`} een datum in de toekomst en kan nog niet worden gefactureerd. Haal ${geplande.length === 1 ? "dat item" : "die items"} uit de selectie, of wacht tot de datum is bereikt.`,
       success: false,
     };
   }

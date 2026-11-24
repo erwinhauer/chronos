@@ -306,9 +306,32 @@ const RELEASE_1_12_1 = {
   gebruikersactie: null,
 };
 
+const RELEASE_1_13_0 = {
+  versienummer: "1.13.0",
+  releasedatum: "2026-11-24",
+  titel: "Toekomstige factuuritems: werk vooruit inplannen",
+  nieuwe_functies: [
+    "Gepland werk: een factuuritem met een datum in de toekomst, bijvoorbeeld over drie maanden, is gepland. Het staat bij de klant in een eigen, afgescheiden sectie Gepland, nog niet factureerbaar, met per item hoe lang het nog duurt. Op de datum zelf staat het item vanzelf bij de gewone, factureerbare items",
+    "Een gepland item heeft een slotje in plaats van een selectievakje en kan niet in een specificatie. Chronos blokkeert dat ook als iemand de selectie omzeilt",
+  ],
+  wijzigingen: [
+    "Onderhanden werk telt alleen werk met een datum tot en met vandaag. Gepland werk telt pas mee vanaf zijn datum en staat apart vermeld op de tegel Onderhanden werk",
+    "Overzicht Factuuritems: per klant tellen alleen factureerbare items mee in het aantal, het bedrag en het totaal openstaand. Gepland werk staat per klant in een aparte regel. Een klant met alleen gepland werk blijft zichtbaar met de aanduiding alleen gepland",
+    "Nieuw factuuritem: bij een datum in de toekomst legt Chronos uit dat het item gepland is. Ligt de datum meer dan 12 maanden vooruit, dan waarschuwt Chronos dat het jaar misschien niet klopt",
+    "De DWO telt gepland werk pas vanaf zijn datum: de DWO meet vanaf de datum van het item tot het moment van factureren",
+  ],
+  bugfixes: [
+    "Een nieuw factuuritem krijgt als standaarddatum de datum van vandaag in Nederlandse tijd. Eerder kon dat rond middernacht een dag schelen",
+  ],
+  bekende_beperkingen: [
+    "Een openstaand item met een datum in de toekomst dat al bestond, verdwijnt bij deze release uit onderhanden werk en uit de selecteerbare lijst. Het staat dan bij Gepland",
+  ],
+  gebruikersactie: null,
+};
+
 // Oudste eerst; de nieuwste release hoort onderaan. package.json "version" moet gelijk zijn
 // aan de laatste (zie de controle hieronder).
-const CHANGELOG_ENTRIES = [RELEASE_1_0_0, RELEASE_1_1_0, RELEASE_1_2_0, RELEASE_1_3_0, RELEASE_1_4_0, RELEASE_1_5_0, RELEASE_1_6_0, RELEASE_1_7_0, RELEASE_1_8_0, RELEASE_1_9_0, RELEASE_1_10_0, RELEASE_1_10_1, RELEASE_1_10_2, RELEASE_1_11_0, RELEASE_1_12_0, RELEASE_1_12_1];
+const CHANGELOG_ENTRIES = [RELEASE_1_0_0, RELEASE_1_1_0, RELEASE_1_2_0, RELEASE_1_3_0, RELEASE_1_4_0, RELEASE_1_5_0, RELEASE_1_6_0, RELEASE_1_7_0, RELEASE_1_8_0, RELEASE_1_9_0, RELEASE_1_10_0, RELEASE_1_10_1, RELEASE_1_10_2, RELEASE_1_11_0, RELEASE_1_12_0, RELEASE_1_12_1, RELEASE_1_13_0];
 
 // Het versienummer in package.json en de nieuwste changelog-entry horen gelijk te lopen.
 {

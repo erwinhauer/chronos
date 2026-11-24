@@ -1,7 +1,8 @@
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
-import { euro, isGefactureerd, isNogTeFactureren, regelbedrag, nettoOmzetPlaceholder } from "@/lib/factuurbedragen";
+import { euro, isGefactureerd, isGepland, isNogTeFactureren, regelbedrag, nettoOmzetPlaceholder } from "@/lib/factuurbedragen";
+import { vandaagAmsterdam } from "@/lib/vandaag";
 import { parsePeriodeKey, periodeLabel, inPeriode, STANDAARD_DASHBOARD_PERIODE } from "@/lib/omzet-periode";
 import { codeVoorDienstLabel, PRODUCTGROEP_CODES } from "@/lib/dossiernummer";
 import { haalLandenMap, type LandenMap } from "@/lib/landen";
@@ -57,7 +58,7 @@ type FactuurRegel = {
 
 // Korte uitleg op de DWO-tegels.
 const DWO_UITLEG =
-  "DWO = Days Work-In-Progress Outstanding, het aantal dagen tussen de dag dat je het werk hebt gedaan en de dag dat je het factureert. Het streven is hier maximaal 45 dagen tussen te hebben zitten en werk dus zo kort mogelijk op te sparen.";
+  "DWO = Days Work-In-Progress Outstanding, het aantal dagen tussen de dag dat je het werk hebt gedaan en de dag dat je het factureert. Het streven is hier maximaal 45 dagen tussen te hebben zitten en werk dus zo kort mogelijk op te sparen. Gepland werk (met een datum in de toekomst) telt pas mee vanaf die datum.";
 
 function buildOmzetGrafiekData(
   ditJaar: { medewerker_id: string; datum: string; honorarium: number; externe_kosten: number; korting: number }[],
@@ -304,8 +305,16 @@ export default async function DashboardPage({
   // Onderhanden werk is ALLE declarabele, nog niet gefactureerde werk, hoe oud ook: een
   // periodekeuze (bv. november) laat dus ook werk uit eerdere periodes zien. Daarom één set,
   // zowel voor het vaste "Lopend jaar"-blok als voor het "Periode"-blok.
-  const ohwRows = rows.filter((r) => isNogTeFactureren(r.status, r.declarabel));
+  //
+  // Werk met een datum na vandaag is "gepland" (zie src/lib/vandaag.ts): het telt pas mee vanaf die
+  // datum, net als bij de DWO. Het bedrag staat wel apart zichtbaar op de OHW-tegel.
+  const vandaag = vandaagAmsterdam();
+  const ohwRows = rows.filter((r) => isNogTeFactureren(r, vandaag));
   const ohwTotaal = ohwRows.reduce((sum, r) => sum + regelbedrag(r), 0);
+  const geplandRows = rows.filter((r) => r.declarabel && isGepland(r, vandaag));
+  const geplandTotaal = geplandRows.reduce((sum, r) => sum + regelbedrag(r), 0);
+  const geplandSub = (bedrag: number) => (bedrag > 0 ? ` · Gepland, nog niet factureerbaar: ${euro(bedrag)}` : "");
+  const geplandTekst = geplandSub(geplandTotaal);
   const ohwPerTeam = (teamsBasis ?? []).map((team) => {
     const bedrag = ohwRows.filter((r) => r.team_id === team.id).reduce((sum, r) => sum + regelbedrag(r), 0);
     return { teamId: team.id, teamNaam: team.naam, bedrag };
@@ -395,6 +404,7 @@ export default async function DashboardPage({
         teamleiderIds
       );
       const ohwTeamOnbeperkt = ohwPerTeam.find((t) => t.teamId === team.id)?.bedrag ?? 0;
+      const geplandTeam = geplandRows.filter((r) => r.team_id === team.id).reduce((sum, r) => sum + regelbedrag(r), 0);
       const { chartData, medewerkerNamen } = buildOmzetGrafiekData(
         ditJaar.filter((r) => r.team_id === team.id),
         namenPerId
@@ -407,6 +417,7 @@ export default async function DashboardPage({
         nettoDoel: d.netto_bedrag,
         gefactureerdDitJaar,
         ohwTeamOnbeperkt,
+        geplandTeam,
         teamlidKpiRijenJaar,
         gefactureerdPeriode,
         ohwPeriode,
@@ -633,7 +644,7 @@ export default async function DashboardPage({
                 variant="geel"
                 label="Onderhanden werk"
                 bedrag={ohwTotaal}
-                sub="Nog te factureren · hele groep, alle periodes"
+                sub={`Nog te factureren · hele groep, alle periodes${geplandTekst}`}
               />
               {zietBureaukosten && (
                 <KpiTegel
@@ -817,7 +828,7 @@ export default async function DashboardPage({
                     variant="geel"
                     label="Onderhanden werk"
                     bedrag={t.ohwTeamOnbeperkt}
-                    sub="Nog te factureren · alle periodes"
+                    sub={`Nog te factureren · alle periodes${geplandSub(t.geplandTeam)}`}
                   />
                 </div>
                 <TargetStrook
@@ -860,7 +871,12 @@ export default async function DashboardPage({
                   }
                 />
               )}
-              <KpiTegel variant="geel" label="Onderhanden werk" bedrag={ohwTotaal} sub="Al het werk dat nog niet is gefactureerd" />
+              <KpiTegel
+                variant="geel"
+                label="Onderhanden werk"
+                bedrag={ohwTotaal}
+                sub={`Al het werk tot en met vandaag dat nog niet is gefactureerd${geplandTekst}`}
+              />
               {zietDwo && (
                 <KpiTegel
                   variant={dwoTegelVariant(dwoTotaal)}
@@ -928,7 +944,12 @@ export default async function DashboardPage({
                   {!zietAlleTeams && (
                     <div className={cn("grid gap-4", dwoZichtbaar ? "lg:grid-cols-3" : "lg:grid-cols-2")}>
                       <KpiTegel variant="wit" label="Gefactureerd" bedrag={t.gefactureerdPeriode} sub={periodeTekst} />
-                      <KpiTegel variant="geel" label="Onderhanden werk" bedrag={t.ohwPeriode} sub="Al het werk dat nog niet is gefactureerd" />
+                      <KpiTegel
+                        variant="geel"
+                        label="Onderhanden werk"
+                        bedrag={t.ohwPeriode}
+                        sub={`Al het werk tot en met vandaag dat nog niet is gefactureerd${geplandSub(t.geplandTeam)}`}
+                      />
                       {dwoZichtbaar && (
                         <KpiTegel
                           variant={dwoTegelVariant(t.dwoTeamPeriode)}
