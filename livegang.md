@@ -956,6 +956,20 @@ formulier. Op BETA getest door Erwin (2026-11-25) en op verzoek gepromoot naar `
 `documentation.md` bijgewerkt (gepland, `vandaag.ts`, trigger, OHW-definitie). Bij de release verdwijnen bestaande
 openstaande items met een toekomstige datum uit OHW en uit de selecteerbare lijst; ze staan dan bij Gepland.
 
+Daarna een afrondingsfix op verzoek van de systeembeheerder (2026-11-25, branch `Decimals`, versie 1.13.1, in `beta`
+gemerged; de branch zelf was 1.12.2 vanaf `main`). Het oude `Math.round(n * 100) / 100` rekende met binaire
+kommagetallen: 1,005 werd 1,00 en een negatieve halve cent ging naar nul (-0,125 werd -0,12). Nieuwe module
+`src/lib/geld.ts` rekent exact (BigInt op de bedoelde decimale waarde) en rondt een exacte helft van nul af, zoals
+Postgres bij `numeric(x,2)` en de Microsoft-rebuild (D-11). Gebruikt voor honorarium, korting als percentage,
+kantoorkosten, specificatietotalen, btw, netto-placeholder en functietarieven. `berekenRegel` laat een bestaand item bij
+bewerken ongewijzigd zolang aantal, tarief en kortingspercentage gelijk blijven; opgeslagen bedragen en specificatietotalen
+worden nooit herberekend. Geen migratie. Het oude gedrag week in 719.937 van de 1,44 miljoen exacte halve-cent-gevallen
+(uren 0,1 tot 20,0 x tarief +/-0,01 tot 400,00) een cent af. Tests: `npm run test:geld` (20). Controlequery voor LIVE:
+`scripts/controle-afronding.sql` (alleen lezen). Lokaal getest: bewerken van een item met oude afronding zonder
+wijziging (blijft 9,99) en met gewijzigd aantal (1,5 x 19,99 wordt 29,99, gelijk aan Postgres). Staat op BETA, nog niet
+getest door Erwin. Terugkoppeling voor de beheerder: `CHRONOS_DECIMALS_FEEDBACK.md` in de analysemap. Bij promotie naar
+LIVE: eerst de controlequery draaien.
+
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
 dossiernaam automatisch invullen) — nog niet gemerged in `beta`, wacht op de

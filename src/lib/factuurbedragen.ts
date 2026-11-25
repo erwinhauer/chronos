@@ -1,4 +1,9 @@
 import type { FactuurItemStatus } from "@/lib/supabase/types";
+import { optellen, percentageVan, round1, round2, vermenigvuldig } from "@/lib/geld";
+
+// Alle bedragen worden exact decimaal berekend en afgerond (src/lib/geld.ts): een exacte halve cent gaat
+// van nul af, zoals ook de database doet. round1/round2 staan hier ter beschikking voor bestaande imports.
+export { round1, round2 };
 
 export const STATUS_LABEL: Record<FactuurItemStatus, string> = {
   aangemaakt: "Aangemaakt",
@@ -42,10 +47,6 @@ export function euro(n: number, valuta: string = "EUR") {
   return new Intl.NumberFormat("nl-NL", { style: "currency", currency: valuta }).format(n);
 }
 
-export function round2(n: number) {
-  return Math.round(n * 100) / 100;
-}
-
 export type FactuurRegelVoorTotalen = {
   honorarium: number;
   externe_kosten: number;
@@ -56,31 +57,26 @@ export type FactuurRegelVoorTotalen = {
 // Gedeeld tussen de factureer-actie (autoritatief, bij aanmaken) en het
 // voorbeeldscherm (dezelfde cijfers, nog vóór er iets is opgeslagen).
 export function berekenFactuurtotalen(items: FactuurRegelVoorTotalen[], kantoorkostenPercentage: number) {
-  const totaalHonorarium = round2(items.reduce((som, i) => som + i.honorarium, 0));
-  const totaalExterneKosten = round2(items.reduce((som, i) => som + i.externe_kosten, 0));
-  const totaalKorting = round2(items.reduce((som, i) => som + i.korting, 0));
-  const kantoorkostenGrondslag = round2(
-    items.reduce(
-      (som, i) => som + (i.kantoorkosten_van_toepassing ? i.honorarium + i.externe_kosten - i.korting : 0),
-      0
-    )
+  const totaalHonorarium = optellen(...items.map((i) => i.honorarium));
+  const totaalExterneKosten = optellen(...items.map((i) => i.externe_kosten));
+  const totaalKorting = optellen(...items.map((i) => i.korting));
+  const kantoorkostenGrondslag = optellen(
+    ...items.map((i) => (i.kantoorkosten_van_toepassing ? optellen(i.honorarium, i.externe_kosten, -i.korting) : 0))
   );
-  const ruweKantoorkosten = round2(kantoorkostenGrondslag * (kantoorkostenPercentage / 100));
+  const ruweKantoorkosten = percentageVan(kantoorkostenGrondslag, kantoorkostenPercentage);
   // Minimaal €15, maximaal €200 per factuur — maar geen vloer als er niets van
   // toepassing is (dan blijft het gewoon €0).
   const totaalKantoorkosten = ruweKantoorkosten > 0 ? Math.min(Math.max(ruweKantoorkosten, 15), 200) : 0;
-  const subtotaalVoorExtraKorting = round2(
-    totaalHonorarium + totaalExterneKosten - totaalKorting + totaalKantoorkosten
-  );
+  const subtotaalVoorExtraKorting = optellen(totaalHonorarium, totaalExterneKosten, -totaalKorting, totaalKantoorkosten);
   return { totaalHonorarium, totaalExterneKosten, totaalKorting, totaalKantoorkosten, subtotaalVoorExtraKorting };
 }
 
 export function berekenBtw(totaalBedrag: number, btwPercentage: number) {
-  return round2(totaalBedrag * (btwPercentage / 100));
+  return percentageVan(totaalBedrag, btwPercentage);
 }
 
 // Tijdelijke placeholder tot Finance een echte netto-omzet per regel kan afleiden in Chronos.
 export const NETTO_OMZET_PLACEHOLDER_RATIO = 0.67;
 export function nettoOmzetPlaceholder(bruto: number) {
-  return round2(bruto * NETTO_OMZET_PLACEHOLDER_RATIO);
+  return vermenigvuldig(bruto, NETTO_OMZET_PLACEHOLDER_RATIO);
 }

@@ -329,9 +329,25 @@ const RELEASE_1_13_0 = {
   gebruikersactie: null,
 };
 
+const RELEASE_1_13_1 = {
+  versienummer: "1.13.1",
+  releasedatum: "2026-11-25",
+  titel: "Bedragen worden op de cent juist afgerond",
+  nieuwe_functies: [],
+  wijzigingen: [
+    "Bedragen worden nu overal exact afgerond op hele centen, waarbij een exacte halve cent van nul af gaat: 1,005 wordt 1,01 en -1,005 wordt -1,01. Dit geldt voor het honorarium (uren maal tarief), een korting als percentage, de kantoorkosten, de totalen van een specificatie en de tarieven van een functie. Voorheen kon zo'n bedrag een cent lager uitkomen, vooral bij credits",
+    "Een bestaand factuuritem verandert niet. Bewerk je een item zonder aantal of tarief te wijzigen, dan blijven honorarium en korting precies zoals ze waren opgeslagen. Specificaties die al zijn gemaakt veranderen ook niet",
+  ],
+  bugfixes: [],
+  bekende_beperkingen: [
+    "Wijzig je bij een bestaand item het aantal of het tarief, dan wordt het honorarium opnieuw berekend met de nieuwe afronding. Dat kan een cent afwijken van wat er eerder stond",
+  ],
+  gebruikersactie: null,
+};
+
 // Oudste eerst; de nieuwste release hoort onderaan. package.json "version" moet gelijk zijn
 // aan de laatste (zie de controle hieronder).
-const CHANGELOG_ENTRIES = [RELEASE_1_0_0, RELEASE_1_1_0, RELEASE_1_2_0, RELEASE_1_3_0, RELEASE_1_4_0, RELEASE_1_5_0, RELEASE_1_6_0, RELEASE_1_7_0, RELEASE_1_8_0, RELEASE_1_9_0, RELEASE_1_10_0, RELEASE_1_10_1, RELEASE_1_10_2, RELEASE_1_11_0, RELEASE_1_12_0, RELEASE_1_12_1, RELEASE_1_13_0];
+const CHANGELOG_ENTRIES = [RELEASE_1_0_0, RELEASE_1_1_0, RELEASE_1_2_0, RELEASE_1_3_0, RELEASE_1_4_0, RELEASE_1_5_0, RELEASE_1_6_0, RELEASE_1_7_0, RELEASE_1_8_0, RELEASE_1_9_0, RELEASE_1_10_0, RELEASE_1_10_1, RELEASE_1_10_2, RELEASE_1_11_0, RELEASE_1_12_0, RELEASE_1_12_1, RELEASE_1_13_0, RELEASE_1_13_1];
 
 // Het versienummer in package.json en de nieuwste changelog-entry horen gelijk te lopen.
 {

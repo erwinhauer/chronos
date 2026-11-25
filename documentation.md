@@ -289,6 +289,29 @@ uitgangspunt dient.
 
 ## 7. Kernberekeningen
 
+### 7.0 Afronding van bedragen (`src/lib/geld.ts`)
+Alle bedragen worden exact decimaal berekend en afgerond op hele centen, **een exacte halve cent van nul af**
+(1,005 wordt 1,01; -1,005 wordt -1,01). Dat is ook wat Postgres doet bij het opslaan in `numeric(x,2)` en wat de
+Microsoft-rebuild gaat doen (`decimal`, `MidpointRounding.AwayFromZero`, besluit D-11).
+
+Waarom een eigen module: het oude `Math.round(n * 100) / 100` rekende met binaire kommagetallen. `1.005 * 100` is
+`100.49999999999999`, dus 1,005 werd 1,00, en `Math.round` rondt een halve negatieve waarde naar nul
+(`-0.125` werd `-0.12`). Over alle combinaties van uren (0,1 tot 20,0) en tarieven (±0,01 tot ±400,00) week het oude
+gedrag in 719.937 van de 1,44 miljoen exacte halve-cent-gevallen een cent af (101.527 positief, 618.410 negatief).
+
+De module zet elk getal eerst om naar de bedoelde decimale waarde (15 significante cijfers, daar valt de binaire ruis af)
+en rekent dan met `BigInt`. Functies: `round2`, `round1` (uren), `vermenigvuldig` (uren x tarief), `percentageVan`
+(korting, kantoorkosten, btw), `optellen` (exacte som, aftrekken met een negatief getal) en `berekenRegel` (honorarium
+en korting van een factuurregel, gedeeld door de server-acties en het formulier). Gebruik geen `Math.round(x * 100) / 100`
+voor bedragen. Tests: `npm run test:geld` (20 tests, met een onafhankelijke referentie in gehele getallen over 1 miljoen
+combinaties); controle op bestaande data: `scripts/controle-afronding.sql`.
+
+**Bestaande data blijft ongewijzigd.** Opgeslagen bedragen worden nooit herberekend. `berekenRegel` laat een bestaand
+item bij bewerken ongemoeid zolang aantal, tarief (en bij een kortingspercentage dat percentage) niet wijzigen; pas bij een
+wijziging wordt opnieuw berekend. Een specificatie bewaart zijn totalen (snapshot) en toont die, ook in de PDF.
+Weergave gaat via `Intl.NumberFormat` (`euro()`), niet via deze module. Percentages en dagen (DWO, aandeel in het team)
+zijn geen bedragen en blijven met `toFixed` en `Math.round` worden afgerond.
+
 ### 7.1 `berekenFactuurtotalen()`
 Berekent `totaal_honorarium`, `totaal_externe_kosten`, `totaal_korting`,
 `totaal_kantoorkosten`, `totaal_bedrag` bij het aanmaken van een specificatie-batch.

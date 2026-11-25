@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { assertBeheerder } from "@/actions/admin";
+import { round2 } from "@/lib/geld";
 
 export type FunctieFormState = { error: string | null; success: boolean };
 
@@ -27,7 +28,7 @@ function leesInvoer(formData: FormData): { naam: string; uurtarief: number } | {
   if (!ruwTarief || !Number.isFinite(uurtarief) || uurtarief < 0 || uurtarief > MAX_UURTARIEF) {
     return { error: "Vul een uurtarief in tussen 0 en 10.000." };
   }
-  return { naam, uurtarief: Math.round(uurtarief * 100) / 100 };
+  return { naam, uurtarief: round2(uurtarief) };
 }
 
 // Een tariefwijziging raakt nooit bestaande registraties en blijft terug te vinden in de auditlog:
