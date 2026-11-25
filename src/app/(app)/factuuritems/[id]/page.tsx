@@ -146,6 +146,7 @@ export default async function FactuurItemBewerkenPage({
           qty: item.qty,
           prijstype: item.prijstype,
           tarief: item.tarief,
+          honorarium: item.honorarium,
           externe_kosten: item.externe_kosten,
           korting: item.korting,
           korting_type: item.korting_type,

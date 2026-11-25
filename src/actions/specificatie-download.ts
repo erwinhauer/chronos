@@ -5,7 +5,8 @@ import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { genereerSpecificatiePdf } from "@/lib/specificatie-pdf";
 import { metSpecificatieDetailniveau } from "@/lib/specificatie-detailniveau";
 import { haalLandenMap } from "@/lib/landen";
-import { berekenFactuurtotalen, round2 } from "@/lib/factuurbedragen";
+import { berekenFactuurtotalen } from "@/lib/factuurbedragen";
+import { optellen, round2 } from "@/lib/geld";
 
 export type SpecificatiePdfResultaat = { base64: string | null; filename: string | null; error: string | null };
 
@@ -194,7 +195,7 @@ export async function genereerConceptSpecificatiePdfBase64(input: {
     totaal_korting: ruw.totaalKorting,
     totaal_kantoorkosten: ruw.totaalKantoorkosten,
     extra_korting: extraKorting,
-    totaal_bedrag: round2(ruw.subtotaalVoorExtraKorting - extraKorting),
+    totaal_bedrag: optellen(ruw.subtotaalVoorExtraKorting, -extraKorting),
   };
 
   const specificatieItems = items.map((item) => ({

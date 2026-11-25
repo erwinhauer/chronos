@@ -6,16 +6,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
 import { parseDossiernummer } from "@/lib/dossiernummer";
 import type { PrijsType, KortingType } from "@/lib/supabase/types";
+import { berekenRegel, round1, round2 } from "@/lib/geld";
 
 export type FactuurItemFormState = { error: string | null; success: boolean };
-
-function round1(n: number) {
-  return Math.round(n * 10) / 10;
-}
-
-function round2(n: number) {
-  return Math.round(n * 100) / 100;
-}
 
 function parseInput(formData: FormData) {
   const klant_id = String(formData.get("klant_id") ?? "").trim();
@@ -329,11 +322,13 @@ export async function createFactuurItem(
     p_datum: input.datum,
   });
 
-  const honorarium = round2(input.qty * (input.tarief ?? 0));
-  const korting =
-    input.korting_type === "percentage"
-      ? round2(honorarium * ((input.korting_percentage ?? 0) / 100))
-      : input.korting_bedrag_ingevoerd;
+  const { honorarium, korting } = berekenRegel({
+    qty: input.qty,
+    tarief: input.tarief,
+    kortingType: input.korting_type,
+    kortingBedrag: input.korting_bedrag_ingevoerd,
+    kortingPercentage: input.korting_percentage,
+  });
 
   // Bij een negatief honorarium (crediteren) is een korting sowieso niet
   // zinvol — dezelfde uitzondering als de check-constraint in de database.
@@ -430,7 +425,7 @@ export async function updateFactuurItem(
   const { data: voor } = await supabase
     .from("factuuritems")
     .select(
-      "klant_id, project_id, team_id, medewerker_id, datum, omschrijving_klant, interne_opmerking, qty, prijstype, tarief, externe_kosten, korting, kantoorkosten_van_toepassing, declarabel, klanten(naam), projecten(naam), profiles!factuuritems_medewerker_id_fkey(full_name), factuuritem_dossiers(dossiernummer, matter_naam)"
+      "klant_id, project_id, team_id, medewerker_id, datum, omschrijving_klant, interne_opmerking, qty, prijstype, tarief, honorarium, externe_kosten, korting, korting_type, korting_percentage, kantoorkosten_van_toepassing, declarabel, klanten(naam), projecten(naam), profiles!factuuritems_medewerker_id_fkey(full_name), factuuritem_dossiers(dossiernummer, matter_naam)"
     )
     .eq("id", id)
     .single();
@@ -441,11 +436,27 @@ export async function updateFactuurItem(
     p_datum: input.datum,
   });
 
-  const honorarium = round2(input.qty * (input.tarief ?? 0));
-  const korting =
-    input.korting_type === "percentage"
-      ? round2(honorarium * ((input.korting_percentage ?? 0) / 100))
-      : input.korting_bedrag_ingevoerd;
+  // Een bestaand item wordt niet stilletjes herberekend: zolang aantal, tarief (en kortingspercentage) ongewijzigd
+  // zijn, blijven zijn opgeslagen bedragen staan (zie berekenRegel in src/lib/geld.ts).
+  const { honorarium, korting } = berekenRegel(
+    {
+      qty: input.qty,
+      tarief: input.tarief,
+      kortingType: input.korting_type,
+      kortingBedrag: input.korting_bedrag_ingevoerd,
+      kortingPercentage: input.korting_percentage,
+    },
+    voor
+      ? {
+          qty: voor.qty,
+          tarief: voor.tarief,
+          honorarium: voor.honorarium,
+          korting: voor.korting,
+          kortingType: voor.korting_type,
+          kortingPercentage: voor.korting_percentage,
+        }
+      : null
+  );
 
   // Bij een negatief honorarium (crediteren) is een korting sowieso niet
   // zinvol — dezelfde uitzondering als de check-constraint in de database.

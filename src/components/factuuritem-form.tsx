@@ -14,6 +14,7 @@ import type { LandenMap } from "@/lib/landen";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DatumInput } from "@/components/ui/datum-input";
+import { berekenRegel, optellen, percentageVan, round1, round2 } from "@/lib/geld";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -64,6 +65,9 @@ type Initial = {
   qty: number;
   prijstype: PrijsType;
   tarief: number | null;
+  // Bij een bestaand item: het opgeslagen honorarium. Zolang aantal en tarief niet wijzigen blijft dat bedrag
+  // staan (het wordt niet opnieuw berekend), net als op de server.
+  honorarium?: number;
   externe_kosten: number;
   korting: number;
   korting_type: KortingType;
@@ -274,11 +278,30 @@ export function FactuurItemForm({
     };
   }, [datum, medewerkerIdVeld]);
 
-  const honorarium = round2(qty * (tarief ?? 0));
-  const kortingBerekend = kortingType === "percentage" ? round2(honorarium * (kortingPercentage / 100)) : kortingBedrag;
-  const regelbedrag = round2(honorarium + externeKosten - kortingBerekend);
+  // Zelfde rekenregels als de server (exacte decimale afronding, src/lib/geld.ts), inclusief: een bestaand item
+  // houdt zijn opgeslagen honorarium en korting zolang aantal, tarief en kortingspercentage niet wijzigen.
+  const { honorarium, korting: kortingBerekend } = berekenRegel(
+    {
+      qty: round1(qty),
+      tarief: tarief === null ? null : round2(tarief),
+      kortingType,
+      kortingBedrag,
+      kortingPercentage,
+    },
+    initial?.id !== undefined && initial.honorarium !== undefined
+      ? {
+          qty: initial.qty,
+          tarief: initial.tarief,
+          honorarium: initial.honorarium,
+          korting: initial.korting,
+          kortingType: initial.korting_type,
+          kortingPercentage: initial.korting_percentage,
+        }
+      : null
+  );
+  const regelbedrag = optellen(honorarium, externeKosten, -kortingBerekend);
   const kantoorkostenPercentage = klant?.kantoorkosten_percentage ?? 6;
-  const kantoorkostenBedrag = kantoorkostenActief ? round2(regelbedrag * (kantoorkostenPercentage / 100)) : 0;
+  const kantoorkostenBedrag = kantoorkostenActief ? percentageVan(regelbedrag, kantoorkostenPercentage) : 0;
   const kortingPercentageVanHonorarium =
     honorarium > 0 ? (kortingType === "percentage" ? kortingPercentage : (kortingBerekend / honorarium) * 100) : 0;
   const kortingTeHoog = kortingBerekend > 0 && kortingPercentageVanHonorarium > 25;
@@ -734,7 +757,7 @@ export function FactuurItemForm({
                 Indicatief per regel — het werkelijke bedrag (min. €15, max. €200) wordt per factuur bepaald.
               </p>
               <div className="my-1 border-t border-border" />
-              <Row label="Totaal" value={euro(round2(regelbedrag + kantoorkostenBedrag), klant?.valuta ?? "EUR")} bold />
+              <Row label="Totaal" value={euro(optellen(regelbedrag, kantoorkostenBedrag), klant?.valuta ?? "EUR")} bold />
             </CardContent>
             {state.error && (
               <CardContent className="pt-0">
@@ -922,6 +945,3 @@ function NativeSelect({
   );
 }
 
-function round2(n: number) {
-  return Math.round(n * 100) / 100;
-}

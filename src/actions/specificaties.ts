@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/supabase/current-profile";
-import { berekenFactuurtotalen, round2 } from "@/lib/factuurbedragen";
+import { berekenFactuurtotalen } from "@/lib/factuurbedragen";
+import { optellen, round2 } from "@/lib/geld";
 
 export type SpecificatieFormState = { error: string | null; success: boolean };
 
@@ -94,7 +95,7 @@ export async function genereerSpecificatie(
   if (extra_korting > subtotaalVoorExtraKorting) {
     return { error: "Extra korting kan niet groter zijn dan het bedrag van de specificatie.", success: false };
   }
-  const totaalBedrag = round2(subtotaalVoorExtraKorting - extra_korting);
+  const totaalBedrag = optellen(subtotaalVoorExtraKorting, -extra_korting);
 
   const {
     data: { user },

@@ -1,6 +1,6 @@
 {
   "name": "chronos",
-  "version": "1.12.1",
+  "version": "1.12.2",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "eslint",
     "check:changelog": "node scripts/check-changelog.mjs",
-    "seed": "node scripts/seed.mjs"
+    "seed": "node scripts/seed.mjs",
+    "test:geld": "node --import ./scripts/register-ts-alias.mjs scripts/test-geld.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

@@ -4,7 +4,7 @@ import { useActionState, useMemo, useRef, useState } from "react";
 import { Download } from "lucide-react";
 import { genereerSpecificatie, type SpecificatieFormState } from "@/actions/specificaties";
 import { genereerConceptSpecificatiePdfBase64 } from "@/actions/specificatie-download";
-import { round2 } from "@/lib/factuurbedragen";
+import { optellen } from "@/lib/geld";
 import type { LandenMap } from "@/lib/landen";
 import {
   FactuurSpecificatie,
@@ -109,7 +109,7 @@ export function NieuweSpecificatieForm({
       totaal_korting: basisTotalen.totaal_korting,
       totaal_kantoorkosten: basisTotalen.totaal_kantoorkosten,
       extra_korting: extraKorting,
-      totaal_bedrag: round2(basisTotalen.subtotaal_voor_extra_korting - extraKorting),
+      totaal_bedrag: optellen(basisTotalen.subtotaal_voor_extra_korting, -extraKorting),
     }),
     [basisTotalen, extraKorting]
   );
