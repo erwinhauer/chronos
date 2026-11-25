@@ -966,9 +966,9 @@ bewerken ongewijzigd zolang aantal, tarief en kortingspercentage gelijk blijven;
 worden nooit herberekend. Geen migratie. Het oude gedrag week in 719.937 van de 1,44 miljoen exacte halve-cent-gevallen
 (uren 0,1 tot 20,0 x tarief +/-0,01 tot 400,00) een cent af. Tests: `npm run test:geld` (20). Controlequery voor LIVE:
 `scripts/controle-afronding.sql` (alleen lezen). Lokaal getest: bewerken van een item met oude afronding zonder
-wijziging (blijft 9,99) en met gewijzigd aantal (1,5 x 19,99 wordt 29,99, gelijk aan Postgres). Staat op BETA, nog niet
-getest door Erwin. Terugkoppeling voor de beheerder: `CHRONOS_DECIMALS_FEEDBACK.md` in de analysemap. Bij promotie naar
-LIVE: eerst de controlequery draaien.
+wijziging (blijft 9,99) en met gewijzigd aantal (1,5 x 19,99 wordt 29,99, gelijk aan Postgres). Op BETA getest door
+Erwin (werkt goed) en op verzoek gepromoot naar `main`/LIVE op 2026-11-25. Terugkoppeling voor de beheerder:
+`CHRONOS_DECIMALS_FEEDBACK.md` in de analysemap. `main` en `beta` staan weer gelijk.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,
