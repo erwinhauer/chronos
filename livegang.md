@@ -952,8 +952,9 @@ blokkeert de overgang naar definitief bij een toekomstige datum. Formulier: uitl
 zachte waarschuwing bij meer dan 12 maanden vooruit. DWO-formule ongewijzigd (telt alleen definitieve items en meet
 vanaf de itemdatum; historische negatieve waarden blijven staan). Lokaal getest: de trigger in een teruggedraaide
 transactie, en in de browser het overzicht, de klantpagina, de URL-blokkade, de server-actie, het dashboard en het
-formulier. Staat op BETA. Bij promotie naar LIVE: eerst de controlequery op LIVE (hoeveel openstaande items hebben
-een toekomstige datum), en `documentation.md` bijwerken (gepland, `vandaag.ts`, trigger, OHW-definitie).
+formulier. Op BETA getest door Erwin (2026-11-25) en op verzoek gepromoot naar `main`/LIVE op 2026-11-25, met
+`documentation.md` bijgewerkt (gepland, `vandaag.ts`, trigger, OHW-definitie). Bij de release verdwijnen bestaande
+openstaande items met een toekomstige datum uit OHW en uit de selecteerbare lijst; ze staan dan bij Gepland.
 
 Los van deze wachtrij: op de `feature/patricia-koppeling`-branch loopt de
 Patricia-koppeling (dossiernummer/klant verplicht maken vanuit Patricia,

@@ -1,6 +1,6 @@
 # Chronos — technische documentatie
 
-*Laatst bijgewerkt: 2026-11-17.*
+*Laatst bijgewerkt: 2026-11-25.*
 
 Dit is een **actuele momentopname** van hoe Chronos technisch in elkaar zit en waarom,
 bedoeld voor een developer die het systeem voor het eerst onder ogen krijgt. Dit is
@@ -135,6 +135,11 @@ sinds de `factuuritem_negatief_bedrag`-migratie ook negatief zijn (deel-crediter
 **vóór** facturering, op regelniveau) — de korting-check (`korting <= honorarium`)
 geldt alleen nog als het honorarium niet negatief is.
 `definitief_op` legt vast wanneer het item definitief werd (basis voor de DWO, zie §7.3).
+**Gepland**: een item met `datum` na vandaag (Amsterdamse tijd) is gepland. Dat is afgeleid, er is geen
+status of kolom voor; op de datum zelf is het vanzelf een gewoon openstaand item. Gepland werk telt niet mee in
+onderhanden werk en kan niet in een specificatie (zie §6 en §7.4). De helpers staan in `src/lib/vandaag.ts`
+(`vandaagAmsterdam`, `isToekomstig`, `overHoeLang`, `ligtVeelTeVerVooruit`) en in `src/lib/factuurbedragen.ts`
+(`isGepland`, `isNogTeFactureren(item, vandaag)`).
 In het formulier (`src/components/factuuritem-form.tsx`) staan `externe_kosten` en `korting`
 achter de switch "Kosten derden/korting uitsplitsen" (`uitsplitsen`): standaard uit, behalve
 bij een bestaand item dat al kosten of korting heeft. Uitzetten zet kosten en korting terug
@@ -224,12 +229,20 @@ retentie-/opslaggrootte-mechanisme (`auditlog_opslaggrootte()`).
 
 ## 6. Levenscyclus: factuuritem → specificatie
 
-1. Medewerker maakt een factuuritem aan → `status = aangemaakt`.
+1. Medewerker maakt een factuuritem aan → `status = aangemaakt`. Ligt de datum na vandaag, dan is het item
+   **gepland**: de klantpagina toont het in een aparte sectie "Gepland, nog niet factureerbaar" (slotje in plaats van
+   selectievakje, `GeplandeItemsSectie` in `factuur-groep.tsx`) en het overzicht Factuuritems telt het niet mee in aantal,
+   bedrag en totaal openstaand maar toont een aparte gepland-regel per klant. Het formulier legt het uit en waarschuwt
+   zacht bij meer dan 12 maanden vooruit.
 2. Teamleider/finance/beheerder selecteert factuuritems van één klant en genereert een
    specificatie (`genereerSpecificatie()`, `src/actions/specificaties.ts`):
    - Maakt een `facturatiebatches`-rij met **hardcoded `status: "gefactureerd"`**
      (regel 111 van dat bestand) — er is geen tussenstap.
    - Zet de betrokken factuuritems op `status: "definitief"`.
+   - Geplande items (datum na vandaag) worden geweigerd, op drie plekken: `/specificaties/nieuw` filtert op
+     `datum <= vandaag`, `genereerSpecificatie()` geeft een foutmelding, en de database-trigger
+     `factuuritems_blokkeer_toekomstig_definitief` (migratie `20261124100000`) blokkeert de overgang naar
+     `definitief` voor een toekomstige datum (vangnet voor elk ander pad; een al definitief item blijft ongemoeid).
 3. De specificatie-PDF wordt **on-demand** gegenereerd bij elke download/preview
    (`src/actions/specificatie-download.ts`), niet éénmalig opgeslagen.
    De "Group by matter"-switch in de preview (`factuur-specificatie.tsx`) deelt zijn
@@ -289,7 +302,9 @@ snapshot-regel.
 ### 7.3 DWO (doorlooptijd van werkzaamheid tot omzet)
 Gewoon gemiddelde per item (elk item telt even zwaar, niet gewogen naar bedrag) van
 `(factuuritems.definitief_op-datum − factuuritems.datum)`, in kalenderdagen, voor items
-die in de gekozen periode definitief zijn geworden. `definitief_op` (timestamptz) staat op het
+die in de gekozen periode definitief zijn geworden. Een gepland item (datum in de toekomst) kan niet definitief
+worden voor zijn datum, dus de DWO meet voor zo'n item vanzelf vanaf zijn datum. Historische items die ooit vóór hun
+datum zijn gefactureerd (negatieve dagen) blijven in het gemiddelde staan. `definitief_op` (timestamptz) staat op het
 item zelf: `genereerSpecificatie()` zet hem op hetzelfde moment als `facturatiebatches.goedgekeurd_op`,
 een trigger (`factuuritems_zet_definitief_op`) zet hem bij elke overgang naar `definitief` en maakt
 hem leeg als een item niet definitief is. Migratie `20261103100000_factuuritems_definitief_op`
@@ -323,7 +338,8 @@ staat, anders Lopend jaar.
   Tegels (gefactureerd, bureaukosten, onderhanden werk, DWO), onderhanden werk per team, per
   team een uitsplitsing per teamlid (`TeamlidKaart`: totaal, uren, fixed fee, onderhanden
   werk, aandeel in het team), lijsten per klant/productgroep/land en de productgroep×land-tabel.
-  Onderhanden werk is **al het nog niet gefactureerde werk, ook uit eerdere periodes** en
+  Onderhanden werk is **al het nog niet gefactureerde werk met een datum tot en met vandaag, ook uit eerdere periodes**
+  (gepland werk telt pas vanaf zijn datum; het geplande bedrag staat als subregel op de OHW-tegels) en
   volgt de periodekeuze dus niet (één `ohwRows` voor beide blokken). Alleen de trendgrafiek per teamlid per maand in een teamtab blijft het hele jaar tonen
   (met een label "Lopend jaar").
 
